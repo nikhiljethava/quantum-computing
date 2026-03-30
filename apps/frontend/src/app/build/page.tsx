@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import { fetchArchitecture, runCircuit } from "@/lib/api";
+import { createArtifact, fetchArchitecture, getArtifactDownloadUrl, runCircuit } from "@/lib/api";
 import { useUseCase } from "@/lib/hooks";
 import {
   STARTER_ORDER,
@@ -24,13 +24,23 @@ import {
   getStarterStory,
   normalizeStarterKey,
 } from "@/lib/studio-mocks";
-import { ArchitectureMap, CircuitRun, GcpComponent, UseCase } from "@/types/api";
+import { ArchitectureMap, ArtifactType, CircuitRun, GcpComponent, UseCase } from "@/types/api";
 
 type OutputTab = "results" | "notes" | "code";
 type FocusCard = "assessment" | "architecture" | null;
 type HistogramTone = StarterStory["histogram"][number]["tone"];
 
 const HISTOGRAM_TONES: HistogramTone[] = ["primary", "accent", "secondary", "warn"];
+const EXPORT_ITEMS: Array<{
+  type: Exclude<ArtifactType, "job_output">;
+  label: string;
+  requiresArchitecture?: boolean;
+}> = [
+  { type: "cirq_code", label: "Cirq code (.py)" },
+  { type: "assessment_json", label: "Assessment JSON" },
+  { type: "architecture_json", label: "Architecture map JSON", requiresArchitecture: true },
+  { type: "session_summary", label: "Session summary (.md)", requiresArchitecture: true },
+];
 
 const TONE_STYLES = {
   primary: {
@@ -615,7 +625,19 @@ function ArchitectureCard({
   );
 }
 
-function ExportCard({ story }: { story: StarterStory }) {
+function ExportCard({
+  canExport,
+  hasArchitecture,
+  exportingType,
+  exportError,
+  onExport,
+}: {
+  canExport: boolean;
+  hasArchitecture: boolean;
+  exportingType: Exclude<ArtifactType, "job_output"> | null;
+  exportError: string | null;
+  onExport: (type: Exclude<ArtifactType, "job_output">) => void;
+}) {
   return (
     <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
       <div className="mb-4 flex items-center justify-between">
@@ -631,21 +653,45 @@ function ExportCard({ story }: { story: StarterStory }) {
       </div>
 
       <div className="space-y-3">
-        {story.exportItems.map((item, index) => (
-          <div key={item} className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-slate-700">{item}</span>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500">
-                {index < 2 ? "Ready" : "Preview"}
-              </span>
+        {EXPORT_ITEMS.map((item) => {
+          const isDisabled = !canExport || Boolean(item.requiresArchitecture && !hasArchitecture);
+          const isPreparing = exportingType === item.type;
+          const availabilityLabel = !canExport
+            ? "Unavailable"
+            : isPreparing
+              ? "Preparing"
+              : "Download";
+
+          return (
+            <div key={item.type} className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                <button
+                  type="button"
+                  disabled={isDisabled || isPreparing}
+                  onClick={() => onExport(item.type)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    isDisabled || isPreparing
+                      ? "bg-white text-slate-400"
+                      : "bg-[#eef2ff] text-[#2f5be3] hover:bg-[#dbe5ff]"
+                  }`}
+                >
+                  {availabilityLabel}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-4 rounded-[18px] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
         Keep the exports honest: label simulation-first assumptions, note missing evidence, and preserve the chosen time horizon in the bundle.
       </div>
+      {exportError ? (
+        <div className="mt-4 rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-4 text-sm leading-6 text-[#b91c1c]">
+          {exportError}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -665,6 +711,8 @@ function BuildPageContent() {
   const [workspaceRun, setWorkspaceRun] = useState<CircuitRun | null>(null);
   const [architecture, setArchitecture] = useState<ArchitectureMap | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [exportingType, setExportingType] = useState<Exclude<ArtifactType, "job_output"> | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
@@ -687,6 +735,7 @@ function BuildPageContent() {
 
       setSimulationState("running");
       setWorkspaceError(null);
+      setExportError(null);
 
       try {
         const activeStory = getStarterStory(starterKey);
@@ -764,6 +813,39 @@ function BuildPageContent() {
     setFocusedCard(which);
     const target = which === "assessment" ? assessmentRef.current : architectureRef.current;
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function exportArtifact(type: Exclude<ArtifactType, "job_output">) {
+    if (!workspaceRun) {
+      setExportError("Run a circuit first so the export bundle has real content.");
+      return;
+    }
+
+    setExportingType(type);
+    setExportError(null);
+
+    try {
+      const artifact = await createArtifact({
+        artifact_type: type,
+        circuit_run_id: workspaceRun.id,
+        architecture_record_id: architecture?.id ?? undefined,
+      });
+      const link = document.createElement("a");
+      link.href = getArtifactDownloadUrl(artifact.id);
+      link.download = artifact.filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : "The export could not be generated.",
+      );
+    } finally {
+      setExportingType(null);
+    }
   }
 
   const isLoadingWorkspace =
@@ -993,7 +1075,13 @@ function BuildPageContent() {
             <div ref={architectureRef}>
               <ArchitectureCard story={displayStory} focused={focusedCard === "architecture"} />
             </div>
-            <ExportCard story={displayStory} />
+            <ExportCard
+              canExport={Boolean(workspaceRun)}
+              hasArchitecture={Boolean(architecture?.id)}
+              exportingType={exportingType}
+              exportError={exportError}
+              onExport={exportArtifact}
+            />
           </div>
         </div>
       </section>

@@ -44,6 +44,14 @@ class JobType(str, enum.Enum):
     chemistry = "chemistry"
 
 
+class ArtifactType(str, enum.Enum):
+    job_output = "job_output"
+    cirq_code = "cirq_code"
+    assessment_json = "assessment_json"
+    architecture_json = "architecture_json"
+    session_summary = "session_summary"
+
+
 class Project(Base):
     """Top-level saved workspace grouping."""
 
@@ -209,6 +217,7 @@ class CircuitRun(Base):
     architecture_records: Mapped[list["ArchitectureRecord"]] = relationship(
         "ArchitectureRecord", back_populates="circuit_run", cascade="all, delete-orphan"
     )
+    artifacts: Mapped[list["Artifact"]] = relationship("Artifact", back_populates="circuit_run")
 
 
 class ArchitectureRecord(Base):
@@ -242,19 +251,31 @@ class ArchitectureRecord(Base):
     assessment: Mapped["Assessment | None"] = relationship(
         "Assessment", back_populates="architecture_records"
     )
+    artifacts: Mapped[list["Artifact"]] = relationship(
+        "Artifact", back_populates="architecture_record"
+    )
 
 
 class Artifact(Base):
     """
-    Tracks a file artifact (e.g. circuit diagram, JSON export) produced by a Job.
+    Tracks a file artifact (e.g. circuit export, session summary, worker output).
     The storage_uri points to a local path or GCS URI depending on the storage backend.
     """
 
     __tablename__ = "artifacts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    job_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False, index=True
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True, index=True
+    )
+    circuit_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("circuit_runs.id"), nullable=True, index=True
+    )
+    architecture_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("architecture_records.id"), nullable=True, index=True
+    )
+    artifact_type: Mapped[ArtifactType] = mapped_column(
+        Enum(ArtifactType), nullable=False, default=ArtifactType.job_output, index=True
     )
     filename: Mapped[str] = mapped_column(String(300), nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -264,4 +285,8 @@ class Artifact(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    job: Mapped["Job"] = relationship("Job", back_populates="artifacts")
+    job: Mapped["Job | None"] = relationship("Job", back_populates="artifacts")
+    circuit_run: Mapped["CircuitRun | None"] = relationship("CircuitRun", back_populates="artifacts")
+    architecture_record: Mapped["ArchitectureRecord | None"] = relationship(
+        "ArchitectureRecord", back_populates="artifacts"
+    )

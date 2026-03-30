@@ -3,6 +3,8 @@
  */
 
 import {
+  Artifact,
+  ArtifactCreate,
   ArchitectureMap,
   ArchitectureRequest,
   Assessment,
@@ -104,4 +106,15 @@ export async function fetchArchitecture(params: ArchitectureRequest): Promise<Ar
     method: "POST",
     body: JSON.stringify(params),
   });
+}
+
+export async function createArtifact(body: ArtifactCreate): Promise<Artifact> {
+  return apiFetch<Artifact>("/api/v1/artifacts", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function getArtifactDownloadUrl(artifactId: string): string {
+  return `${BASE_URL}/api/v1/artifacts/${artifactId}/download`;
 }

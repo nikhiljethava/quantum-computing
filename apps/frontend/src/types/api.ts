@@ -14,6 +14,12 @@ export type IndustryTag =
 export type Horizon = "near-term" | "mid-term" | "long-term";
 export type JobType = "coin_flip" | "bell_state" | "grover" | "routing" | "chemistry";
 export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+export type ArtifactType =
+  | "job_output"
+  | "cirq_code"
+  | "assessment_json"
+  | "architecture_json"
+  | "session_summary";
 
 export interface UseCase {
   id: string;
@@ -143,4 +149,24 @@ export interface ArchitectureMap {
   connections: string[][];
   notes: string[];
   created_at: string | null;
+}
+
+export interface ArtifactCreate {
+  artifact_type: ArtifactType;
+  circuit_run_id?: string;
+  architecture_record_id?: string;
+}
+
+export interface Artifact {
+  id: string;
+  artifact_type: ArtifactType;
+  job_id: string | null;
+  circuit_run_id: string | null;
+  architecture_record_id: string | null;
+  filename: string;
+  content_type: string;
+  storage_uri: string;
+  size_bytes: number;
+  download_path: string;
+  created_at: string;
 }

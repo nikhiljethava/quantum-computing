@@ -5,6 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  createArtifact,
   createAssessment,
   fetchArchitecture,
   fetchCircuitRun,
@@ -17,6 +18,7 @@ import {
   submitJob,
 } from "@/lib/api";
 import {
+  ArtifactCreate,
   ArchitectureRequest,
   AssessmentInputs,
   CircuitRunCreate,
@@ -128,5 +130,11 @@ export function useArchitecture(params: {
 export function useGenerateArchitecture() {
   return useMutation({
     mutationFn: (body: ArchitectureRequest) => fetchArchitecture(body),
+  });
+}
+
+export function useCreateArtifact() {
+  return useMutation({
+    mutationFn: (body: ArtifactCreate) => createArtifact(body),
   });
 }

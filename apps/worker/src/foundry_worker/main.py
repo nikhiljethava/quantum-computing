@@ -7,8 +7,6 @@ TODO(gcp-deploy): replace this polling loop with a Cloud Tasks push handler
 """
 
 import asyncio
-import dataclasses
-import json
 import logging
 import os
 from datetime import datetime, timezone
@@ -94,7 +92,7 @@ async def poll_once(db: AsyncSession) -> int:
     Returns the number of jobs processed.
     """
     # Import models here to avoid loading ORM before engine is ready
-    from foundry_backend.models.models import Job, JobStatus  # type: ignore[import]
+    from foundry_backend.models.models import Artifact, ArtifactType, Job, JobStatus  # type: ignore[import]
 
     stmt = (
         select(Job)
@@ -113,6 +111,16 @@ async def poll_once(db: AsyncSession) -> int:
         try:
             result = await _execute_job(str(job.id), job.job_type.value, job.payload)
             job.result = result
+            if result.get("artifact_uri"):
+                artifact = Artifact(
+                    job_id=job.id,
+                    artifact_type=ArtifactType.job_output,
+                    filename=f"{job.id}_circuit.txt",
+                    content_type="text/plain",
+                    storage_uri=str(result["artifact_uri"]),
+                    size_bytes=len(result.get("circuit_text", "").encode()),
+                )
+                db.add(artifact)
             job.status = JobStatus.completed
             logger.info("Job %s completed (%s)", job.id, job.job_type.value)
         except Exception as exc:

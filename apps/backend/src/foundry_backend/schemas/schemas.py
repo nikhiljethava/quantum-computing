@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foundry_backend.models.models import IndustryTag, JobStatus, JobType
+from foundry_backend.models.models import ArtifactType, IndustryTag, JobStatus, JobType
 
 
 class UseCaseRead(BaseModel):
@@ -197,3 +197,35 @@ class ArchitectureRead(BaseModel):
     connections: list[list[str]]
     notes: list[str]
     created_at: datetime | None = None
+
+
+class ArtifactCreate(BaseModel):
+    """Request body for generating a downloadable artifact."""
+
+    artifact_type: ArtifactType = Field(description="Which export to generate.")
+    circuit_run_id: uuid.UUID | None = Field(
+        default=None,
+        description="Circuit run backing the export bundle.",
+    )
+    architecture_record_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional persisted architecture record for architecture/session exports.",
+    )
+
+
+class ArtifactRead(BaseModel):
+    """Read model for stored artifacts."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    artifact_type: ArtifactType
+    job_id: uuid.UUID | None = None
+    circuit_run_id: uuid.UUID | None = None
+    architecture_record_id: uuid.UUID | None = None
+    filename: str
+    content_type: str
+    storage_uri: str
+    size_bytes: int
+    download_path: str
+    created_at: datetime
