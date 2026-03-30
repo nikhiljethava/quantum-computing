@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+.pnpm-store/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Alembic
+alembic.ini.local
+
+# Artifacts
+apps/backend/artifacts/
+apps/worker/artifacts/
