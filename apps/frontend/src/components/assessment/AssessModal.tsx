@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, SlidersHorizontal, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { X, SlidersHorizontal, AlertCircle, Loader2 } from "lucide-react";
 import { UseCase } from "@/types/api";
 import { useCreateAssessment } from "@/lib/hooks";
 import { Assessment, AssessmentInputs } from "@/types/api";
@@ -166,7 +166,7 @@ export function AssessModal({
       try {
         const assessment = await mutateAsync({ use_case_id: useCase.id, user_inputs: updated });
         setResult(assessment);
-      } catch (_) {
+      } catch {
         // error shown via isError
       }
     }

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, Filter, ArrowRight, Info, SlidersHorizontal, Zap } from "lucide-react";
+import { Globe, ArrowRight, Info, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useUseCases } from "@/lib/hooks";
 import { IndustryTag, UseCase } from "@/types/api";
 import { AssessModal } from "@/components/assessment/AssessModal";
+import { getStarterByIndustry } from "@/lib/studio-mocks";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ function UseCaseCard({
   onAssess: (uc: UseCase) => void;
 }) {
   const horizonColor = HORIZON_COLORS[uc.horizon] ?? "#94a3b8";
+  const starter = getStarterByIndustry(uc.industry);
 
   return (
     <motion.div
@@ -147,11 +149,11 @@ function UseCaseCard({
             <SlidersHorizontal size={13} /> Assess Fit
           </button>
           <Link
-            href={`/map?use_case_id=${uc.id}`}
+            href={`/build?starter=${starter}&use_case_id=${uc.id}`}
             className="btn-ghost"
-            style={{ padding: "0.5rem 0.75rem", fontSize: "0.8rem" }}
+            style={{ padding: "0.5rem 0.875rem", fontSize: "0.8rem" }}
           >
-            <ArrowRight size={13} />
+            Open Hybrid Lab <ArrowRight size={13} />
           </Link>
         </div>
       </div>

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { Atom, Map, FlaskConical, Globe } from "lucide-react";
+import { Atom, Bot, FlaskConical, Globe, Map, SlidersHorizontal } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Learn", icon: Atom, step: "01" },
   { href: "/explore", label: "Explore", icon: Globe, step: "02" },
-  { href: "/build", label: "Build", icon: FlaskConical, step: "03" },
-  { href: "/map", label: "Map", icon: Map, step: "04" },
+  { href: "/assess", label: "Assess", icon: SlidersHorizontal, step: "03" },
+  { href: "/build", label: "Build", icon: FlaskConical, step: "04" },
+  { href: "/map", label: "Map", icon: Map, step: "05" },
 ];
 
 export function NavigationBar() {
@@ -32,14 +32,23 @@ export function NavigationBar() {
           maxWidth: "1280px",
           margin: "0 auto",
           padding: "0 1.5rem",
-          height: "64px",
+          minHeight: "72px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: "1rem",
+          flexWrap: "wrap",
         }}
       >
-        {/* Wordmark */}
-        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.625rem" }}>
+        <Link
+          href="/"
+          style={{
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
           <div
             style={{
               width: "32px",
@@ -53,14 +62,24 @@ export function NavigationBar() {
           >
             <Atom size={18} color="#fff" strokeWidth={2} />
           </div>
-          <span style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "-0.02em" }}>
-            <span className="gradient-text">Quantum</span>
-            <span style={{ color: "var(--color-text-secondary)" }}> Foundry</span>
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <span style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "-0.02em" }}>
+              <span className="gradient-text">Quantum</span>
+              <span style={{ color: "var(--color-text-secondary)" }}> Foundry</span>
+            </span>
+            <span
+              style={{
+                fontSize: "0.68rem",
+                color: "var(--color-text-muted)",
+                fontWeight: 600,
+              }}
+            >
+              Powered by QSE
+            </span>
+          </div>
         </Link>
 
-        {/* Nav links */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
           {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
             const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
@@ -71,7 +90,13 @@ export function NavigationBar() {
                 style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}
               >
                 <Icon size={14} strokeWidth={2.5} />
-                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginRight: "2px" }}>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--color-text-muted)",
+                    marginRight: "2px",
+                  }}
+                >
                   {step}
                 </span>
                 {label}
@@ -80,25 +105,32 @@ export function NavigationBar() {
           })}
         </div>
 
-        {/* Status chip */}
-        <div
-          className="chip"
-          style={{
-            background: "rgba(45, 212, 191, 0.1)",
-            color: "var(--color-glow-secondary)",
-            border: "1px solid rgba(45,212,191,0.25)",
-          }}
-        >
-          <span
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <Link
+            href="/build#qals-lite"
+            className="btn-primary"
+            style={{ padding: "0.55rem 1rem", fontSize: "0.82rem" }}
+          >
+            <Bot size={14} />
+            Ask the guide
+          </Link>
+          <div
             style={{
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              background: "var(--color-glow-secondary)",
-              display: "inline-block",
+              width: "34px",
+              height: "34px",
+              borderRadius: "9999px",
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-primary)",
+              fontWeight: 700,
+              fontSize: "0.82rem",
             }}
-          />
-          Simulation Mode
+          >
+            N
+          </div>
         </div>
       </nav>
     </header>

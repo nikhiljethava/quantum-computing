@@ -11,6 +11,7 @@ import {
   Map,
   BookOpen,
   Layers,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // ── Concept cards ──────────────────────────────────────────────────────────
@@ -59,8 +60,9 @@ const CONCEPTS = [
 const JOURNEY = [
   { step: "01", icon: BookOpen, label: "Learn", desc: "Grasp the core quantum concepts", href: "/", active: true },
   { step: "02", icon: Globe, label: "Explore", desc: "Discover industry use cases", href: "/explore" },
-  { step: "03", icon: FlaskConical, label: "Build", desc: "Simulate real quantum circuits", href: "/build" },
-  { step: "04", icon: Map, label: "Map", desc: "Visualize your GCP architecture", href: "/map" },
+  { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Score credible readiness", href: "/assess" },
+  { step: "04", icon: FlaskConical, label: "Build", desc: "Simulate real quantum circuits", href: "/build" },
+  { step: "05", icon: Map, label: "Map", desc: "Visualize your GCP architecture", href: "/map" },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────
