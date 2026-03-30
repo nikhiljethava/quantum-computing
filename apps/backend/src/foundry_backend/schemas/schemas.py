@@ -1,7 +1,4 @@
-"""
-Pydantic schemas for request/response serialization.
-These are completely separate from the ORM models to keep API contracts stable.
-"""
+"""Pydantic schemas for the backend API contracts."""
 
 import uuid
 from datetime import datetime
@@ -12,12 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from foundry_backend.models.models import IndustryTag, JobStatus, JobType
 
 
-# ---------------------------------------------------------------------------
-# Use Case
-# ---------------------------------------------------------------------------
-
-
 class UseCaseRead(BaseModel):
+    """Read model for a seeded industry use case."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -31,16 +25,15 @@ class UseCaseRead(BaseModel):
 
 
 class UseCaseList(BaseModel):
+    """Paginated use-case list."""
+
     items: list[UseCaseRead]
     total: int
 
 
-# ---------------------------------------------------------------------------
-# Assessment
-# ---------------------------------------------------------------------------
-
-
 class AssessmentCreate(BaseModel):
+    """Request body for a persisted QALS-lite assessment."""
+
     use_case_id: uuid.UUID
     user_inputs: dict[str, Any] = Field(
         ...,
@@ -50,6 +43,8 @@ class AssessmentCreate(BaseModel):
 
 
 class AssessmentRead(BaseModel):
+    """Read model for a persisted QALS-lite assessment."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -61,20 +56,19 @@ class AssessmentRead(BaseModel):
     created_at: datetime
 
 
-# ---------------------------------------------------------------------------
-# Jobs
-# ---------------------------------------------------------------------------
-
-
 class JobCreate(BaseModel):
+    """Request body for an async worker-backed circuit job."""
+
     job_type: JobType
     payload: dict[str, Any] = Field(
         default_factory=dict,
-        description="Circuit-specific parameters. Defaults appropriate per job_type.",
+        description="Circuit-specific parameters. Defaults appropriate per job type.",
     )
 
 
 class JobRead(BaseModel):
+    """Read model for queued or completed jobs."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -88,18 +82,118 @@ class JobRead(BaseModel):
     completed_at: datetime | None = None
 
 
-# ---------------------------------------------------------------------------
-# Architecture
-# ---------------------------------------------------------------------------
+class CircuitTemplateRead(BaseModel):
+    """Metadata for a starter circuit template shown in the Build workspace."""
+
+    key: JobType
+    label: str
+    badge: str
+    concept: str
+    prompt: str
+
+
+class HistogramEntryRead(BaseModel):
+    """Measurement histogram entry for UI charts."""
+
+    state: str
+    count: int
+    probability: float
+
+
+class AssessmentPreviewRead(BaseModel):
+    """Heuristic preview surfaced directly inside the Hybrid Lab."""
+
+    score: int
+    verdict: str
+    horizon: str
+    confidence: str
+    explanation: list[str]
+    assumptions: list[str]
+    public_signals: list[str]
+    next_action: str
+    score_breakdown: dict[str, Any]
+
+
+class CircuitRunCreate(BaseModel):
+    """Request body for a synchronous Build workspace circuit run."""
+
+    template_key: JobType = Field(description="Starter template to generate and simulate.")
+    prompt: str | None = Field(
+        default=None,
+        description="Optional custom prompt shown back to the user alongside the generated circuit.",
+    )
+    use_case_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional seeded use case to anchor the narrative and QALS-lite preview.",
+    )
+    session_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional saved workspace session identifier.",
+    )
+
+
+class CircuitRunRead(BaseModel):
+    """Read model for a synchronous circuit run."""
+
+    id: uuid.UUID
+    session_id: uuid.UUID | None = None
+    use_case_id: uuid.UUID | None = None
+    template_key: JobType
+    label: str
+    badge: str
+    concept: str
+    prompt: str
+    guide_response: str
+    explanation: str
+    circuit_text: str
+    cirq_code: str
+    histogram: list[HistogramEntryRead]
+    measurements: dict[str, Any]
+    metadata: dict[str, Any]
+    assessment_preview: AssessmentPreviewRead
+    created_at: datetime
+
+
+class GcpComponentRead(BaseModel):
+    """Serializable GCP architecture component."""
+
+    id: str
+    name: str
+    service: str
+    description: str
 
 
 class ArchitectureRequest(BaseModel):
-    job_id: uuid.UUID | None = None
+    """Request body for rule-based architecture generation."""
+
+    circuit_run_id: uuid.UUID | None = Field(
+        default=None,
+        description="Persisted circuit run created by the Build workspace.",
+    )
+    job_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional legacy async job identifier for compatibility with worker-based runs.",
+    )
+    assessment_id: uuid.UUID | None = Field(
+        default=None,
+        description="Persisted QALS-lite assessment to layer into the architecture context.",
+    )
+    use_case_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional seeded use case to enrich the architecture story.",
+    )
+
+
+class ArchitectureRead(BaseModel):
+    """Read model for a persisted or transient architecture map."""
+
+    id: uuid.UUID | None = None
+    circuit_run_id: uuid.UUID | None = None
     assessment_id: uuid.UUID | None = None
     use_case_id: uuid.UUID | None = None
-
-
-# ArchitectureMap and GcpComponent live in foundry-core to avoid circular imports.
-# Re-export them here so the backend has a single import path.
-from foundry_core.mapping.gcp_mapper import ArchitectureMap as ArchitectureRead  # noqa: E402
-from foundry_core.mapping.gcp_mapper import GcpComponent  # noqa: E402, F401
+    title: str
+    summary: str
+    components: list[GcpComponentRead]
+    connections: list[list[str]]
+    notes: list[str]
+    created_at: datetime | None = None

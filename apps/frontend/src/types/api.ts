@@ -1,6 +1,5 @@
 /**
- * Typed API types — mirrors backend Pydantic schemas.
- * Update these when the API contract changes.
+ * Typed API types mirrored from the backend Pydantic schemas.
  */
 
 export type IndustryTag =
@@ -13,6 +12,8 @@ export type IndustryTag =
   | "other";
 
 export type Horizon = "near-term" | "mid-term" | "long-term";
+export type JobType = "coin_flip" | "bell_state" | "grover" | "routing" | "chemistry";
+export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
 export interface UseCase {
   id: string;
@@ -29,8 +30,6 @@ export interface UseCaseList {
   items: UseCase[];
   total: number;
 }
-
-// Assessment
 
 export interface AssessmentInputs {
   problem_size: "small" | "medium" | "large" | "very_large";
@@ -49,11 +48,6 @@ export interface Assessment {
   created_at: string;
 }
 
-// Jobs
-
-export type JobType = "coin_flip" | "bell_state" | "grover" | "routing" | "chemistry";
-export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
-
 export interface JobCreate {
   job_type: JobType;
   payload?: Record<string, unknown>;
@@ -64,30 +58,65 @@ export interface Job {
   job_type: JobType;
   status: JobStatus;
   payload: Record<string, unknown>;
-  result: CircuitResult | null;
+  result: Record<string, unknown> | null;
   error_message: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
 }
 
-export interface CircuitResult {
-  circuit_text: string;
-  histogram: Record<string, number>;
-  metadata: CircuitMetadata;
-  artifact_uri: string;
-}
-
-export interface CircuitMetadata {
-  name: string;
-  num_qubits: number;
-  description: string;
+export interface CircuitTemplate {
+  key: JobType;
+  label: string;
+  badge: string;
   concept: string;
-  repetitions: number;
-  [key: string]: unknown;
+  prompt: string;
 }
 
-// Architecture
+export interface HistogramEntry {
+  state: string;
+  count: number;
+  probability: number;
+}
+
+export interface AssessmentPreview {
+  score: number;
+  verdict: string;
+  horizon: string;
+  confidence: string;
+  explanation: string[];
+  assumptions: string[];
+  public_signals: string[];
+  next_action: string;
+  score_breakdown: Record<string, number>;
+}
+
+export interface CircuitRunCreate {
+  template_key: JobType;
+  prompt?: string;
+  use_case_id?: string;
+  session_id?: string;
+}
+
+export interface CircuitRun {
+  id: string;
+  session_id: string | null;
+  use_case_id: string | null;
+  template_key: JobType;
+  label: string;
+  badge: string;
+  concept: string;
+  prompt: string;
+  guide_response: string;
+  explanation: string;
+  circuit_text: string;
+  cirq_code: string;
+  histogram: HistogramEntry[];
+  measurements: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  assessment_preview: AssessmentPreview;
+  created_at: string;
+}
 
 export interface GcpComponent {
   id: string;
@@ -96,10 +125,22 @@ export interface GcpComponent {
   description: string;
 }
 
+export interface ArchitectureRequest {
+  circuit_run_id?: string;
+  job_id?: string;
+  assessment_id?: string;
+  use_case_id?: string;
+}
+
 export interface ArchitectureMap {
+  id: string | null;
+  circuit_run_id: string | null;
+  assessment_id: string | null;
+  use_case_id: string | null;
   title: string;
   summary: string;
   components: GcpComponent[];
-  connections: [string, string][];
+  connections: string[][];
   notes: string[];
+  created_at: string | null;
 }

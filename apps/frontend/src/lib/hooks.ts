@@ -1,23 +1,29 @@
 /**
- * React Query hooks for all API endpoints.
- * Provides polling, caching, and loading/error state management.
+ * React Query hooks for backend endpoints.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import {
-  fetchUseCases,
-  fetchUseCase,
   createAssessment,
-  submitJob,
+  fetchArchitecture,
+  fetchCircuitRun,
+  fetchCircuitTemplates,
   fetchJob,
   fetchJobs,
-  fetchArchitecture,
+  fetchUseCase,
+  fetchUseCases,
+  runCircuit,
+  submitJob,
 } from "@/lib/api";
-import { AssessmentInputs, IndustryTag, JobCreate, JobStatus } from "@/types/api";
-
-// ---------------------------------------------------------------------------
-// Use Cases
-// ---------------------------------------------------------------------------
+import {
+  ArchitectureRequest,
+  AssessmentInputs,
+  CircuitRunCreate,
+  IndustryTag,
+  JobCreate,
+  JobStatus,
+} from "@/types/api";
 
 export function useUseCases(industry?: IndustryTag) {
   return useQuery({
@@ -34,10 +40,6 @@ export function useUseCase(id: string | null) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Assessment
-// ---------------------------------------------------------------------------
-
 export function useCreateAssessment() {
   const qc = useQueryClient();
   return useMutation({
@@ -52,9 +54,31 @@ export function useCreateAssessment() {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Jobs
-// ---------------------------------------------------------------------------
+export function useCircuitTemplates() {
+  return useQuery({
+    queryKey: ["circuit-templates"],
+    queryFn: fetchCircuitTemplates,
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useRunCircuit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CircuitRunCreate) => runCircuit(body),
+    onSuccess: (run) => {
+      qc.setQueryData(["circuit-run", run.id], run);
+    },
+  });
+}
+
+export function useCircuitRun(id: string | null) {
+  return useQuery({
+    queryKey: ["circuit-run", id],
+    queryFn: () => fetchCircuitRun(id!),
+    enabled: !!id,
+  });
+}
 
 export function useSubmitJob() {
   const qc = useQueryClient();
@@ -69,7 +93,6 @@ export function useJob(id: string | null) {
     queryKey: ["job", id],
     queryFn: () => fetchJob(id!),
     enabled: !!id,
-    // Poll every 1.5s when job is pending or running
     refetchInterval: (query) => {
       const status = query.state.data?.status as JobStatus | undefined;
       if (status === "PENDING" || status === "RUNNING") return 1500;
@@ -85,11 +108,8 @@ export function useJobs(status?: string) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Architecture
-// ---------------------------------------------------------------------------
-
 export function useArchitecture(params: {
+  circuit_run_id?: string;
   job_id?: string;
   assessment_id?: string;
   use_case_id?: string;
@@ -99,6 +119,14 @@ export function useArchitecture(params: {
   return useQuery({
     queryKey: ["architecture", params],
     queryFn: () => fetchArchitecture(rest),
-    enabled: enabled && !!(rest.job_id || rest.assessment_id || rest.use_case_id),
+    enabled:
+      enabled &&
+      !!(rest.circuit_run_id || rest.job_id || rest.assessment_id || rest.use_case_id),
+  });
+}
+
+export function useGenerateArchitecture() {
+  return useMutation({
+    mutationFn: (body: ArchitectureRequest) => fetchArchitecture(body),
   });
 }
