@@ -15,9 +15,9 @@ import {
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import { getArtifactDownloadUrl } from "@/lib/api";
-import { useSession, useSessions, useUseCase } from "@/lib/hooks";
+import { useProjects, useSession, useSessions, useUseCase } from "@/lib/hooks";
 import { getStarterStory, normalizeStarterKey } from "@/lib/studio-mocks";
-import { Artifact, SavedSession, SessionDetail } from "@/types/api";
+import { Artifact, Project, SavedSession, SessionDetail } from "@/types/api";
 
 function formatSessionTime(value: string) {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -55,12 +55,18 @@ function buildSessionHref(session: SavedSession | SessionDetail) {
 }
 
 function SessionListCard({
+  projects,
+  selectedProjectId,
   sessions,
   selectedSessionId,
+  onFilterProject,
   onSelect,
 }: {
+  projects: Project[];
+  selectedProjectId: string | null;
   sessions: SavedSession[];
   selectedSessionId: string | null;
+  onFilterProject: (projectId: string | null) => void;
   onSelect: (sessionId: string) => void;
 }) {
   return (
@@ -77,6 +83,24 @@ function SessionListCard({
         <div className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]">
           {sessions.length} saved
         </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          Project filter
+        </div>
+        <select
+          value={selectedProjectId ?? ""}
+          onChange={(event) => onFilterProject(event.target.value || null)}
+          className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+        >
+          <option value="">All projects</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name} ({project.session_count})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-3">
@@ -366,9 +390,17 @@ function SessionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedSessionId = searchParams.get("session_id");
-  const { data: sessionList, isLoading, error } = useSessions({ limit: 12 });
+  const selectedProjectId = searchParams.get("project_id");
+  const { data: projects } = useProjects(50);
+  const { data: sessionList, isLoading, error } = useSessions({
+    limit: 12,
+    project_id: selectedProjectId ?? undefined,
+  });
   const fallbackSessionId = sessionList?.items[0]?.id ?? null;
-  const activeSessionId = selectedSessionId ?? fallbackSessionId;
+  const activeSessionId =
+    selectedSessionId && sessionList?.items.some((item) => item.id === selectedSessionId)
+      ? selectedSessionId
+      : fallbackSessionId;
   const {
     data: activeSession,
     isLoading: isLoadingSession,
@@ -379,6 +411,18 @@ function SessionsPageContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("session_id", sessionId);
     router.replace(`/sessions?${params.toString()}`, { scroll: false });
+  }
+
+  function filterProject(projectId: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (projectId) {
+      params.set("project_id", projectId);
+    } else {
+      params.delete("project_id");
+    }
+    params.delete("session_id");
+    const query = params.toString();
+    router.replace(query ? `/sessions?${query}` : "/sessions", { scroll: false });
   }
 
   return (
@@ -409,8 +453,11 @@ function SessionsPageContent() {
 
           <div className="space-y-5">
             <SessionListCard
+              projects={projects?.items ?? []}
+              selectedProjectId={selectedProjectId}
               sessions={sessionList?.items ?? []}
               selectedSessionId={activeSessionId}
+              onFilterProject={filterProject}
               onSelect={selectSession}
             />
 
@@ -444,10 +491,12 @@ function SessionsPageContent() {
               <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                   <FolderOpen className="h-4 w-4 text-[#2f5be3]" />
-                  No saved sessions yet
+                  {selectedProjectId ? "No sessions in this project yet" : "No saved sessions yet"}
                 </div>
                 <p className="text-sm leading-7 text-slate-600">
-                  Start in the Hybrid Lab, generate a live circuit, and save the workspace to populate this library.
+                  {selectedProjectId
+                    ? "This project does not have any saved sessions yet. Open the Hybrid Lab and save the next workspace into this project."
+                    : "Start in the Hybrid Lab, generate a live circuit, and save the workspace to populate this library."}
                 </p>
                 <Link
                   href="/build"

@@ -23,6 +23,7 @@ import { createArtifact, fetchArchitecture, getArtifactDownloadUrl, runCircuit }
 import {
   useCreateProject,
   useCreateSession,
+  useProjects,
   useSession,
   useSessions,
   useUpdateSession,
@@ -40,6 +41,7 @@ import {
   ArtifactType,
   CircuitRun,
   GcpComponent,
+  Project,
   SavedSession,
   UseCase,
 } from "@/types/api";
@@ -50,6 +52,7 @@ type HistogramTone = StarterStory["histogram"][number]["tone"];
 
 const HISTOGRAM_TONES: HistogramTone[] = ["primary", "accent", "secondary", "warn"];
 const DEFAULT_PROJECT_NAME = "Quantum Foundry demos";
+const NEW_PROJECT_VALUE = "__new_project__";
 const EXPORT_ITEMS: Array<{
   type: Exclude<ArtifactType, "job_output">;
   label: string;
@@ -241,32 +244,54 @@ function mergeLiveStory(
 }
 
 function WorkspaceMemoryCard({
+  currentProjectId,
   projectName,
   sessionTitle,
   currentSessionId,
   saveState,
   saveError,
+  availableProjects,
   recentSessions,
   isBusy,
+  onProjectSelectionChange,
   onProjectNameChange,
   onSessionTitleChange,
   onSave,
   onOpenSession,
   onReset,
 }: {
+  currentProjectId: string | null;
   projectName: string;
   sessionTitle: string;
   currentSessionId: string | null;
   saveState: "idle" | "saving" | "saved";
   saveError: string | null;
+  availableProjects: Project[];
   recentSessions: SavedSession[];
   isBusy: boolean;
+  onProjectSelectionChange: (projectId: string | null) => void;
   onProjectNameChange: (value: string) => void;
   onSessionTitleChange: (value: string) => void;
   onSave: () => void;
   onOpenSession: (session: SavedSession) => void;
   onReset: () => void;
 }) {
+  const projectOptions =
+    currentProjectId && !availableProjects.some((project) => project.id === currentProjectId)
+      ? [
+          {
+            id: currentProjectId,
+            name: projectName || DEFAULT_PROJECT_NAME,
+            description: "",
+            status: "active" as const,
+            session_count: 0,
+            created_at: "",
+            updated_at: "",
+          },
+          ...availableProjects,
+        ]
+      : availableProjects;
+
   return (
     <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -284,14 +309,42 @@ function WorkspaceMemoryCard({
       <div className="space-y-3">
         <label className="block">
           <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Project
+            Project container
+          </span>
+          <select
+            value={currentProjectId ?? NEW_PROJECT_VALUE}
+            onChange={(event) =>
+              onProjectSelectionChange(
+                event.target.value === NEW_PROJECT_VALUE ? null : event.target.value,
+              )
+            }
+            className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+          >
+            <option value={NEW_PROJECT_VALUE}>Create a new project</option>
+            {projectOptions.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            {currentProjectId ? "Selected project" : "New project name"}
           </span>
           <input
             value={projectName}
             onChange={(event) => onProjectNameChange(event.target.value)}
-            className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+            disabled={Boolean(currentProjectId)}
+            className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
             placeholder={DEFAULT_PROJECT_NAME}
           />
+          <span className="mt-2 block text-xs leading-5 text-slate-500">
+            {currentProjectId
+              ? "This workspace will save into the selected project. Switch the picker above to create a new one."
+              : "Use a stable project name to group related saved sessions together."}
+          </span>
         </label>
 
         <label className="block">
@@ -347,7 +400,14 @@ function WorkspaceMemoryCard({
             Recent sessions
           </div>
           <Link
-            href={currentSessionId ? `/sessions?session_id=${currentSessionId}` : "/sessions"}
+            href={
+              currentSessionId || currentProjectId
+                ? `/sessions?${new URLSearchParams({
+                    ...(currentSessionId ? { session_id: currentSessionId } : {}),
+                    ...(currentProjectId ? { project_id: currentProjectId } : {}),
+                  }).toString()}`
+                : "/sessions"
+            }
             className="rounded-full border border-[#d8e2f3] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
           >
             Browse library
@@ -910,6 +970,7 @@ function BuildPageContent() {
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
   const { data: sessionDetail } = useSession(activeSessionId);
+  const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
   const createProjectMutation = useCreateProject();
   const createSessionMutation = useCreateSession();
@@ -1167,8 +1228,10 @@ function BuildPageContent() {
     restoredSessionRef.current = null;
     skippedInitialRestoredRunRef.current = null;
     setCurrentSessionId(null);
+    setCurrentProjectId(null);
     setWorkspaceRun(null);
     setArchitecture(null);
+    setProjectName(DEFAULT_PROJECT_NAME);
     setSessionTitle(buildDefaultSessionTitle(selectedKey, selectedUseCase));
     setSaveState("idle");
     setSaveError(null);
@@ -1213,6 +1276,22 @@ function BuildPageContent() {
 
   const isLoadingWorkspace =
     simulationState === "running";
+
+  function selectProject(projectId: string | null) {
+    if (!projectId) {
+      setCurrentProjectId(null);
+      setProjectName(DEFAULT_PROJECT_NAME);
+      setSaveState("idle");
+      return;
+    }
+
+    const project = projects?.items.find((item) => item.id === projectId);
+    setCurrentProjectId(projectId);
+    if (project) {
+      setProjectName(project.name);
+    }
+    setSaveState("idle");
+  }
 
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
@@ -1433,13 +1512,16 @@ function BuildPageContent() {
 
           <div className="space-y-5">
             <WorkspaceMemoryCard
+              currentProjectId={currentProjectId}
               projectName={projectName}
               sessionTitle={sessionTitle}
               currentSessionId={currentSessionId}
               saveState={saveState}
               saveError={saveError}
+              availableProjects={projects?.items ?? []}
               recentSessions={recentSessions?.items ?? []}
               isBusy={saveState === "saving"}
+              onProjectSelectionChange={selectProject}
               onProjectNameChange={setProjectName}
               onSessionTitleChange={setSessionTitle}
               onSave={saveWorkspace}
