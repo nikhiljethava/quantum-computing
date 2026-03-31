@@ -1,11 +1,13 @@
 .PHONY: install install-python install-frontend up down logs migrate dev-backend dev-worker dev-frontend test test-backend test-core test-worker compose-config
 
+PYTHON ?= $(shell command -v python3.11 2>/dev/null || command -v python3 2>/dev/null)
+
 install: install-python install-frontend
 
 install-python:
-	python3 -m pip install -e packages/foundry-core
-	python3 -m pip install -e 'apps/backend[dev]'
-	python3 -m pip install -e 'apps/worker[dev]'
+	$(PYTHON) -m pip install -e packages/foundry-core
+	$(PYTHON) -m pip install -e 'apps/backend[dev]'
+	$(PYTHON) -m pip install -e 'apps/worker[dev]'
 
 install-frontend:
 	cd apps/frontend && npm install
@@ -29,7 +31,7 @@ dev-backend:
 	PYTHONPATH=apps/backend/src:packages/foundry-core/src uvicorn foundry_backend.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-worker:
-	PYTHONPATH=apps/worker/src:apps/backend/src:packages/foundry-core/src python3 -m foundry_worker.main
+	PYTHONPATH=apps/worker/src:apps/backend/src:packages/foundry-core/src $(PYTHON) -m foundry_worker.main
 
 dev-frontend:
 	cd apps/frontend && npm run dev
@@ -37,10 +39,10 @@ dev-frontend:
 test: test-core test-backend test-worker
 
 test-core:
-	PYTHONPATH=packages/foundry-core/src python3 -m pytest packages/foundry-core/tests
+	MPLCONFIGDIR=/tmp/matplotlib PYTHONPATH=packages/foundry-core/src $(PYTHON) -m pytest packages/foundry-core/tests
 
 test-backend:
-	PYTHONPATH=apps/backend/src:packages/foundry-core/src python3 -m pytest apps/backend/tests
+	MPLCONFIGDIR=/tmp/matplotlib PYTHONPATH=apps/backend/src:packages/foundry-core/src $(PYTHON) -m pytest apps/backend/tests
 
 test-worker:
-	PYTHONPATH=apps/worker/src:apps/backend/src:packages/foundry-core/src python3 -m pytest apps/worker/tests
+	MPLCONFIGDIR=/tmp/matplotlib PYTHONPATH=apps/worker/src:apps/backend/src:packages/foundry-core/src $(PYTHON) -m pytest apps/worker/tests

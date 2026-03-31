@@ -29,7 +29,7 @@ class CircuitResult:
     """Circuit-specific metadata (num_qubits, num_gates, description, etc.)."""
 
 
-def _simulate(circuit: cirq.Circuit, repetitions: int = 1000) -> cirq.ResultTypes:
+def _simulate(circuit: cirq.Circuit, repetitions: int = 1000) -> cirq.Result:
     simulator = cirq.Simulator()
     return simulator.run(circuit, repetitions=repetitions)
 

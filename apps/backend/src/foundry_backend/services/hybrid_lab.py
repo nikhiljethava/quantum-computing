@@ -245,7 +245,7 @@ async def create_circuit_run(
         cirq_code=build_cirq_code(template_key=template_key.value, metadata=circuit_result.metadata),
         histogram=_build_histogram_entries(circuit_result.histogram),
         measurements=circuit_result.measurements,
-        metadata={
+        run_metadata={
             **circuit_result.metadata,
             "label": template["label"],
             "concept": template["concept"],
@@ -276,7 +276,7 @@ def serialize_circuit_run(run: CircuitRun) -> dict[str, Any]:
         "cirq_code": run.cirq_code,
         "histogram": run.histogram,
         "measurements": run.measurements,
-        "metadata": run.metadata,
+        "metadata": run.run_metadata,
         "assessment_preview": run.assessment_preview,
         "label": template["label"],
         "concept": template["concept"],
@@ -298,7 +298,7 @@ async def create_architecture_record(
     if circuit_run:
         context["job_type"] = circuit_run.template_key.value
         context["job_result"] = {
-            "metadata": circuit_run.metadata,
+            "metadata": circuit_run.run_metadata,
             "histogram": circuit_run.histogram,
         }
         if isinstance(circuit_run.assessment_preview, dict):

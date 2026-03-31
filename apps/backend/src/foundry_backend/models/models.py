@@ -207,7 +207,7 @@ class CircuitRun(Base):
     cirq_code: Mapped[str] = mapped_column(Text, nullable=False)
     histogram: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     measurements: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    metadata: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    run_metadata: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
     assessment_preview: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

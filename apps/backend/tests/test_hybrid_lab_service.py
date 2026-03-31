@@ -27,7 +27,7 @@ def test_build_assessment_preview_is_deterministic() -> None:
     preview = build_assessment_preview(JobType.routing, use_case=None)
 
     assert 0 <= preview["score"] <= 100
-    assert preview["horizon"] == "Hybrid experiment now"
+    assert preview["horizon"] == "Prototype now"
     assert "simulation-first" in preview["explanation"][1].lower()
     assert preview["next_action"]
 

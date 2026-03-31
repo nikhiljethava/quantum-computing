@@ -13,7 +13,7 @@ def _mock_circuit_run() -> SimpleNamespace:
         explanation="Hadamard creates an even split before measurement.",
         cirq_code="print('hello quantum')",
         histogram=[{"state": "0", "probability": 50, "count": 500}],
-        metadata={"concept": "Superposition"},
+        run_metadata={"concept": "Superposition"},
         assessment_preview={
             "score": 72,
             "verdict": "Credible prototype candidate now",

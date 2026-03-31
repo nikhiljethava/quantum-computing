@@ -56,7 +56,7 @@ def _build_session_summary(
 ## Circuit
 - Template: `{circuit_run.template_key.value}`
 - Prompt: {circuit_run.prompt}
-- Concept: {circuit_run.metadata.get('concept', 'N/A')}
+- Concept: {circuit_run.run_metadata.get('concept', 'N/A')}
 
 ## Use Case
 {use_case_line}

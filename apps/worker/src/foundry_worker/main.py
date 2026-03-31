@@ -177,7 +177,7 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
         "use_case_id": str(run.use_case_id) if run.use_case_id else None,
         "session_id": str(run.session_id) if run.session_id else None,
         "histogram": run.histogram,
-        "metadata": run.metadata,
+        "metadata": run.run_metadata,
         "job_output_artifact_uri": artifact_uri,
         "job_output_size": len(circuit_bytes),
         "architecture": {
