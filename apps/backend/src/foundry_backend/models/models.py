@@ -42,6 +42,7 @@ class JobType(str, enum.Enum):
     grover = "grover"
     routing = "routing"
     chemistry = "chemistry"
+    session_summary_export = "session_summary_export"
 
 
 class ArtifactType(str, enum.Enum):

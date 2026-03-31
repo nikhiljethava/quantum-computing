@@ -908,12 +908,14 @@ function ExportCard({
   canExport,
   hasArchitecture,
   exportingType,
+  exportStatusMessage,
   exportError,
   onExport,
 }: {
   canExport: boolean;
   hasArchitecture: boolean;
   exportingType: Exclude<ArtifactType, "job_output"> | null;
+  exportStatusMessage: string | null;
   exportError: string | null;
   onExport: (type: Exclude<ArtifactType, "job_output">) => void;
 }) {
@@ -966,6 +968,14 @@ function ExportCard({
       <div className="mt-4 rounded-[18px] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
         Keep the exports honest: label simulation-first assumptions, note missing evidence, and preserve the chosen time horizon in the bundle.
       </div>
+      {exportStatusMessage ? (
+        <div className="mt-4 rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
+            Worker-backed export
+          </div>
+          {exportStatusMessage}
+        </div>
+      ) : null}
       {exportError ? (
         <div className="mt-4 rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-4 text-sm leading-6 text-[#b91c1c]">
           {exportError}
@@ -998,11 +1008,13 @@ function BuildPageContent() {
   const [sessionTitle, setSessionTitle] = useState(buildDefaultSessionTitle(initialKey, null));
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exportJobId, setExportJobId] = useState<string | null>(null);
   const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
   const [backgroundRunState, setBackgroundRunState] = useState<"idle" | "queued" | "hydrating">("idle");
   const requestIdRef = useRef(0);
   const restoredSessionRef = useRef<string | null>(null);
   const skippedInitialRestoredRunRef = useRef<string | null>(null);
+  const handledExportJobRef = useRef<string | null>(null);
   const handledBackgroundJobRef = useRef<string | null>(null);
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
@@ -1010,6 +1022,7 @@ function BuildPageContent() {
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
   const submitJobMutation = useSubmitJob();
+  const { data: exportJob } = useJob(exportJobId);
   const { data: backgroundJob } = useJob(backgroundJobId);
   const createProjectMutation = useCreateProject();
   const createSessionMutation = useCreateSession();
@@ -1191,6 +1204,53 @@ function BuildPageContent() {
   }, [backgroundJob, backgroundJobId, hydrateBackgroundRun]);
 
   useEffect(() => {
+    if (!exportJobId || !exportJob) return;
+
+    if (exportJob.status === "PENDING" || exportJob.status === "RUNNING") {
+      return;
+    }
+
+    if (handledExportJobRef.current === exportJob.id) {
+      return;
+    }
+    handledExportJobRef.current = exportJob.id;
+
+    if (exportJob.status === "FAILED") {
+      setExportError(
+        exportJob.error_message || "The worker could not generate the session summary export.",
+      );
+      setExportingType(null);
+      setExportJobId(null);
+      return;
+    }
+
+    if (exportJob.status === "COMPLETED") {
+      const artifactId =
+        typeof exportJob.result?.artifact_id === "string" ? exportJob.result.artifact_id : null;
+      const filename =
+        typeof exportJob.result?.filename === "string" ? exportJob.result.filename : "session_summary.md";
+
+      if (!artifactId) {
+        setExportError("The worker completed without returning an export artifact identifier.");
+        setExportingType(null);
+        setExportJobId(null);
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = getArtifactDownloadUrl(artifactId);
+      link.download = filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setExportError(null);
+      setExportingType(null);
+      setExportJobId(null);
+    }
+  }, [exportJob, exportJobId]);
+
+  useEffect(() => {
     if (activeSessionId && !sessionDetail) {
       return;
     }
@@ -1361,6 +1421,8 @@ function BuildPageContent() {
   function openSavedSession(session: SavedSession) {
     restoredSessionRef.current = null;
     skippedInitialRestoredRunRef.current = null;
+    handledExportJobRef.current = null;
+    setExportJobId(null);
     handledBackgroundJobRef.current = null;
     setBackgroundJobId(null);
     setBackgroundRunState("idle");
@@ -1383,6 +1445,8 @@ function BuildPageContent() {
   function resetWorkspace() {
     restoredSessionRef.current = null;
     skippedInitialRestoredRunRef.current = null;
+    handledExportJobRef.current = null;
+    setExportJobId(null);
     handledBackgroundJobRef.current = null;
     setBackgroundJobId(null);
     setBackgroundRunState("idle");
@@ -1410,6 +1474,19 @@ function BuildPageContent() {
     setExportError(null);
 
     try {
+      if (type === "session_summary") {
+        handledExportJobRef.current = null;
+        const job = await submitJobMutation.mutateAsync({
+          job_type: "session_summary_export",
+          payload: {
+            circuit_run_id: workspaceRun.id,
+            architecture_record_id: architecture?.id ?? undefined,
+          },
+        });
+        setExportJobId(job.id);
+        return;
+      }
+
       const artifact = await createArtifact({
         artifact_type: type,
         circuit_run_id: workspaceRun.id,
@@ -1428,8 +1505,11 @@ function BuildPageContent() {
           ? error.message
           : "The export could not be generated.",
       );
+      setExportJobId(null);
     } finally {
-      setExportingType(null);
+      if (type !== "session_summary") {
+        setExportingType(null);
+      }
     }
   }
 
@@ -1443,6 +1523,12 @@ function BuildPageContent() {
         : backgroundJob?.status === "PENDING"
           ? "Background run queued. The worker will pick up the job and persist the next circuit run."
           : null;
+  const exportStatusMessage =
+    exportJob?.status === "RUNNING"
+      ? "Worker is generating the session summary in the background. The download will start automatically when it completes."
+      : exportJob?.status === "PENDING"
+        ? "Session summary export queued. The worker will package the artifact and attach it to this workspace history."
+        : null;
 
   function selectProject(projectId: string | null) {
     if (!projectId) {
@@ -1724,6 +1810,7 @@ function BuildPageContent() {
               canExport={Boolean(workspaceRun)}
               hasArchitecture={Boolean(architecture?.id)}
               exportingType={exportingType}
+              exportStatusMessage={exportStatusMessage}
               exportError={exportError}
               onExport={exportArtifact}
             />

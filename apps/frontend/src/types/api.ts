@@ -12,7 +12,13 @@ export type IndustryTag =
   | "other";
 
 export type Horizon = "near-term" | "mid-term" | "long-term";
-export type JobType = "coin_flip" | "bell_state" | "grover" | "routing" | "chemistry";
+export type JobType =
+  | "coin_flip"
+  | "bell_state"
+  | "grover"
+  | "routing"
+  | "chemistry"
+  | "session_summary_export";
 export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 export type ArtifactType =
   | "job_output"

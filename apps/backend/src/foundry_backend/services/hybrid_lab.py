@@ -220,6 +220,9 @@ async def create_circuit_run(
 ) -> CircuitRun:
     """Run a synchronous toy circuit and persist the result for the Build workspace."""
 
+    if template_key not in TEMPLATE_LIBRARY:
+        raise ValueError(f"Unsupported circuit template: {template_key.value}")
+
     template = TEMPLATE_LIBRARY[template_key]
     factory = CIRCUIT_REGISTRY[template_key.value]
     parameters = {**template["parameters"], **(parameter_overrides or {})}

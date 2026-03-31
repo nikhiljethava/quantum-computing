@@ -144,12 +144,12 @@ class AssessmentRead(BaseModel):
 
 
 class JobCreate(BaseModel):
-    """Request body for an async worker-backed circuit job."""
+    """Request body for an async worker-backed circuit or export job."""
 
     job_type: JobType
     payload: dict[str, Any] = Field(
         default_factory=dict,
-        description="Circuit-specific parameters. Defaults appropriate per job type.",
+        description="Job-specific parameters for simulation or export generation.",
     )
 
 

@@ -1,6 +1,7 @@
 """Artifact generation helpers for exports and worker outputs."""
 
 import json
+import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -147,6 +148,7 @@ async def create_export_artifact(
     circuit_run: CircuitRun,
     architecture_record: ArchitectureRecord | None,
     use_case: UseCase | None,
+    job_id: uuid.UUID | None = None,
 ) -> Artifact:
     """Generate, persist, and register an export artifact."""
 
@@ -164,6 +166,7 @@ async def create_export_artifact(
     storage_uri = await storage.save(content=content, filename=filename, content_type=content_type)
 
     artifact = Artifact(
+        job_id=job_id,
         artifact_type=artifact_type,
         circuit_run_id=circuit_run.id,
         architecture_record_id=architecture_record.id if architecture_record else None,

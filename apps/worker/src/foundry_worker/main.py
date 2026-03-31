@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from foundry_backend.models.models import ArtifactType, JobType
+from foundry_backend.services.artifacts import create_export_artifact, serialize_artifact
 from foundry_core.storage import get_storage_backend
-from foundry_backend.models.models import JobType
 from foundry_backend.services.hybrid_lab import create_architecture_record, create_circuit_run
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,57 @@ def _safe_uuid(value: object, field_name: str) -> uuid.UUID | None:
         raise ValueError(f"Invalid {field_name}: {value}") from exc
 
 
-async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload: dict) -> dict:
+async def _execute_export_job(db: AsyncSession, *, job_id: str, payload: dict) -> dict:
+    """Generate a worker-backed export artifact and return its metadata."""
+
+    # Import models here to avoid eager ORM initialization during module import.
+    from foundry_backend.models.models import ArchitectureRecord, CircuitRun, UseCase  # type: ignore[import]
+
+    circuit_run_id = _safe_uuid(payload.get("circuit_run_id"), "circuit_run_id")
+    if circuit_run_id is None:
+        raise ValueError("circuit_run_id is required for session_summary_export jobs.")
+
+    circuit_run = await db.get(CircuitRun, circuit_run_id)
+    if circuit_run is None:
+        raise ValueError(f"CircuitRun {circuit_run_id} not found.")
+
+    architecture_record = None
+    architecture_record_id = _safe_uuid(payload.get("architecture_record_id"), "architecture_record_id")
+    if architecture_record_id is not None:
+        architecture_record = await db.get(ArchitectureRecord, architecture_record_id)
+        if architecture_record is None:
+            raise ValueError(f"ArchitectureRecord {architecture_record_id} not found.")
+    else:
+        stmt = (
+            select(ArchitectureRecord)
+            .where(ArchitectureRecord.circuit_run_id == circuit_run.id)
+            .order_by(ArchitectureRecord.created_at.desc())
+            .limit(1)
+        )
+        architecture_record = (await db.execute(stmt)).scalar_one_or_none()
+
+    use_case = await db.get(UseCase, circuit_run.use_case_id) if circuit_run.use_case_id else None
+    artifact = await create_export_artifact(
+        db,
+        artifact_type=ArtifactType.session_summary,
+        circuit_run=circuit_run,
+        architecture_record=architecture_record,
+        use_case=use_case,
+        job_id=uuid.UUID(job_id),
+    )
+    serialized = serialize_artifact(artifact)
+    return {
+        "artifact_id": str(serialized["id"]),
+        "artifact_type": serialized["artifact_type"].value,
+        "filename": serialized["filename"],
+        "download_path": serialized["download_path"],
+        "content_type": serialized["content_type"],
+        "size_bytes": serialized["size_bytes"],
+        "created_at": serialized["created_at"].isoformat(),
+    }
+
+
+async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, payload: dict) -> dict:
     """Run the async simulation job and return JSON-safe result metadata."""
 
     # Import models here to avoid eager ORM initialization during module import.
@@ -127,8 +178,8 @@ async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload:
         "session_id": str(run.session_id) if run.session_id else None,
         "histogram": run.histogram,
         "metadata": run.metadata,
-        "artifact_uri": artifact_uri,
-        "circuit_text_size": len(circuit_bytes),
+        "job_output_artifact_uri": artifact_uri,
+        "job_output_size": len(circuit_bytes),
         "architecture": {
             "id": str(architecture_record.id),
             "circuit_run_id": str(architecture_record.circuit_run_id)
@@ -150,6 +201,15 @@ async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload:
             else None,
         },
     }
+
+
+async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload: dict) -> dict:
+    """Dispatch a worker job and return JSON-safe result metadata."""
+
+    if job_type == JobType.session_summary_export.value:
+        return await _execute_export_job(db, job_id=job_id, payload=payload)
+
+    return await _execute_circuit_job(db, job_id=job_id, job_type=job_type, payload=payload)
 
 
 # ---------------------------------------------------------------------------
@@ -182,14 +242,14 @@ async def poll_once(db: AsyncSession) -> int:
         try:
             result = await _execute_job(db, job_id=str(job.id), job_type=job.job_type.value, payload=job.payload)
             job.result = result
-            if result.get("artifact_uri"):
+            if result.get("job_output_artifact_uri"):
                 artifact = Artifact(
                     job_id=job.id,
                     artifact_type=ArtifactType.job_output,
                     filename=f"{job.id}_circuit.txt",
                     content_type="text/plain",
-                    storage_uri=str(result["artifact_uri"]),
-                    size_bytes=int(result.get("circuit_text_size", 0)),
+                    storage_uri=str(result["job_output_artifact_uri"]),
+                    size_bytes=int(result.get("job_output_size", 0)),
                 )
                 db.add(artifact)
             job.status = JobStatus.completed

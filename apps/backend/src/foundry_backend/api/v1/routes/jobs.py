@@ -1,7 +1,4 @@
-"""
-Jobs route — submit circuit simulation jobs and poll for results.
-The worker service picks up PENDING jobs from the DB queue.
-"""
+"""Jobs route for worker-backed simulations and export generation."""
 
 import uuid
 
@@ -10,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.db.session import get_db
-from foundry_backend.models.models import Job, JobStatus
+from foundry_backend.models.models import Job, JobStatus, JobType
 from foundry_backend.schemas.schemas import JobCreate, JobRead
 
 router = APIRouter()
@@ -22,10 +19,16 @@ async def submit_job(
     db: AsyncSession = Depends(get_db),
 ) -> JobRead:
     """
-    Submit a new circuit simulation job.
+    Submit a new worker-backed job.
     Returns 202 Accepted immediately. Poll GET /jobs/{id} for status.
     TODO(gcp-deploy): replace DB queue insertion with Cloud Tasks task creation.
     """
+    if body.job_type == JobType.session_summary_export and not body.payload.get("circuit_run_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="session_summary_export jobs require circuit_run_id in payload.",
+        )
+
     job = Job(job_type=body.job_type, payload=body.payload)
     db.add(job)
     await db.commit()
