@@ -144,8 +144,11 @@ export async function fetchJob(id: string): Promise<Job> {
   return apiFetch<Job>(`/api/v1/jobs/${id}`);
 }
 
-export async function fetchJobs(status?: string): Promise<Job[]> {
-  const qs = status ? `?status=${status}` : "";
+export async function fetchJobs(status?: string, limit = 40): Promise<Job[]> {
+  const query = new URLSearchParams();
+  if (status) query.set("status", status);
+  query.set("limit", String(limit));
+  const qs = `?${query.toString()}`;
   return apiFetch<Job[]>(`/api/v1/jobs${qs}`);
 }
 

@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Atom, Bot, FlaskConical, FolderOpen, Folders, Globe, Map, SlidersHorizontal } from "lucide-react";
+import {
+  Atom,
+  Bot,
+  FlaskConical,
+  FolderOpen,
+  Folders,
+  Globe,
+  ListTodo,
+  Map,
+  SlidersHorizontal,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Learn", icon: Atom, step: "01" },
@@ -12,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/map", label: "Map", icon: Map, step: "05" },
   { href: "/projects", label: "Projects", icon: Folders, step: "06" },
   { href: "/sessions", label: "Saved", icon: FolderOpen, step: "07" },
+  { href: "/jobs", label: "Jobs", icon: ListTodo, step: "08" },
 ];
 
 export function NavigationBar() {

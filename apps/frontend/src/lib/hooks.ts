@@ -29,6 +29,7 @@ import {
   AssessmentInputs,
   CircuitRunCreate,
   IndustryTag,
+  Job,
   JobCreate,
   JobStatus,
   ProjectCreate,
@@ -163,10 +164,19 @@ export function useJob(id: string | null) {
   });
 }
 
-export function useJobs(status?: string) {
+export function useJobs(status?: JobStatus, limit = 40) {
   return useQuery({
-    queryKey: ["jobs", status],
-    queryFn: () => fetchJobs(status),
+    queryKey: ["jobs", status, limit],
+    queryFn: () => fetchJobs(status, limit),
+    refetchInterval: (query) => {
+      const jobs = query.state.data as Job[] | undefined;
+      const hasActiveJobs =
+        jobs?.some((job) => job.status === "PENDING" || job.status === "RUNNING") ?? false;
+      if (status === "PENDING" || status === "RUNNING" || hasActiveJobs) {
+        return 2500;
+      }
+      return false;
+    },
   });
 }
 

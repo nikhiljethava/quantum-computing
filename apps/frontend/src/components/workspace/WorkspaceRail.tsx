@@ -10,7 +10,8 @@ type WorkspaceSection =
   | "hybrid-lab"
   | "exports"
   | "projects"
-  | "saved-sessions";
+  | "saved-sessions"
+  | "jobs";
 
 const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "primer", label: "Primer", href: "/" },
@@ -21,6 +22,7 @@ const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "exports", label: "Map & exports", href: "/map" },
   { key: "projects", label: "Projects", href: "/projects" },
   { key: "saved-sessions", label: "Saved sessions", href: "/sessions" },
+  { key: "jobs", label: "Job activity", href: "/jobs" },
 ];
 
 export function WorkspaceRail({

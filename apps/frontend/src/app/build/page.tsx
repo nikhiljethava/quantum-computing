@@ -909,6 +909,7 @@ function ExportCard({
   hasArchitecture,
   exportingType,
   exportStatusMessage,
+  exportJobHref,
   exportError,
   onExport,
 }: {
@@ -916,6 +917,7 @@ function ExportCard({
   hasArchitecture: boolean;
   exportingType: Exclude<ArtifactType, "job_output"> | null;
   exportStatusMessage: string | null;
+  exportJobHref: string | null;
   exportError: string | null;
   onExport: (type: Exclude<ArtifactType, "job_output">) => void;
 }) {
@@ -974,6 +976,15 @@ function ExportCard({
             Worker-backed export
           </div>
           {exportStatusMessage}
+          <div className="mt-3">
+            <Link
+              href={exportJobHref ?? "/jobs"}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#2f5be3] transition hover:bg-[#dbe5ff]"
+            >
+              Open job activity
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       ) : null}
       {exportError ? (
@@ -1529,6 +1540,8 @@ function BuildPageContent() {
       : exportJob?.status === "PENDING"
         ? "Session summary export queued. The worker will package the artifact and attach it to this workspace history."
         : null;
+  const backgroundJobHref = backgroundJobId ? `/jobs?job_id=${backgroundJobId}` : "/jobs";
+  const exportJobHref = exportJobId ? `/jobs?job_id=${exportJobId}` : "/jobs";
 
   function selectProject(projectId: string | null) {
     if (!projectId) {
@@ -1668,6 +1681,15 @@ function BuildPageContent() {
               Worker-backed run
             </div>
             {backgroundStatusMessage}
+            <div className="mt-3">
+              <Link
+                href={backgroundJobHref}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#2f5be3] transition hover:bg-[#dbe5ff]"
+              >
+                Open job activity
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         ) : null}
 
@@ -1811,6 +1833,7 @@ function BuildPageContent() {
               hasArchitecture={Boolean(architecture?.id)}
               exportingType={exportingType}
               exportStatusMessage={exportStatusMessage}
+              exportJobHref={exportJobHref}
               exportError={exportError}
               onExport={exportArtifact}
             />
