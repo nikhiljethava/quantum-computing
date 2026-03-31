@@ -9,13 +9,15 @@ TODO(gcp-deploy): replace this polling loop with a Cloud Tasks push handler
 import asyncio
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from foundry_core.circuits import CIRCUIT_REGISTRY, CircuitResult
 from foundry_core.storage import get_storage_backend
+from foundry_backend.models.models import JobType
+from foundry_backend.services.hybrid_lab import create_architecture_record, create_circuit_run
 
 logger = logging.getLogger(__name__)
 
@@ -44,29 +46,75 @@ storage = get_storage_backend(backend=STORAGE_BACKEND, artifact_dir=ARTIFACT_DIR
 # ---------------------------------------------------------------------------
 
 
-async def _execute_job(job_id: str, job_type: str, payload: dict) -> dict:
-    """
-    Run the circuit simulation for the given job_type and return a result dict.
-    All results are JSON-serializable.
-    """
-    factory = CIRCUIT_REGISTRY.get(job_type)
-    if not factory:
-        raise ValueError(f"Unknown job_type: {job_type!r}. Available: {list(CIRCUIT_REGISTRY)}")
+SUPPORTED_PARAMETERS = {
+    "coin_flip": ["repetitions"],
+    "bell_state": ["repetitions"],
+    "grover": ["num_qubits", "marked_state", "repetitions"],
+    "routing": ["num_cities", "repetitions"],
+    "chemistry": ["repetitions"],
+}
 
-    # Pass supported payload keys to the factory
-    supported = {
-        "coin_flip": ["repetitions"],
-        "bell_state": ["repetitions"],
-        "grover": ["num_qubits", "marked_state", "repetitions"],
-        "routing": ["num_cities", "repetitions"],
-        "chemistry": ["repetitions"],
+
+def _safe_uuid(value: object, field_name: str) -> uuid.UUID | None:
+    """Parse an optional UUID payload field."""
+
+    if value in (None, ""):
+        return None
+    if isinstance(value, uuid.UUID):
+        return value
+    try:
+        return uuid.UUID(str(value))
+    except ValueError as exc:
+        raise ValueError(f"Invalid {field_name}: {value}") from exc
+
+
+async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload: dict) -> dict:
+    """Run the async simulation job and return JSON-safe result metadata."""
+
+    # Import models here to avoid eager ORM initialization during module import.
+    from foundry_backend.models.models import Session, UseCase  # type: ignore[import]
+
+    try:
+        template_key = JobType(job_type)
+    except ValueError as exc:
+        raise ValueError(f"Unknown job_type: {job_type!r}.") from exc
+
+    use_case_id = _safe_uuid(payload.get("use_case_id"), "use_case_id")
+    session_id = _safe_uuid(payload.get("session_id"), "session_id")
+
+    use_case = None
+    if use_case_id is not None:
+        use_case = await db.get(UseCase, use_case_id)
+        if use_case is None:
+            raise ValueError(f"UseCase {use_case_id} not found.")
+
+    if session_id is not None:
+        session = await db.get(Session, session_id)
+        if session is None:
+            raise ValueError(f"Session {session_id} not found.")
+
+    parameter_overrides = {
+        key: value for key, value in payload.items() if key in SUPPORTED_PARAMETERS.get(job_type, [])
     }
-    filtered_payload = {k: v for k, v in payload.items() if k in supported.get(job_type, [])}
+    prompt = payload.get("prompt")
+    if prompt is not None and not isinstance(prompt, str):
+        raise ValueError("prompt must be a string when provided.")
 
-    circuit_result: CircuitResult = factory(**filtered_payload)
+    run = await create_circuit_run(
+        db=db,
+        template_key=template_key,
+        prompt=prompt,
+        use_case=use_case,
+        session_id=session_id,
+        parameter_overrides=parameter_overrides,
+    )
+    architecture_record = await create_architecture_record(
+        db,
+        circuit_run=run,
+        use_case=use_case,
+    )
 
-    # Persist circuit text as an artifact
-    circuit_bytes = circuit_result.circuit_text.encode()
+    circuit_bytes = run.circuit_text.encode()
     artifact_uri = await storage.save(
         content=circuit_bytes,
         filename=f"{job_id}_circuit.txt",
@@ -74,10 +122,33 @@ async def _execute_job(job_id: str, job_type: str, payload: dict) -> dict:
     )
 
     return {
-        "circuit_text": circuit_result.circuit_text,
-        "histogram": circuit_result.histogram,
-        "metadata": circuit_result.metadata,
+        "circuit_run_id": str(run.id),
+        "use_case_id": str(run.use_case_id) if run.use_case_id else None,
+        "session_id": str(run.session_id) if run.session_id else None,
+        "histogram": run.histogram,
+        "metadata": run.metadata,
         "artifact_uri": artifact_uri,
+        "circuit_text_size": len(circuit_bytes),
+        "architecture": {
+            "id": str(architecture_record.id),
+            "circuit_run_id": str(architecture_record.circuit_run_id)
+            if architecture_record.circuit_run_id
+            else None,
+            "assessment_id": str(architecture_record.assessment_id)
+            if architecture_record.assessment_id
+            else None,
+            "use_case_id": str(architecture_record.use_case_id)
+            if architecture_record.use_case_id
+            else None,
+            "title": architecture_record.title,
+            "summary": architecture_record.summary,
+            "components": architecture_record.components,
+            "connections": architecture_record.connections,
+            "notes": architecture_record.notes,
+            "created_at": architecture_record.created_at.isoformat()
+            if architecture_record.created_at
+            else None,
+        },
     }
 
 
@@ -109,7 +180,7 @@ async def poll_once(db: AsyncSession) -> int:
         await db.commit()
 
         try:
-            result = await _execute_job(str(job.id), job.job_type.value, job.payload)
+            result = await _execute_job(db, job_id=str(job.id), job_type=job.job_type.value, payload=job.payload)
             job.result = result
             if result.get("artifact_uri"):
                 artifact = Artifact(
@@ -118,7 +189,7 @@ async def poll_once(db: AsyncSession) -> int:
                     filename=f"{job.id}_circuit.txt",
                     content_type="text/plain",
                     storage_uri=str(result["artifact_uri"]),
-                    size_bytes=len(result.get("circuit_text", "").encode()),
+                    size_bytes=int(result.get("circuit_text_size", 0)),
                 )
                 db.add(artifact)
             job.status = JobStatus.completed

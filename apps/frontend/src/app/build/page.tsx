@@ -19,13 +19,21 @@ import {
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import { createArtifact, fetchArchitecture, getArtifactDownloadUrl, runCircuit } from "@/lib/api";
+import {
+  createArtifact,
+  fetchArchitecture,
+  fetchCircuitRun,
+  getArtifactDownloadUrl,
+  runCircuit,
+} from "@/lib/api";
 import {
   useCreateProject,
   useCreateSession,
+  useJob,
   useProjects,
   useSession,
   useSessions,
+  useSubmitJob,
   useUpdateSession,
   useUseCase,
 } from "@/lib/hooks";
@@ -240,6 +248,32 @@ function mergeLiveStory(
     architectureNodes: liveArchitecture?.nodes.length ? liveArchitecture.nodes : fallback.architectureNodes,
     optionalNode: liveArchitecture?.optionalNode ?? fallback.optionalNode,
     exportItems: ["Cirq code export", "Assessment JSON", "Architecture JSON", "Session summary"],
+  };
+}
+
+function architectureFromJobResult(result: Record<string, unknown> | null): ArchitectureMap | null {
+  if (!result) return null;
+  const architecture = result.architecture;
+  if (!architecture || typeof architecture !== "object") return null;
+
+  const candidate = architecture as Partial<ArchitectureMap>;
+  if (!candidate.title || !candidate.summary || !Array.isArray(candidate.components)) {
+    return null;
+  }
+
+  return {
+    id: typeof candidate.id === "string" ? candidate.id : null,
+    circuit_run_id:
+      typeof candidate.circuit_run_id === "string" ? candidate.circuit_run_id : null,
+    assessment_id:
+      typeof candidate.assessment_id === "string" ? candidate.assessment_id : null,
+    use_case_id: typeof candidate.use_case_id === "string" ? candidate.use_case_id : null,
+    title: candidate.title,
+    summary: candidate.summary,
+    components: candidate.components,
+    connections: Array.isArray(candidate.connections) ? candidate.connections : [],
+    notes: Array.isArray(candidate.notes) ? candidate.notes : [],
+    created_at: typeof candidate.created_at === "string" ? candidate.created_at : null,
   };
 }
 
@@ -964,14 +998,19 @@ function BuildPageContent() {
   const [sessionTitle, setSessionTitle] = useState(buildDefaultSessionTitle(initialKey, null));
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
+  const [backgroundRunState, setBackgroundRunState] = useState<"idle" | "queued" | "hydrating">("idle");
   const requestIdRef = useRef(0);
   const restoredSessionRef = useRef<string | null>(null);
   const skippedInitialRestoredRunRef = useRef<string | null>(null);
+  const handledBackgroundJobRef = useRef<string | null>(null);
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
   const { data: sessionDetail } = useSession(activeSessionId);
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
+  const submitJobMutation = useSubmitJob();
+  const { data: backgroundJob } = useJob(backgroundJobId);
   const createProjectMutation = useCreateProject();
   const createSessionMutation = useCreateSession();
   const updateSessionMutation = useUpdateSession();
@@ -1016,11 +1055,47 @@ function BuildPageContent() {
     [architecture, selectedUseCase, story, workspaceRun],
   );
 
+  const hydrateBackgroundRun = useCallback(
+    async (runId: string, jobResult: Record<string, unknown> | null) => {
+      try {
+        const run = await fetchCircuitRun(runId);
+        setWorkspaceRun(run);
+
+        const workerArchitecture = architectureFromJobResult(jobResult);
+        if (workerArchitecture) {
+          setArchitecture(workerArchitecture);
+        } else {
+          const nextArchitecture = await fetchArchitecture({
+            circuit_run_id: run.id,
+            use_case_id: run.use_case_id ?? activeUseCaseId ?? undefined,
+          });
+          setArchitecture(nextArchitecture);
+        }
+
+        setOutputTab("results");
+      } catch (error) {
+        setWorkspaceError(
+          error instanceof Error
+            ? error.message
+            : "The background job completed, but the workspace could not be hydrated.",
+        );
+      } finally {
+        setSimulationState("ready");
+        setBackgroundRunState("idle");
+        setBackgroundJobId(null);
+      }
+    },
+    [activeUseCaseId],
+  );
+
   const loadWorkspace = useCallback(
     async (starterKey: StarterKey) => {
       const activeRequestId = requestIdRef.current + 1;
       requestIdRef.current = activeRequestId;
 
+      handledBackgroundJobRef.current = null;
+      setBackgroundJobId(null);
+      setBackgroundRunState("idle");
       setSimulationState("running");
       setWorkspaceError(null);
       setExportError(null);
@@ -1071,6 +1146,51 @@ function BuildPageContent() {
   );
 
   useEffect(() => {
+    if (!backgroundJobId || !backgroundJob) return;
+
+    if (backgroundJob.status === "PENDING" || backgroundJob.status === "RUNNING") {
+      setSimulationState("running");
+      setBackgroundRunState("queued");
+      return;
+    }
+
+    if (handledBackgroundJobRef.current === backgroundJob.id) {
+      return;
+    }
+    handledBackgroundJobRef.current = backgroundJob.id;
+
+    if (backgroundJob.status === "FAILED") {
+      setBackgroundRunState("idle");
+      setSimulationState("ready");
+      setWorkspaceError(
+        backgroundJob.error_message || "The background worker could not finish the circuit run.",
+      );
+      setBackgroundJobId(null);
+      return;
+    }
+
+    if (backgroundJob.status === "COMPLETED") {
+      const runId =
+        typeof backgroundJob.result?.circuit_run_id === "string"
+          ? backgroundJob.result.circuit_run_id
+          : null;
+
+      if (!runId) {
+        setBackgroundRunState("idle");
+        setSimulationState("ready");
+        setWorkspaceError(
+          "The worker completed without returning a persisted circuit run identifier.",
+        );
+        setBackgroundJobId(null);
+        return;
+      }
+
+      setBackgroundRunState("hydrating");
+      void hydrateBackgroundRun(runId, backgroundJob.result);
+    }
+  }, [backgroundJob, backgroundJobId, hydrateBackgroundRun]);
+
+  useEffect(() => {
     if (activeSessionId && !sessionDetail) {
       return;
     }
@@ -1116,6 +1236,9 @@ function BuildPageContent() {
   }
 
   function selectStarter(nextKey: StarterKey) {
+    handledBackgroundJobRef.current = null;
+    setBackgroundJobId(null);
+    setBackgroundRunState("idle");
     setSelectedKey(nextKey);
     setOutputTab("results");
     setFocusedCard(null);
@@ -1132,6 +1255,36 @@ function BuildPageContent() {
   function runSimulation() {
     setOutputTab("results");
     void loadWorkspace(selectedKey);
+  }
+
+  async function queueBackgroundRun() {
+    const activeStory = getStarterStory(selectedKey);
+    handledBackgroundJobRef.current = null;
+    setBackgroundRunState("queued");
+    setSimulationState("running");
+    setWorkspaceError(null);
+    setExportError(null);
+    setSaveState("idle");
+
+    try {
+      const job = await submitJobMutation.mutateAsync({
+        job_type: selectedKey,
+        payload: {
+          prompt: activeStory.prompt,
+          session_id: currentSessionId ?? undefined,
+          use_case_id: activeUseCaseId ?? undefined,
+        },
+      });
+      setBackgroundJobId(job.id);
+    } catch (error) {
+      setBackgroundRunState("idle");
+      setSimulationState("ready");
+      setWorkspaceError(
+        error instanceof Error
+          ? error.message
+          : "The background run could not be queued.",
+      );
+    }
   }
 
   function focusCard(which: FocusCard) {
@@ -1208,6 +1361,9 @@ function BuildPageContent() {
   function openSavedSession(session: SavedSession) {
     restoredSessionRef.current = null;
     skippedInitialRestoredRunRef.current = null;
+    handledBackgroundJobRef.current = null;
+    setBackgroundJobId(null);
+    setBackgroundRunState("idle");
     setSaveState("idle");
     setSaveError(null);
     setWorkspaceError(null);
@@ -1227,6 +1383,9 @@ function BuildPageContent() {
   function resetWorkspace() {
     restoredSessionRef.current = null;
     skippedInitialRestoredRunRef.current = null;
+    handledBackgroundJobRef.current = null;
+    setBackgroundJobId(null);
+    setBackgroundRunState("idle");
     setCurrentSessionId(null);
     setCurrentProjectId(null);
     setWorkspaceRun(null);
@@ -1276,6 +1435,14 @@ function BuildPageContent() {
 
   const isLoadingWorkspace =
     simulationState === "running";
+  const backgroundStatusMessage =
+    backgroundRunState === "hydrating"
+      ? "Background run completed. Syncing the persisted circuit run and architecture back into the workspace."
+      : backgroundJob?.status === "RUNNING"
+        ? "Worker is executing the simulator run now. The result will rehydrate this workspace when it completes."
+        : backgroundJob?.status === "PENDING"
+          ? "Background run queued. The worker will pick up the job and persist the next circuit run."
+          : null;
 
   function selectProject(projectId: string | null) {
     if (!projectId) {
@@ -1376,6 +1543,15 @@ function BuildPageContent() {
           </button>
           <button
             type="button"
+            onClick={queueBackgroundRun}
+            disabled={isLoadingWorkspace}
+            className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+          >
+            <Clock3 className="h-4 w-4" />
+            {backgroundRunState === "idle" ? "Run in worker" : "Worker in progress"}
+          </button>
+          <button
+            type="button"
             onClick={() => setOutputTab("code")}
             className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
           >
@@ -1399,6 +1575,15 @@ function BuildPageContent() {
             Map to GCP
           </button>
         </div>
+
+        {backgroundStatusMessage ? (
+          <div className="mb-6 rounded-[22px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-4 text-sm leading-7 text-slate-600">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
+              Worker-backed run
+            </div>
+            {backgroundStatusMessage}
+          </div>
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_330px]">
           <WorkspaceRail
@@ -1448,6 +1633,7 @@ function BuildPageContent() {
                           key={key}
                           type="button"
                           onClick={() => selectStarter(key)}
+                          disabled={isLoadingWorkspace}
                           className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
                             isActive
                               ? "bg-[#2f5be3] text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)]"

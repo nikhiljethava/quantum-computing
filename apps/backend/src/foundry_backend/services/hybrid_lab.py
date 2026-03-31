@@ -216,12 +216,14 @@ async def create_circuit_run(
     prompt: str | None = None,
     use_case: UseCase | None = None,
     session_id: uuid.UUID | None = None,
+    parameter_overrides: dict[str, Any] | None = None,
 ) -> CircuitRun:
     """Run a synchronous toy circuit and persist the result for the Build workspace."""
 
     template = TEMPLATE_LIBRARY[template_key]
     factory = CIRCUIT_REGISTRY[template_key.value]
-    circuit_result = factory(**template["parameters"])
+    parameters = {**template["parameters"], **(parameter_overrides or {})}
+    circuit_result = factory(**parameters)
 
     assessment_preview = build_assessment_preview(template_key=template_key, use_case=use_case)
 
@@ -245,6 +247,7 @@ async def create_circuit_run(
             "label": template["label"],
             "concept": template["concept"],
             "badge": template["badge"],
+            "parameters": parameters,
         },
         assessment_preview=assessment_preview,
     )
