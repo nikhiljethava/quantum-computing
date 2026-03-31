@@ -341,9 +341,17 @@ function WorkspaceMemoryCard({
       ) : null}
 
       <div className="mt-5">
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-          <Clock3 className="h-4 w-4" />
-          Recent sessions
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <Clock3 className="h-4 w-4" />
+            Recent sessions
+          </div>
+          <Link
+            href={currentSessionId ? `/sessions?session_id=${currentSessionId}` : "/sessions"}
+            className="rounded-full border border-[#d8e2f3] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+          >
+            Browse library
+          </Link>
         </div>
         <div className="space-y-3">
           {recentSessions.length ? (

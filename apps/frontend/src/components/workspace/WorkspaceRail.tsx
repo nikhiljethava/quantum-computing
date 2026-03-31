@@ -8,7 +8,8 @@ type WorkspaceSection =
   | "industry-atlas"
   | "idea-evaluator"
   | "hybrid-lab"
-  | "exports";
+  | "exports"
+  | "saved-sessions";
 
 const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "primer", label: "Primer", href: "/" },
@@ -16,7 +17,8 @@ const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "industry-atlas", label: "Industry atlas", href: "/explore#atlas" },
   { key: "idea-evaluator", label: "Idea evaluator", href: "/assess" },
   { key: "hybrid-lab", label: "Hybrid lab", href: "/build" },
-  { key: "exports", label: "Exports", href: "/map" },
+  { key: "exports", label: "Map & exports", href: "/map" },
+  { key: "saved-sessions", label: "Saved sessions", href: "/sessions" },
 ];
 
 export function WorkspaceRail({
