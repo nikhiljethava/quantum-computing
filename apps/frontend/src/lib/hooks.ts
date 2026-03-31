@@ -7,15 +7,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createArtifact,
   createAssessment,
+  createProject,
+  createSession,
   fetchArchitecture,
   fetchCircuitRun,
   fetchCircuitTemplates,
   fetchJob,
   fetchJobs,
+  fetchProjects,
+  fetchSession,
+  fetchSessions,
   fetchUseCase,
   fetchUseCases,
   runCircuit,
   submitJob,
+  updateSession,
 } from "@/lib/api";
 import {
   ArtifactCreate,
@@ -25,6 +31,9 @@ import {
   IndustryTag,
   JobCreate,
   JobStatus,
+  ProjectCreate,
+  SessionCreate,
+  SessionUpdate,
 } from "@/types/api";
 
 export function useUseCases(industry?: IndustryTag) {
@@ -39,6 +48,57 @@ export function useUseCase(id: string | null) {
     queryKey: ["use-case", id],
     queryFn: () => fetchUseCase(id!),
     enabled: !!id,
+  });
+}
+
+export function useProjects(limit = 20) {
+  return useQuery({
+    queryKey: ["projects", limit],
+    queryFn: () => fetchProjects(limit),
+  });
+}
+
+export function useSessions(params?: { project_id?: string; limit?: number }) {
+  return useQuery({
+    queryKey: ["sessions", params],
+    queryFn: () => fetchSessions(params),
+  });
+}
+
+export function useSession(id: string | null) {
+  return useQuery({
+    queryKey: ["session", id],
+    queryFn: () => fetchSession(id!),
+    enabled: !!id,
+  });
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProjectCreate) => createProject(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+}
+
+export function useCreateSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SessionCreate) => createSession(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+}
+
+export function useUpdateSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: SessionUpdate }) => updateSession(id, body),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["sessions"] });
+      qc.invalidateQueries({ queryKey: ["session", variables.id] });
+    },
   });
 }
 

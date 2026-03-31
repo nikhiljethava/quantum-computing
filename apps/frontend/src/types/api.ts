@@ -20,6 +20,7 @@ export type ArtifactType =
   | "assessment_json"
   | "architecture_json"
   | "session_summary";
+export type ProjectStatus = "draft" | "active" | "archived";
 
 export interface UseCase {
   id: string;
@@ -169,4 +170,69 @@ export interface Artifact {
   size_bytes: number;
   download_path: string;
   created_at: string;
+}
+
+export interface ProjectCreate {
+  name: string;
+  description?: string;
+  status?: ProjectStatus;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  session_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectList {
+  items: Project[];
+  total: number;
+}
+
+export interface SessionCreate {
+  project_id?: string;
+  selected_use_case_id?: string;
+  title: string;
+  current_mode?: string;
+  starter_key: string;
+  notes?: Record<string, unknown>;
+  latest_circuit_run_id?: string;
+}
+
+export interface SessionUpdate {
+  project_id?: string;
+  selected_use_case_id?: string;
+  title?: string;
+  current_mode?: string;
+  starter_key?: string;
+  notes?: Record<string, unknown>;
+  latest_circuit_run_id?: string;
+}
+
+export interface SavedSession {
+  id: string;
+  project_id: string | null;
+  project_name: string | null;
+  selected_use_case_id: string | null;
+  title: string;
+  current_mode: string;
+  starter_key: string;
+  notes: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionList {
+  items: SavedSession[];
+  total: number;
+}
+
+export interface SessionDetail extends SavedSession {
+  latest_circuit_run: CircuitRun | null;
+  latest_architecture: ArchitectureMap | null;
+  artifacts: Artifact[];
 }

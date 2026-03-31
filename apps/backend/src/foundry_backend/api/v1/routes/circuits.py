@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.db.session import get_db
-from foundry_backend.models.models import CircuitRun, UseCase
+from foundry_backend.models.models import CircuitRun, Session, UseCase
 from foundry_backend.schemas.schemas import CircuitRunCreate, CircuitRunRead, CircuitTemplateRead
 from foundry_backend.services.hybrid_lab import create_circuit_run, list_templates, serialize_circuit_run
 
@@ -46,6 +46,11 @@ async def run_circuit(
         use_case = await db.get(UseCase, body.use_case_id)
         if not use_case:
             raise HTTPException(status_code=404, detail=f"UseCase {body.use_case_id} not found.")
+
+    if body.session_id:
+        session = await db.get(Session, body.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail=f"Session {body.session_id} not found.")
 
     run = await create_circuit_run(
         db=db,

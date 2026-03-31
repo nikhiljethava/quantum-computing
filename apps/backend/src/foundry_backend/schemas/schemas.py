@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from foundry_backend.models.models import ArtifactType, IndustryTag, JobStatus, JobType
+from foundry_backend.models.models import ArtifactType, IndustryTag, JobStatus, JobType, ProjectStatus
 
 
 class UseCaseRead(BaseModel):
@@ -28,6 +28,93 @@ class UseCaseList(BaseModel):
     """Paginated use-case list."""
 
     items: list[UseCaseRead]
+    total: int
+
+
+class ProjectCreate(BaseModel):
+    """Request body for creating a saved workspace project."""
+
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    status: ProjectStatus = ProjectStatus.active
+
+
+class ProjectUpdate(BaseModel):
+    """Patch body for updating a project."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    status: ProjectStatus | None = None
+
+
+class ProjectRead(BaseModel):
+    """Read model for a saved project."""
+
+    id: uuid.UUID
+    name: str
+    description: str
+    status: ProjectStatus
+    session_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectList(BaseModel):
+    """Paginated project list."""
+
+    items: list[ProjectRead]
+    total: int
+
+
+class SessionCreate(BaseModel):
+    """Request body for creating a saved workspace session."""
+
+    project_id: uuid.UUID | None = None
+    selected_use_case_id: uuid.UUID | None = None
+    title: str = Field(min_length=1, max_length=200)
+    current_mode: str = "build"
+    starter_key: str = Field(default="coin_flip", min_length=1, max_length=50)
+    notes: dict[str, Any] = Field(default_factory=dict)
+    latest_circuit_run_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional circuit run to attach to this session when saving live workspace state.",
+    )
+
+
+class SessionUpdate(BaseModel):
+    """Patch body for updating a saved workspace session."""
+
+    project_id: uuid.UUID | None = None
+    selected_use_case_id: uuid.UUID | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    current_mode: str | None = None
+    starter_key: str | None = Field(default=None, min_length=1, max_length=50)
+    notes: dict[str, Any] | None = None
+    latest_circuit_run_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional circuit run to attach to this session when updating workspace state.",
+    )
+
+
+class SessionRead(BaseModel):
+    """Read model for a saved workspace session."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID | None = None
+    project_name: str | None = None
+    selected_use_case_id: uuid.UUID | None = None
+    title: str
+    current_mode: str
+    starter_key: str
+    notes: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class SessionList(BaseModel):
+    """Paginated session list."""
+
+    items: list[SessionRead]
     total: int
 
 
@@ -229,3 +316,11 @@ class ArtifactRead(BaseModel):
     size_bytes: int
     download_path: str
     created_at: datetime
+
+
+class SessionDetailRead(SessionRead):
+    """Detailed saved-session view with the latest workspace outputs attached."""
+
+    latest_circuit_run: CircuitRunRead | None = None
+    latest_architecture: ArchitectureRead | None = None
+    artifacts: list[ArtifactRead] = Field(default_factory=list)

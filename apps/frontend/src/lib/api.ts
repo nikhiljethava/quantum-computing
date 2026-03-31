@@ -15,6 +15,14 @@ import {
   IndustryTag,
   Job,
   JobCreate,
+  Project,
+  ProjectCreate,
+  ProjectList,
+  SavedSession,
+  SessionCreate,
+  SessionDetail,
+  SessionList,
+  SessionUpdate,
   UseCase,
   UseCaseList,
 } from "@/types/api";
@@ -58,6 +66,46 @@ export async function fetchUseCases(params?: {
 
 export async function fetchUseCase(id: string): Promise<UseCase> {
   return apiFetch<UseCase>(`/api/v1/use-cases/${id}`);
+}
+
+export async function fetchProjects(limit = 20): Promise<ProjectList> {
+  return apiFetch<ProjectList>(`/api/v1/projects?limit=${limit}`);
+}
+
+export async function createProject(body: ProjectCreate): Promise<Project> {
+  return apiFetch<Project>("/api/v1/projects", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchSessions(params?: {
+  project_id?: string;
+  limit?: number;
+}): Promise<SessionList> {
+  const query = new URLSearchParams();
+  if (params?.project_id) query.set("project_id", params.project_id);
+  if (params?.limit) query.set("limit", String(params.limit));
+  const qs = query.toString() ? `?${query}` : "";
+  return apiFetch<SessionList>(`/api/v1/sessions${qs}`);
+}
+
+export async function fetchSession(id: string): Promise<SessionDetail> {
+  return apiFetch<SessionDetail>(`/api/v1/sessions/${id}`);
+}
+
+export async function createSession(body: SessionCreate): Promise<SavedSession> {
+  return apiFetch<SavedSession>("/api/v1/sessions", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateSession(id: string, body: SessionUpdate): Promise<SavedSession> {
+  return apiFetch<SavedSession>(`/api/v1/sessions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function createAssessment(

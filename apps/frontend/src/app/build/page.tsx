@@ -6,17 +6,28 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import {
   ArrowRight,
   Bot,
+  Clock3,
   Code2,
   FileDown,
+  FolderOpen,
   GitBranch,
   Play,
+  RotateCcw,
+  Save,
   Sparkles,
   Wand2,
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import { createArtifact, fetchArchitecture, getArtifactDownloadUrl, runCircuit } from "@/lib/api";
-import { useUseCase } from "@/lib/hooks";
+import {
+  useCreateProject,
+  useCreateSession,
+  useSession,
+  useSessions,
+  useUpdateSession,
+  useUseCase,
+} from "@/lib/hooks";
 import {
   STARTER_ORDER,
   StarterKey,
@@ -24,13 +35,21 @@ import {
   getStarterStory,
   normalizeStarterKey,
 } from "@/lib/studio-mocks";
-import { ArchitectureMap, ArtifactType, CircuitRun, GcpComponent, UseCase } from "@/types/api";
+import {
+  ArchitectureMap,
+  ArtifactType,
+  CircuitRun,
+  GcpComponent,
+  SavedSession,
+  UseCase,
+} from "@/types/api";
 
 type OutputTab = "results" | "notes" | "code";
 type FocusCard = "assessment" | "architecture" | null;
 type HistogramTone = StarterStory["histogram"][number]["tone"];
 
 const HISTOGRAM_TONES: HistogramTone[] = ["primary", "accent", "secondary", "warn"];
+const DEFAULT_PROJECT_NAME = "Quantum Foundry demos";
 const EXPORT_ITEMS: Array<{
   type: Exclude<ArtifactType, "job_output">;
   label: string;
@@ -84,6 +103,24 @@ function formatScoreLabel(score: number) {
   if (score >= 75) return "Hybrid now";
   if (score >= 60) return "Prototype now";
   return "Hardware later";
+}
+
+function buildDefaultSessionTitle(starterKey: StarterKey, useCase?: UseCase | null) {
+  const starter = getStarterStory(starterKey);
+  if (useCase) {
+    return `${useCase.title} - ${starter.label}`;
+  }
+  return `${starter.label} workspace`;
+}
+
+function formatSessionTime(value: string) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return formatter.format(new Date(value));
 }
 
 function summarizeUseCase(useCase: UseCase | null | undefined) {
@@ -201,6 +238,146 @@ function mergeLiveStory(
     optionalNode: liveArchitecture?.optionalNode ?? fallback.optionalNode,
     exportItems: ["Cirq code export", "Assessment JSON", "Architecture JSON", "Session summary"],
   };
+}
+
+function WorkspaceMemoryCard({
+  projectName,
+  sessionTitle,
+  currentSessionId,
+  saveState,
+  saveError,
+  recentSessions,
+  isBusy,
+  onProjectNameChange,
+  onSessionTitleChange,
+  onSave,
+  onOpenSession,
+  onReset,
+}: {
+  projectName: string;
+  sessionTitle: string;
+  currentSessionId: string | null;
+  saveState: "idle" | "saving" | "saved";
+  saveError: string | null;
+  recentSessions: SavedSession[];
+  isBusy: boolean;
+  onProjectNameChange: (value: string) => void;
+  onSessionTitleChange: (value: string) => void;
+  onSave: () => void;
+  onOpenSession: (session: SavedSession) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Workspace memory
+          </div>
+          <h3 className="mt-1 text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-900">
+            Save and reopen this flow
+          </h3>
+        </div>
+        <FolderOpen className="h-5 w-5 text-[#2f5be3]" />
+      </div>
+
+      <div className="space-y-3">
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Project
+          </span>
+          <input
+            value={projectName}
+            onChange={(event) => onProjectNameChange(event.target.value)}
+            className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+            placeholder={DEFAULT_PROJECT_NAME}
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Session
+          </span>
+          <input
+            value={sessionTitle}
+            onChange={(event) => onSessionTitleChange(event.target.value)}
+            className="w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+            placeholder="Bell state workspace"
+          />
+        </label>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isBusy}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.24)] transition hover:-translate-y-[1px]"
+        >
+          <Save className="h-4 w-4" />
+          {saveState === "saving" ? "Saving..." : currentSessionId ? "Update workspace" : "Save workspace"}
+        </button>
+        <button
+          type="button"
+          onClick={onReset}
+          disabled={isBusy}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          New
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-[18px] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
+        {saveState === "saved"
+          ? "Workspace saved. Future circuit runs will stay attached to this session."
+          : "Save the current Build workspace so you can reopen the latest run, architecture, and export history."}
+      </div>
+
+      {saveError ? (
+        <div className="mt-4 rounded-[18px] border border-[#fecaca] bg-[#fff1f2] p-4 text-sm leading-6 text-[#b91c1c]">
+          {saveError}
+        </div>
+      ) : null}
+
+      <div className="mt-5">
+        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <Clock3 className="h-4 w-4" />
+          Recent sessions
+        </div>
+        <div className="space-y-3">
+          {recentSessions.length ? (
+            recentSessions.map((session) => (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => onOpenSession(session)}
+                className={`w-full rounded-[18px] border px-4 py-3 text-left transition ${
+                  session.id === currentSessionId
+                    ? "border-[#2f5be3] bg-[#eef2ff]"
+                    : "border-[#e2e8f0] bg-[#f8fafc] hover:border-[#c7d7f4]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-slate-800">{session.title}</span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {formatSessionTime(session.updated_at)}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {(session.project_name ?? DEFAULT_PROJECT_NAME)} · {session.starter_key.replaceAll("_", " ")}
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="rounded-[18px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-4 text-sm text-slate-500">
+              Saved sessions will appear here after your first workspace save.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function CircuitCanvas({ story }: { story: StarterStory }) {
@@ -699,10 +876,12 @@ function ExportCard({
 function BuildPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const activeSessionId = searchParams.get("session_id");
   const initialKey = normalizeStarterKey(
     searchParams.get("starter") ?? searchParams.get("circuit"),
   );
-  const selectedUseCaseId = searchParams.get("use_case_id");
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(activeSessionId);
 
   const [selectedKey, setSelectedKey] = useState<StarterKey>(initialKey);
   const [outputTab, setOutputTab] = useState<OutputTab>("results");
@@ -713,14 +892,54 @@ function BuildPageContent() {
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [exportingType, setExportingType] = useState<Exclude<ArtifactType, "job_output"> | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+  const [sessionTitle, setSessionTitle] = useState(buildDefaultSessionTitle(initialKey, null));
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const restoredSessionRef = useRef<string | null>(null);
+  const skippedInitialRestoredRunRef = useRef<string | null>(null);
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
-  const { data: selectedUseCase } = useUseCase(selectedUseCaseId);
+  const { data: sessionDetail } = useSession(activeSessionId);
+  const { data: recentSessions } = useSessions({ limit: 5 });
+  const createProjectMutation = useCreateProject();
+  const createSessionMutation = useCreateSession();
+  const updateSessionMutation = useUpdateSession();
+  const activeUseCaseId = searchParams.get("use_case_id") ?? sessionDetail?.selected_use_case_id ?? null;
+  const { data: selectedUseCase } = useUseCase(activeUseCaseId);
 
   useEffect(() => {
     setSelectedKey(initialKey);
   }, [initialKey]);
+
+  useEffect(() => {
+    setCurrentSessionId(activeSessionId);
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    if (!activeSessionId || !sessionDetail) return;
+    if (restoredSessionRef.current === sessionDetail.id) return;
+
+    restoredSessionRef.current = sessionDetail.id;
+    setCurrentSessionId(sessionDetail.id);
+    setCurrentProjectId(sessionDetail.project_id);
+    setProjectName(sessionDetail.project_name ?? DEFAULT_PROJECT_NAME);
+    setSessionTitle(sessionDetail.title);
+    setSelectedKey(normalizeStarterKey(sessionDetail.starter_key));
+    setWorkspaceRun(sessionDetail.latest_circuit_run);
+    setArchitecture(sessionDetail.latest_architecture);
+    setOutputTab("results");
+    setFocusedCard(null);
+    setSaveState("idle");
+    setSaveError(null);
+    setExportError(null);
+  }, [activeSessionId, sessionDetail]);
+
+  useEffect(() => {
+    if (currentSessionId || sessionTitle.trim()) return;
+    setSessionTitle(buildDefaultSessionTitle(selectedKey, selectedUseCase));
+  }, [currentSessionId, selectedKey, selectedUseCase, sessionTitle]);
 
   const story = useMemo(() => getStarterStory(selectedKey), [selectedKey]);
   const displayStory = useMemo(
@@ -736,13 +955,15 @@ function BuildPageContent() {
       setSimulationState("running");
       setWorkspaceError(null);
       setExportError(null);
+      setSaveState("idle");
 
       try {
         const activeStory = getStarterStory(starterKey);
         const run = await runCircuit({
           template_key: starterKey,
           prompt: activeStory.prompt,
-          use_case_id: selectedUseCaseId ?? undefined,
+          use_case_id: activeUseCaseId ?? undefined,
+          session_id: currentSessionId ?? undefined,
         });
 
         if (requestIdRef.current !== activeRequestId) {
@@ -753,7 +974,7 @@ function BuildPageContent() {
 
         const nextArchitecture = await fetchArchitecture({
           circuit_run_id: run.id,
-          use_case_id: run.use_case_id ?? selectedUseCaseId ?? undefined,
+          use_case_id: run.use_case_id ?? activeUseCaseId ?? undefined,
         });
 
         if (requestIdRef.current !== activeRequestId) {
@@ -777,17 +998,51 @@ function BuildPageContent() {
         }
       }
     },
-    [selectedUseCaseId],
+    [activeUseCaseId, currentSessionId],
   );
 
   useEffect(() => {
+    if (activeSessionId && !sessionDetail) {
+      return;
+    }
+    if (
+      activeSessionId &&
+      sessionDetail?.latest_circuit_run &&
+      skippedInitialRestoredRunRef.current !== sessionDetail.id
+    ) {
+      skippedInitialRestoredRunRef.current = sessionDetail.id;
+      return;
+    }
     void loadWorkspace(selectedKey);
-  }, [loadWorkspace, selectedKey]);
+  }, [activeSessionId, loadWorkspace, selectedKey, sessionDetail]);
 
-  function syncQuery(nextKey: StarterKey) {
+  function syncQuery(
+    nextKey: StarterKey,
+    overrides?: {
+      sessionId?: string | null;
+      useCaseId?: string | null;
+    },
+  ) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("starter", nextKey);
     params.delete("circuit");
+    const nextSessionId =
+      overrides && "sessionId" in overrides ? overrides.sessionId : currentSessionId;
+    const nextUseCaseId =
+      overrides && "useCaseId" in overrides ? overrides.useCaseId : activeUseCaseId;
+
+    if (nextSessionId) {
+      params.set("session_id", nextSessionId);
+    } else {
+      params.delete("session_id");
+    }
+
+    if (nextUseCaseId) {
+      params.set("use_case_id", nextUseCaseId);
+    } else {
+      params.delete("use_case_id");
+    }
+
     router.replace(`/build?${params.toString()}`, { scroll: false });
   }
 
@@ -795,6 +1050,7 @@ function BuildPageContent() {
     setSelectedKey(nextKey);
     setOutputTab("results");
     setFocusedCard(null);
+    setSaveState("idle");
     syncQuery(nextKey);
   }
 
@@ -813,6 +1069,105 @@ function BuildPageContent() {
     setFocusedCard(which);
     const target = which === "assessment" ? assessmentRef.current : architectureRef.current;
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function saveWorkspace() {
+    if (!workspaceRun) {
+      setSaveError("Generate a circuit first so there is a live workspace to save.");
+      return;
+    }
+
+    setSaveState("saving");
+    setSaveError(null);
+
+    try {
+      let nextProjectId = currentProjectId;
+      const trimmedProjectName = projectName.trim() || DEFAULT_PROJECT_NAME;
+      const trimmedSessionTitle =
+        sessionTitle.trim() || buildDefaultSessionTitle(selectedKey, selectedUseCase);
+
+      if (!nextProjectId) {
+        const project = await createProjectMutation.mutateAsync({
+          name: trimmedProjectName,
+          description: "Saved Hybrid Lab workspaces and demo sessions.",
+          status: "active",
+        });
+        nextProjectId = project.id;
+        setCurrentProjectId(project.id);
+        setProjectName(project.name);
+      }
+
+      const body = {
+        project_id: nextProjectId ?? undefined,
+        selected_use_case_id: activeUseCaseId ?? undefined,
+        title: trimmedSessionTitle,
+        current_mode: "build",
+        starter_key: selectedKey,
+        notes: {
+          last_saved_at: new Date().toISOString(),
+          last_architecture_id: architecture?.id ?? null,
+        },
+        latest_circuit_run_id: workspaceRun.id,
+      };
+
+      const savedSession = currentSessionId
+        ? await updateSessionMutation.mutateAsync({
+            id: currentSessionId,
+            body,
+          })
+        : await createSessionMutation.mutateAsync(body);
+
+      setCurrentSessionId(savedSession.id);
+      setCurrentProjectId(savedSession.project_id);
+      setSessionTitle(savedSession.title);
+      setProjectName(savedSession.project_name ?? trimmedProjectName);
+      setSaveState("saved");
+      syncQuery(selectedKey, {
+        sessionId: savedSession.id,
+        useCaseId: savedSession.selected_use_case_id,
+      });
+    } catch (error) {
+      setSaveState("idle");
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "The workspace could not be saved.",
+      );
+    }
+  }
+
+  function openSavedSession(session: SavedSession) {
+    restoredSessionRef.current = null;
+    skippedInitialRestoredRunRef.current = null;
+    setSaveState("idle");
+    setSaveError(null);
+    setWorkspaceError(null);
+    setExportError(null);
+    setWorkspaceRun(null);
+    setArchitecture(null);
+    setCurrentSessionId(session.id);
+    setCurrentProjectId(session.project_id);
+    setProjectName(session.project_name ?? DEFAULT_PROJECT_NAME);
+    setSessionTitle(session.title);
+    syncQuery(normalizeStarterKey(session.starter_key), {
+      sessionId: session.id,
+      useCaseId: session.selected_use_case_id,
+    });
+  }
+
+  function resetWorkspace() {
+    restoredSessionRef.current = null;
+    skippedInitialRestoredRunRef.current = null;
+    setCurrentSessionId(null);
+    setWorkspaceRun(null);
+    setArchitecture(null);
+    setSessionTitle(buildDefaultSessionTitle(selectedKey, selectedUseCase));
+    setSaveState("idle");
+    setSaveError(null);
+    syncQuery(selectedKey, {
+      sessionId: null,
+      useCaseId: activeUseCaseId,
+    });
   }
 
   async function exportArtifact(type: Exclude<ArtifactType, "job_output">) {
@@ -1069,6 +1424,20 @@ function BuildPageContent() {
           </div>
 
           <div className="space-y-5">
+            <WorkspaceMemoryCard
+              projectName={projectName}
+              sessionTitle={sessionTitle}
+              currentSessionId={currentSessionId}
+              saveState={saveState}
+              saveError={saveError}
+              recentSessions={recentSessions?.items ?? []}
+              isBusy={saveState === "saving"}
+              onProjectNameChange={setProjectName}
+              onSessionTitleChange={setSessionTitle}
+              onSave={saveWorkspace}
+              onOpenSession={openSavedSession}
+              onReset={resetWorkspace}
+            />
             <div ref={assessmentRef}>
               <AssessmentCard story={displayStory} focused={focusedCard === "assessment"} />
             </div>

@@ -9,11 +9,15 @@ from foundry_backend.api.v1.routes import (
     circuits,
     health,
     jobs,
+    projects,
+    sessions,
     use_cases,
 )
 
 router = APIRouter()
 router.include_router(health.router, prefix="/health", tags=["health"])
+router.include_router(projects.router, prefix="/projects", tags=["projects"])
+router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(use_cases.router, prefix="/use-cases", tags=["use-cases"])
 router.include_router(assessments.router, prefix="/assessments", tags=["assessments"])
 router.include_router(circuits.router, prefix="/circuits", tags=["circuits"])
