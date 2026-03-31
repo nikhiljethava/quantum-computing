@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import {
   ArrowRight,
   Clock3,
@@ -10,14 +10,24 @@ import {
   FileStack,
   FolderOpen,
   GitBranch,
+  ListTodo,
   Sparkles,
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import { getArtifactDownloadUrl } from "@/lib/api";
-import { useProjects, useSession, useSessions, useUseCase } from "@/lib/hooks";
+import {
+  buildJobHref,
+  formatJobStatusLabel,
+  formatJobTime,
+  formatJobTypeLabel,
+  getJobStatusClasses,
+  getJobsForSession,
+  summarizeJobs,
+} from "@/lib/job-activity";
+import { useJobs, useProjects, useSession, useSessions, useUseCase } from "@/lib/hooks";
 import { getStarterStory, normalizeStarterKey } from "@/lib/studio-mocks";
-import { Artifact, Project, SavedSession, SessionDetail } from "@/types/api";
+import { Artifact, Job, Project, SavedSession, SessionDetail } from "@/types/api";
 
 function formatSessionTime(value: string) {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -160,12 +170,16 @@ function SessionListCard({
 
 function SessionDetailPanel({
   session,
+  jobs,
 }: {
   session: SessionDetail;
+  jobs: Job[];
 }) {
   const starter = getStarterStory(session.starter_key);
   const useCaseId = session.selected_use_case_id ?? session.latest_circuit_run?.use_case_id ?? null;
   const { data: useCase } = useUseCase(useCaseId);
+  const jobSummary = useMemo(() => summarizeJobs(jobs), [jobs]);
+  const latestJobs = jobs.slice(0, 3);
 
   return (
     <div className="space-y-5">
@@ -331,6 +345,69 @@ function SessionDetailPanel({
 
         <div className="space-y-5">
           <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <ListTodo className="h-4 w-4 text-[#2f5be3]" />
+                Job activity
+              </div>
+              <Link
+                href={latestJobs[0] ? buildJobHref(latestJobs[0].id) : "/jobs"}
+                className="rounded-full border border-[#d8e2f3] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+              >
+                Open jobs
+              </Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                ["Tracked", String(jobSummary.total)],
+                ["Active", String(jobSummary.pending + jobSummary.running)],
+                ["Completed", String(jobSummary.completed)],
+                ["Failed", String(jobSummary.failed)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-[20px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    {label}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-slate-800">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {latestJobs.length ? (
+                latestJobs.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={buildJobHref(job.id)}
+                    className="block rounded-[20px] border border-[#e2e8f0] bg-[#f8fafc] p-4 transition hover:border-[#c7d7f4] hover:bg-white"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {formatJobTypeLabel(job.job_type)}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {formatJobTime(job.created_at)}
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${getJobStatusClasses(job.status)}`}
+                      >
+                        {formatJobStatusLabel(job.status)}
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[20px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-500">
+                  This session does not have any tracked worker jobs yet. Queue a background run or summary export from Build to populate this history.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
               <FolderOpen className="h-4 w-4 text-[#2f5be3]" />
               Export bundle
@@ -415,6 +492,11 @@ function SessionsPageContent() {
     isLoading: isLoadingSession,
     error: activeSessionError,
   } = useSession(activeSessionId);
+  const { data: jobs = [] } = useJobs(undefined, 80);
+  const sessionJobs = useMemo(
+    () => (activeSession ? getJobsForSession(jobs, activeSession) : []),
+    [activeSession, jobs],
+  );
 
   function selectSession(sessionId: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -531,7 +613,7 @@ function SessionsPageContent() {
                 </span>
               </div>
             ) : (
-              <SessionDetailPanel session={activeSession} />
+              <SessionDetailPanel session={activeSession} jobs={sessionJobs} />
             )}
           </div>
         </div>

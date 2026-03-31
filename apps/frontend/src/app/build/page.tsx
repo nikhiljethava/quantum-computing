@@ -1492,6 +1492,7 @@ function BuildPageContent() {
           payload: {
             circuit_run_id: workspaceRun.id,
             architecture_record_id: architecture?.id ?? undefined,
+            session_id: currentSessionId ?? undefined,
           },
         });
         setExportJobId(job.id);
