@@ -189,6 +189,15 @@ function SessionDetailPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {session.project_id ? (
+              <Link
+                href={`/projects?project_id=${session.project_id}`}
+                className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+              >
+                Open project view
+                <FolderOpen className="h-4 w-4" />
+              </Link>
+            ) : null}
             <Link
               href={buildSessionHref(session)}
               className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"

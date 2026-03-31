@@ -9,6 +9,7 @@ type WorkspaceSection =
   | "idea-evaluator"
   | "hybrid-lab"
   | "exports"
+  | "projects"
   | "saved-sessions";
 
 const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
@@ -18,6 +19,7 @@ const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "idea-evaluator", label: "Idea evaluator", href: "/assess" },
   { key: "hybrid-lab", label: "Hybrid lab", href: "/build" },
   { key: "exports", label: "Map & exports", href: "/map" },
+  { key: "projects", label: "Projects", href: "/projects" },
   { key: "saved-sessions", label: "Saved sessions", href: "/sessions" },
 ];
 
