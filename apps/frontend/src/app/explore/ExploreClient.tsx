@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, ArrowRight, Info, SlidersHorizontal } from "lucide-react";
+import { Globe, ArrowRight, Info, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useUseCases } from "@/lib/hooks";
 import { IndustryTag, UseCase } from "@/types/api";
@@ -53,9 +53,11 @@ function ComplexityBar({ score }: { score: number }) {
 function UseCaseCard({
   uc,
   onAssess,
+  onDetails,
 }: {
   uc: UseCase;
   onAssess: (uc: UseCase) => void;
+  onDetails: (uc: UseCase) => void;
 }) {
   const horizonColor = HORIZON_COLORS[uc.horizon] ?? "#94a3b8";
   const starter = getStarterByIndustry(uc.industry);
@@ -139,19 +141,29 @@ function UseCaseCard({
         <ComplexityBar score={uc.complexity_score} />
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.25rem" }}>
-          <button
-            className="btn-primary"
-            style={{ flex: 1, justifyContent: "center", fontSize: "0.8rem", padding: "0.5rem" }}
-            onClick={() => onAssess(uc)}
-            id={`assess-${uc.id}`}
-          >
-            <SlidersHorizontal size={13} /> Assess Fit
-          </button>
+        <div style={{ display: "grid", gap: "0.5rem", marginTop: "1.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+            <button
+              className="btn-ghost"
+              style={{ justifyContent: "center", fontSize: "0.8rem", padding: "0.5rem" }}
+              onClick={() => onDetails(uc)}
+              id={`details-${uc.id}`}
+            >
+              <Info size={13} /> View Details
+            </button>
+            <button
+              className="btn-primary"
+              style={{ justifyContent: "center", fontSize: "0.8rem", padding: "0.5rem" }}
+              onClick={() => onAssess(uc)}
+              id={`assess-${uc.id}`}
+            >
+              <SlidersHorizontal size={13} /> Assess Fit
+            </button>
+          </div>
           <Link
             href={`/build?starter=${starter}&use_case_id=${uc.id}`}
             className="btn-ghost"
-            style={{ padding: "0.5rem 0.875rem", fontSize: "0.8rem" }}
+            style={{ justifyContent: "center", padding: "0.6rem 0.875rem", fontSize: "0.8rem" }}
           >
             Open Hybrid Lab <ArrowRight size={13} />
           </Link>
@@ -161,11 +173,171 @@ function UseCaseCard({
   );
 }
 
+function UseCaseDetailModal({
+  useCase,
+  onClose,
+}: {
+  useCase: UseCase;
+  onClose: () => void;
+}) {
+  const starter = getStarterByIndustry(useCase.industry);
+  const maturityLabel =
+    useCase.horizon === "near-term"
+      ? "Today demo / hybrid research now"
+      : useCase.horizon === "mid-term"
+        ? "Hybrid research now"
+        : "Fault-tolerant later";
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.7)",
+          zIndex: 100,
+          backdropFilter: "blur(4px)",
+        }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 40 }}
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "min(520px, 100vw)",
+          background: "var(--color-space)",
+          borderLeft: "1px solid var(--color-border)",
+          zIndex: 101,
+          overflowY: "auto",
+          padding: "2rem",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+          <div>
+            <div
+              className="chip"
+              style={{
+                background: "rgba(99,102,241,0.1)",
+                color: "var(--color-glow-primary)",
+                border: "1px solid rgba(99,102,241,0.2)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <Info size={11} /> Use case detail
+            </div>
+            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, lineHeight: 1.25 }}>{useCase.title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close use case details"
+            style={{ background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer", padding: "0.25rem" }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.5rem" }}>
+          <span className="chip" style={{ background: "rgba(99,102,241,0.1)", color: "var(--color-glow-primary)", border: "1px solid rgba(99,102,241,0.2)", textTransform: "capitalize" }}>
+            {useCase.industry}
+          </span>
+          <span className="chip" style={{ background: "rgba(45,212,191,0.12)", color: "var(--color-glow-secondary)", border: "1px solid rgba(45,212,191,0.2)" }}>
+            {maturityLabel}
+          </span>
+          <span className="chip" style={{ background: "rgba(255,255,255,0.06)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+            Complexity {useCase.complexity_score.toFixed(1)} / 5
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gap: "1rem" }}>
+          {[
+            ["Problem statement", useCase.description],
+            [
+              "Why classical gets hard",
+              `As the workload scales, ${useCase.description.toLowerCase()} This pushes cost, time, or accuracy limits for purely classical baselines.`,
+            ],
+            ["Why quantum might help", useCase.quantum_approach],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              style={{
+                border: "1px solid var(--color-border)",
+                borderRadius: "1rem",
+                padding: "1rem",
+                background: "rgba(255,255,255,0.04)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>
+                {label}
+              </div>
+              <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            marginTop: "1.5rem",
+            border: "1px solid rgba(99,102,241,0.16)",
+            borderRadius: "1rem",
+            padding: "1rem",
+            background: "rgba(99,102,241,0.06)",
+          }}
+        >
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-glow-primary)", marginBottom: "0.5rem" }}>
+            Recommended starter lane
+          </div>
+          <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
+            Open this use case in the Hybrid Lab with the <strong style={{ color: "var(--color-text-primary)" }}>{getStarterByIndustry(useCase.industry).replaceAll("_", " ")}</strong> starter so the circuit, assessment, and architecture stay tied to the same narrative.
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: "0.75rem", marginTop: "1.5rem" }}>
+          <button
+            className="btn-primary"
+            style={{ justifyContent: "center" }}
+            onClick={onClose}
+          >
+            Close Details
+          </button>
+          <Link
+            href={`/assess?starter=${starter}&use_case_id=${useCase.id}`}
+            className="btn-ghost"
+            style={{ justifyContent: "center" }}
+          >
+            Open Assess View <ArrowRight size={14} />
+          </Link>
+          <Link
+            href={`/build?starter=${starter}&use_case_id=${useCase.id}`}
+            className="btn-ghost"
+            style={{ justifyContent: "center" }}
+          >
+            Open Hybrid Lab <ArrowRight size={14} />
+          </Link>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ExploreClient() {
   const [industry, setIndustry] = useState<IndustryTag | "all">("all");
   const [assessTarget, setAssessTarget] = useState<UseCase | null>(null);
+  const [detailTarget, setDetailTarget] = useState<UseCase | null>(null);
 
   const { data, isLoading, isError } = useUseCases(
     industry === "all" ? undefined : industry
@@ -244,14 +416,21 @@ export default function ExploreClient() {
             }}
           >
             {data.items.map((uc) => (
-              <UseCaseCard key={uc.id} uc={uc} onAssess={setAssessTarget} />
+              <UseCaseCard
+                key={uc.id}
+                uc={uc}
+                onAssess={setAssessTarget}
+                onDetails={setDetailTarget}
+              />
             ))}
           </div>
         </AnimatePresence>
       )}
 
-      {/* Assess modal */}
       <AnimatePresence>
+        {detailTarget && (
+          <UseCaseDetailModal useCase={detailTarget} onClose={() => setDetailTarget(null)} />
+        )}
         {assessTarget && (
           <AssessModal useCase={assessTarget} onClose={() => setAssessTarget(null)} />
         )}

@@ -1,15 +1,19 @@
 # GCP Quantum Foundry
 
 GCP Quantum Foundry is a production-minded, local-first monorepo for a
-visual-first interactive quantum launchpad. The product is designed around a
-single guided journey:
+visual-first interactive quantum launchpad. The product is organized around one
+guided journey:
 
 `Learn -> Explore -> Assess -> Build -> Map`
 
-The current repository focus is Phase 1 scaffolding and developer experience.
-It already includes a Next.js frontend shell, a FastAPI backend shell, a
-separate worker process, Docker-based local infrastructure, and a shared Python
-package for quantum/domain logic.
+The app now includes a complete local demo experience with:
+
+- a concept-first Learn surface
+- an industry atlas with live use-case detail and assessment entry points
+- a live QALS-lite Assess workspace
+- a Build / Hybrid Lab that generates and simulates toy circuits
+- a live architecture mapper and downloadable artifacts
+- saved projects, saved sessions, and worker job activity
 
 ## Product guardrails
 
@@ -35,7 +39,9 @@ package for quantum/domain logic.
 │       ├── src/foundry_worker
 │       └── tests
 ├── docs
-│   └── architecture.md
+│   ├── api.md
+│   ├── architecture.md
+│   └── demo-script.md
 ├── packages
 │   └── foundry-core
 │       ├── src/foundry_core
@@ -44,6 +50,20 @@ package for quantum/domain logic.
 ├── docker-compose.yml
 └── Makefile
 ```
+
+## What you can preview
+
+After startup, the strongest routes are:
+
+- `http://localhost:3000/` - Learn
+- `http://localhost:3000/explore` - Industry Atlas
+- `http://localhost:3000/assess` - live QALS-lite workspace
+- `http://localhost:3000/build` - Hybrid Lab
+- `http://localhost:3000/map` - live architecture mapper
+- `http://localhost:3000/projects` - saved projects
+- `http://localhost:3000/sessions` - saved sessions
+- `http://localhost:3000/jobs` - worker activity
+- `http://localhost:8000/docs` - FastAPI docs
 
 ## Local quick start
 
@@ -59,17 +79,17 @@ cp .env.example .env
 make up
 ```
 
-3. Open the applications.
-
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health check: [http://localhost:8000/health](http://localhost:8000/health)
-
-4. Run database migrations in a separate terminal after the containers are up.
+3. Run database migrations in a separate terminal after the containers are up.
 
 ```bash
 make migrate
 ```
+
+4. Open the applications.
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health check: [http://localhost:8000/health](http://localhost:8000/health)
 
 ## Manual development
 
@@ -109,27 +129,65 @@ make dev-worker
 - `make logs`: tail service logs
 - `make migrate`: run Alembic migrations
 - `make test`: run Python test suites
+- `make test-backend`: run backend tests
+- `make test-worker`: run worker tests
+- `cd apps/frontend && npm run lint`: run frontend lint
+- `cd apps/frontend && npm run build -- --webpack`: verify production build
 
-## Phase 1 status
+## Product surfaces
 
-This scaffold intentionally stops short of the full product experience. Phase 1
-covers:
+- Learn
+  Concept-first landing page with approachable quantum explanations and direct
+  paths into Explore and Build.
+- Explore
+  Seeded industry atlas with filters, detail drawer, and direct handoff into
+  Assess and Build.
+- Assess
+  Live QALS-lite workflow backed by the API with transparent assumptions and
+  simulation-first language.
+- Build
+  Prompt-to-circuit workspace with live circuit runs, worker-backed runs,
+  artifacts, and workspace persistence.
+- Map
+  Live architecture generation tied to real circuit runs plus downloadable JSON
+  export.
+- Projects / Sessions / Jobs
+  Persistent workspace history, saved demo narratives, and worker activity
+  tracking.
 
-- repo structure and local runtime wiring
-- environment variable handling
-- backend health endpoints
-- shared package boundaries for later quantum logic
-- architecture notes and future GCP migration hooks
+## Current architecture
 
-The next major phase is backend domain implementation:
-projects, sessions, use cases, assessments, circuits, architecture maps,
-artifacts, and jobs.
+- `apps/frontend`
+  Next.js App Router interface for the full Learn -> Explore -> Assess ->
+  Build -> Map flow.
+- `apps/backend`
+  FastAPI service for persistence, assessments, circuits, architectures,
+  artifacts, jobs, projects, and sessions.
+- `apps/worker`
+  Python worker that polls queued jobs and produces persisted outputs for async
+  runs and exports.
+- `packages/foundry-core`
+  Shared deterministic logic for circuit templates, simulation, explainers,
+  readiness scoring, architecture mapping, storage, and job abstractions.
+
+## Verification
+
+- Backend and worker tests run under Python 3.11.
+- Frontend verification uses `eslint` and a production `next build`.
+- The repo is designed to run locally first, then move to Cloud Run with Cloud
+  SQL, Cloud Storage, and Cloud Tasks adapters later.
 
 ## GCP and MCP path
 
-- Cloud Run is the first hosted target for the frontend, backend, and worker.
-- Cloud SQL is the first target for PostgreSQL persistence.
-- Cloud Storage and Cloud Tasks are deferred behind storage and queue
-  abstractions.
-- MCP can be added later for retrieval and enterprise integrations, but the
-  local corpus and deterministic product logic remain the default path.
+- Cloud Run is the first hosted target for frontend, backend, and worker.
+- Cloud SQL is the first persistence target.
+- Cloud Storage and Cloud Tasks remain adapter-backed migration paths.
+- MCP is optional and reserved for retrieval and enterprise connectors, not
+  core product logic.
+
+## Demo flow
+
+See [docs/demo-script.md](/Users/nikhiljethava/Documents/Codex/quantum-computing/docs/demo-script.md)
+for the recommended end-to-end walkthrough and
+[docs/api.md](/Users/nikhiljethava/Documents/Codex/quantum-computing/docs/api.md)
+for the current API surface.
