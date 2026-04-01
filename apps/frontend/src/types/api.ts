@@ -111,6 +111,35 @@ export interface CircuitRunCreate {
   session_id?: string;
 }
 
+export interface CircuitVisualDraftNode {
+  type: "gate" | "control" | "target" | "measure" | "label";
+  lane: number;
+  column: number;
+  label?: string;
+  target_lane?: number;
+  tone?: "primary" | "secondary" | "accent" | "warn" | "neutral";
+}
+
+export interface GeminiCircuitUpdateRequest {
+  api_key: string;
+  instruction: string;
+  model_name?: string;
+  starter_key?: JobType;
+  wires: string[];
+  nodes: CircuitVisualDraftNode[];
+  prompt?: string;
+  guide_response?: string;
+  explanation?: string;
+  use_case_title?: string;
+}
+
+export interface GeminiCircuitUpdateResponse {
+  model_name: string;
+  guide_response: string;
+  explanation: string;
+  nodes: CircuitVisualDraftNode[];
+}
+
 export interface CircuitRun {
   id: string;
   session_id: string | null;

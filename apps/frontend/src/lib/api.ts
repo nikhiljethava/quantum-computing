@@ -9,6 +9,8 @@ import {
   ArchitectureRequest,
   Assessment,
   AssessmentInputs,
+  GeminiCircuitUpdateRequest,
+  GeminiCircuitUpdateResponse,
   CircuitRun,
   CircuitRunCreate,
   CircuitTemplate,
@@ -131,6 +133,15 @@ export async function runCircuit(body: CircuitRunCreate): Promise<CircuitRun> {
 
 export async function fetchCircuitRun(id: string): Promise<CircuitRun> {
   return apiFetch<CircuitRun>(`/api/v1/circuits/runs/${id}`);
+}
+
+export async function geminiUpdateCircuit(
+  body: GeminiCircuitUpdateRequest,
+): Promise<GeminiCircuitUpdateResponse> {
+  return apiFetch<GeminiCircuitUpdateResponse>("/api/v1/circuits/gemini-update", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function submitJob(body: JobCreate): Promise<Job> {

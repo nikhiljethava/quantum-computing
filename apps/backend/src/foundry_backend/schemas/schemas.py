@@ -2,9 +2,9 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from foundry_backend.models.models import ArtifactType, IndustryTag, JobStatus, JobType, ProjectStatus
 
@@ -217,6 +217,92 @@ class CircuitRunCreate(BaseModel):
         default=None,
         description="Optional saved workspace session identifier.",
     )
+
+
+CircuitTone = Literal["primary", "secondary", "accent", "warn", "neutral"]
+CircuitNodeType = Literal["gate", "control", "target", "measure", "label"]
+
+
+class CircuitVisualNodeRead(BaseModel):
+    """Serializable circuit node used by the direct-edit canvas."""
+
+    type: CircuitNodeType
+    lane: int = Field(ge=0, le=16)
+    column: int = Field(ge=0, le=24)
+    label: str | None = Field(default=None, max_length=48)
+    target_lane: int | None = Field(default=None, ge=0, le=16)
+    tone: CircuitTone | None = None
+
+    @field_validator("label")
+    @classmethod
+    def strip_label(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class GeminiCircuitUpdateRequest(BaseModel):
+    """Request body for Gemini-assisted circuit draft updates."""
+
+    api_key: str = Field(
+        min_length=16,
+        max_length=256,
+        description=(
+            "User-supplied Gemini API key. The backend uses it ephemerally for this request "
+            "and does not persist it."
+        ),
+    )
+    instruction: str = Field(
+        min_length=3,
+        max_length=1200,
+        description="Natural-language instruction describing how the current draft should change.",
+    )
+    model_name: str = Field(
+        default="gemini-2.5-flash",
+        min_length=3,
+        max_length=80,
+        description="Gemini model name to call via generateContent.",
+    )
+    starter_key: JobType | None = Field(
+        default=None,
+        description="Current starter template key anchoring the draft circuit story.",
+    )
+    wires: list[str] = Field(
+        min_length=1,
+        max_length=8,
+        description="Ordered list of wire labels currently rendered in the Build canvas.",
+    )
+    nodes: list[CircuitVisualNodeRead] = Field(
+        min_length=1,
+        max_length=48,
+        description="Current editable circuit nodes from the Build canvas.",
+    )
+    prompt: str | None = Field(
+        default=None,
+        description="Current guide prompt shown in the workspace.",
+    )
+    guide_response: str | None = Field(
+        default=None,
+        description="Current guide response shown beside the circuit.",
+    )
+    explanation: str | None = Field(
+        default=None,
+        description="Current plain-English explanation shown under the circuit.",
+    )
+    use_case_title: str | None = Field(
+        default=None,
+        description="Optional selected use-case title for additional context.",
+    )
+
+
+class GeminiCircuitUpdateResponse(BaseModel):
+    """Validated Gemini-assisted draft update returned to the Build canvas."""
+
+    model_name: str
+    guide_response: str
+    explanation: str
+    nodes: list[CircuitVisualNodeRead]
 
 
 class CircuitRunRead(BaseModel):

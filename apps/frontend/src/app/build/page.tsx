@@ -12,9 +12,11 @@ import {
   FolderOpen,
   GitBranch,
   Play,
+  Plus,
   RotateCcw,
   Save,
   Sparkles,
+  Trash2,
   Wand2,
 } from "lucide-react";
 
@@ -29,6 +31,7 @@ import {
 import {
   useCreateProject,
   useCreateSession,
+  useGeminiCircuitUpdate,
   useJob,
   useProjects,
   useSession,
@@ -38,6 +41,7 @@ import {
   useUseCase,
 } from "@/lib/hooks";
 import {
+  CircuitVisualNode,
   STARTER_ORDER,
   StarterKey,
   StarterStory,
@@ -47,6 +51,7 @@ import {
 import {
   ArchitectureMap,
   ArtifactType,
+  CircuitVisualDraftNode,
   CircuitRun,
   GcpComponent,
   Project,
@@ -57,6 +62,8 @@ import {
 type OutputTab = "results" | "notes" | "code";
 type FocusCard = "assessment" | "architecture" | null;
 type HistogramTone = StarterStory["histogram"][number]["tone"];
+type EditableCircuitNode = CircuitVisualNode & { id: string };
+type EditableInsertType = "gate" | "measure" | "control" | "label";
 
 const HISTOGRAM_TONES: HistogramTone[] = ["primary", "accent", "secondary", "warn"];
 const DEFAULT_PROJECT_NAME = "Quantum Foundry demos";
@@ -109,6 +116,372 @@ const TONE_STYLES = {
     pill: "bg-slate-200 text-slate-700",
   },
 } as const;
+
+const EDITOR_TONE_OPTIONS = Object.keys(TONE_STYLES) as Array<keyof typeof TONE_STYLES>;
+
+function getQuantumLaneIndexes(wires: string[]) {
+  return wires
+    .map((wire, index) => (wire.startsWith("q") ? index : null))
+    .filter((value): value is number => value !== null);
+}
+
+function getClassicalLaneIndex(wires: string[]) {
+  return wires.findIndex((wire) => wire.startsWith("c"));
+}
+
+function defaultLabelForNodeType(type: EditableCircuitNode["type"]) {
+  switch (type) {
+    case "measure":
+      return "M";
+    case "label":
+      return "readout";
+    case "gate":
+      return "H";
+    default:
+      return undefined;
+  }
+}
+
+function defaultToneForNodeType(type: EditableCircuitNode["type"]): HistogramTone | "neutral" {
+  switch (type) {
+    case "measure":
+      return "secondary";
+    case "label":
+      return "neutral";
+    case "control":
+    case "target":
+      return "accent";
+    default:
+      return "primary";
+  }
+}
+
+function sanitizeEditableNode(
+  node: EditableCircuitNode,
+  wires: string[],
+): EditableCircuitNode {
+  const quantumLanes = getQuantumLaneIndexes(wires);
+  const classicalLaneIndex = getClassicalLaneIndex(wires);
+  const firstQuantumLane = quantumLanes[0] ?? 0;
+  const lastQuantumLane = quantumLanes[quantumLanes.length - 1] ?? firstQuantumLane;
+
+  let lane = node.lane;
+  if (node.type === "label") {
+    lane = classicalLaneIndex >= 0 ? classicalLaneIndex : wires.length - 1;
+  } else if (!quantumLanes.includes(lane)) {
+    lane = firstQuantumLane;
+  }
+
+  const tone = node.tone ?? defaultToneForNodeType(node.type);
+  const label =
+    node.type === "control" || node.type === "target"
+      ? undefined
+      : node.label?.trim() || defaultLabelForNodeType(node.type);
+
+  if (node.type === "control") {
+    const requestedTarget = node.targetLane ?? Math.min(lane + 1, lastQuantumLane);
+    const safeTarget = quantumLanes.includes(requestedTarget)
+      ? requestedTarget
+      : Math.min(lane + 1, lastQuantumLane);
+
+    return {
+      ...node,
+      lane,
+      tone,
+      label: undefined,
+      targetLane: safeTarget === lane && quantumLanes.length > 1 ? lastQuantumLane : safeTarget,
+    };
+  }
+
+  return {
+    ...node,
+    lane,
+    tone,
+    label,
+    targetLane: node.type === "target" ? undefined : node.targetLane,
+  };
+}
+
+function withEditableNodeIds(nodes: CircuitVisualNode[], wires: string[]) {
+  return nodes.map((node, index) =>
+    sanitizeEditableNode(
+      {
+        ...node,
+        id: `${node.type}-${node.column}-${node.lane}-${index}`,
+      },
+      wires,
+    ),
+  );
+}
+
+function createEditableNode(
+  type: EditableInsertType,
+  wires: string[],
+  existingNodes: EditableCircuitNode[],
+  preferredLane: number | null,
+): EditableCircuitNode {
+  const maxColumn = Math.max(-1, ...existingNodes.map((node) => node.column));
+  const quantumLanes = getQuantumLaneIndexes(wires);
+  const classicalLaneIndex = getClassicalLaneIndex(wires);
+  const fallbackLane = quantumLanes[0] ?? 0;
+  const baseLane =
+    preferredLane !== null && quantumLanes.includes(preferredLane) ? preferredLane : fallbackLane;
+  const id = `draft-${type}-${Date.now()}-${existingNodes.length}`;
+
+  switch (type) {
+    case "measure":
+      return sanitizeEditableNode(
+        {
+          id,
+          type,
+          lane: baseLane,
+          column: maxColumn + 1,
+          label: "M",
+          tone: "secondary",
+        },
+        wires,
+      );
+    case "control":
+      return sanitizeEditableNode(
+        {
+          id,
+          type,
+          lane: baseLane,
+          column: maxColumn + 1,
+          targetLane: quantumLanes.find((lane) => lane !== baseLane) ?? baseLane,
+          tone: "accent",
+        },
+        wires,
+      );
+    case "label":
+      return sanitizeEditableNode(
+        {
+          id,
+          type,
+          lane: classicalLaneIndex >= 0 ? classicalLaneIndex : wires.length - 1,
+          column: maxColumn + 1,
+          label: "readout",
+          tone: "neutral",
+        },
+        wires,
+      );
+    default:
+      return sanitizeEditableNode(
+        {
+          id,
+          type: "gate",
+          lane: baseLane,
+          column: maxColumn + 1,
+          label: "H",
+          tone: "primary",
+        },
+        wires,
+      );
+  }
+}
+
+function qubitVariableForLane(wires: string[], lane: number) {
+  const wire = wires[lane] ?? `q${lane}`;
+  return wire.replace(/[^a-zA-Z0-9_]/g, "_");
+}
+
+function buildDraftCircuitCode(wires: string[], nodes: EditableCircuitNode[]) {
+  const quantumWires = wires.filter((wire) => wire.startsWith("q"));
+  const orderedNodes = [...nodes].sort((left, right) => {
+    if (left.column !== right.column) return left.column - right.column;
+    return left.lane - right.lane;
+  });
+  const lines: string[] = [];
+  const pairedTargets = new Set<string>();
+
+  for (const node of orderedNodes) {
+    if (node.type === "target" && pairedTargets.has(node.id)) {
+      continue;
+    }
+
+    if (node.type === "control") {
+      const pairedTarget = orderedNodes.find(
+        (candidate) =>
+          candidate.type === "target" &&
+          candidate.column === node.column &&
+          candidate.lane === (node.targetLane ?? node.lane),
+      );
+
+      if (pairedTarget) {
+        pairedTargets.add(pairedTarget.id);
+        lines.push(
+          `    cirq.CNOT(${qubitVariableForLane(wires, node.lane)}, ${qubitVariableForLane(
+            wires,
+            pairedTarget.lane,
+          )}),`,
+        );
+      } else {
+        lines.push(
+          `    # Controlled interaction from ${qubitVariableForLane(wires, node.lane)} to ${qubitVariableForLane(
+            wires,
+            node.targetLane ?? node.lane,
+          )},`,
+        );
+      }
+      continue;
+    }
+
+    if (node.type === "target") {
+      lines.push(`    # Target marker on ${qubitVariableForLane(wires, node.lane)},`);
+      continue;
+    }
+
+    if (node.type === "label") {
+      lines.push(`    # ${node.label ?? "Classical readout"},`);
+      continue;
+    }
+
+    if (node.type === "measure") {
+      const key = (node.label ?? `m_${node.lane}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, "_");
+      lines.push(
+        `    cirq.measure(${qubitVariableForLane(wires, node.lane)}, key="${key}"),`,
+      );
+      continue;
+    }
+
+    const gateLabel = (node.label ?? "H").trim().toUpperCase();
+    const qubit = qubitVariableForLane(wires, node.lane);
+
+    if (gateLabel === "H") {
+      lines.push(`    cirq.H(${qubit}),`);
+    } else if (gateLabel === "X") {
+      lines.push(`    cirq.X(${qubit}),`);
+    } else if (gateLabel === "Y") {
+      lines.push(`    cirq.Y(${qubit}),`);
+    } else if (gateLabel === "Z") {
+      lines.push(`    cirq.Z(${qubit}),`);
+    } else if (gateLabel === "RX") {
+      lines.push(`    cirq.rx(0.6)(${qubit}),`);
+    } else if (gateLabel === "RY") {
+      lines.push(`    cirq.ry(0.6)(${qubit}),`);
+    } else if (gateLabel === "RZ") {
+      lines.push(`    cirq.rz(0.6)(${qubit}),`);
+    } else {
+      lines.push(`    # Custom gate ${node.label ?? "Gate"} on ${qubit},`);
+    }
+  }
+
+  const qubitDeclaration =
+    quantumWires.length > 1
+      ? `${quantumWires.join(", ")} = cirq.LineQubit.range(${quantumWires.length})`
+      : `${quantumWires[0] ?? "q0"} = cirq.LineQubit(0)`;
+
+  return `import cirq
+
+${qubitDeclaration}
+
+circuit = cirq.Circuit(
+${lines.length ? lines.join("\n") : "    # Add gates in the UI editor to build the draft circuit,"}
+)
+
+simulator = cirq.Simulator()
+result = simulator.run(circuit, repetitions=1000)
+print(result)`;
+}
+
+function toCircuitVisualNode(node: EditableCircuitNode): CircuitVisualNode {
+  return {
+    type: node.type,
+    lane: node.lane,
+    column: node.column,
+    label: node.label,
+    targetLane: node.targetLane,
+    tone: node.tone,
+  };
+}
+
+function toDraftApiNode(node: EditableCircuitNode): CircuitVisualDraftNode {
+  return {
+    type: node.type,
+    lane: node.lane,
+    column: node.column,
+    label: node.label,
+    target_lane: node.targetLane,
+    tone: node.tone,
+  };
+}
+
+function fromDraftApiNode(node: CircuitVisualDraftNode): CircuitVisualNode {
+  return {
+    type: node.type,
+    lane: node.lane,
+    column: node.column,
+    label: node.label,
+    targetLane: node.target_lane,
+    tone: node.tone,
+  };
+}
+
+function restoreSavedDraft(
+  notes: Record<string, unknown> | null | undefined,
+  wires: string[],
+) {
+  if (!notes) return null;
+
+  const rawNodes = notes.draft_circuit_nodes;
+  if (!Array.isArray(rawNodes) || !rawNodes.length) {
+    return null;
+  }
+
+  const validNodes = rawNodes.reduce<CircuitVisualNode[]>((acc, node) => {
+    if (!node || typeof node !== "object") return acc;
+    const candidate = node as Record<string, unknown>;
+    const type = candidate.type;
+    const lane = candidate.lane;
+    const column = candidate.column;
+
+    if (
+      (type !== "gate" &&
+        type !== "control" &&
+        type !== "target" &&
+        type !== "measure" &&
+        type !== "label") ||
+      typeof lane !== "number" ||
+      typeof column !== "number"
+    ) {
+      return acc;
+    }
+
+    acc.push({
+      type,
+      lane,
+      column,
+      label: typeof candidate.label === "string" ? candidate.label : undefined,
+      targetLane:
+        typeof candidate.target_lane === "number" ? candidate.target_lane : undefined,
+      tone:
+        candidate.tone === "primary" ||
+        candidate.tone === "secondary" ||
+        candidate.tone === "accent" ||
+        candidate.tone === "warn" ||
+        candidate.tone === "neutral"
+          ? candidate.tone
+          : undefined,
+    });
+    return acc;
+  }, []);
+
+  if (!validNodes.length) {
+    return null;
+  }
+
+  return {
+    nodes: withEditableNodeIds(validNodes, wires),
+    explanation:
+      typeof notes.draft_explanation === "string" ? notes.draft_explanation : null,
+    guideResponse:
+      typeof notes.draft_guide_response === "string" ? notes.draft_guide_response : null,
+    modelName: typeof notes.draft_model_name === "string" ? notes.draft_model_name : null,
+    source: typeof notes.draft_source === "string" ? notes.draft_source : null,
+  };
+}
 
 function formatScoreLabel(score: number) {
   if (score >= 75) return "Hybrid now";
@@ -482,133 +855,765 @@ function WorkspaceMemoryCard({
   );
 }
 
-function CircuitCanvas({ story }: { story: StarterStory }) {
-  const laneGap = 62;
-  const columnGap = 86;
-  const startX = 78;
-  const startY = 52;
+function CircuitCanvas({
+  story,
+  nodes,
+  selectedNodeId,
+  onSelectNode,
+}: {
+  story: StarterStory;
+  nodes: EditableCircuitNode[];
+  selectedNodeId: string | null;
+  onSelectNode: (nodeId: string | null) => void;
+}) {
+  const laneGap = 76;
+  const columnGap = 118;
+  const startX = 136;
+  const startY = 84;
+  const gateWidth = 72;
+  const gateHeight = 72;
+  const labelWidth = 118;
+  const labelHeight = 40;
   const maxColumn = Math.max(...story.circuit.map((node) => node.column), 0);
-  const width = startX * 2 + columnGap * (maxColumn + 1);
+  const quantumWireCount = story.wires.filter((wire) => wire.startsWith("q")).length;
+  const width = startX + columnGap * (maxColumn + 1) + 140;
   const height = startY * 2 + laneGap * Math.max(story.wires.length - 1, 1);
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] px-3 py-4">
+    <div className="overflow-x-auto rounded-[28px] border border-[#d8e2f3] bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_34%),radial-gradient(circle_at_top_right,rgba(45,212,191,0.14),transparent_30%),linear-gradient(180deg,#f9fbff_0%,#edf4ff_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="rounded-full border border-white/80 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 backdrop-blur">
+          Live circuit canvas
+        </div>
+        <div className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#2f5be3]">
+          {quantumWireCount} qubit{quantumWireCount === 1 ? "" : "s"} · simulator-first
+        </div>
+      </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-[280px] min-w-[620px] w-full"
+        className="h-[320px] min-w-[760px] w-full"
         role="img"
         aria-label={`${story.label} circuit`}
+        onClick={() => onSelectNode(null)}
       >
+        <defs>
+          <linearGradient id="circuit-surface" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#f5f9ff" />
+          </linearGradient>
+          <linearGradient id="measure-surface" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f3fff8" />
+            <stop offset="100%" stopColor="#dff8eb" />
+          </linearGradient>
+          <linearGradient id="label-surface" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#e8eef8" />
+          </linearGradient>
+          <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="12" stdDeviation="12" floodColor="#94a3b8" floodOpacity="0.18" />
+          </filter>
+          <filter id="gate-glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#c7d7ff" floodOpacity="0.42" />
+          </filter>
+        </defs>
+
+        <rect x="2" y="2" width={width - 4} height={height - 4} rx="30" fill="url(#circuit-surface)" stroke="#d8e2f3" />
+
+        {Array.from({ length: maxColumn + 2 }).map((_, index) => {
+          const x = startX + columnGap * index;
+          return (
+            <line
+              key={`grid-${index}`}
+              x1={x}
+              y1={28}
+              x2={x}
+              y2={height - 28}
+              stroke="#dbe5f1"
+              strokeDasharray="4 10"
+              opacity="0.8"
+            />
+          );
+        })}
+
         {story.wires.map((wire, index) => {
           const y = startY + laneGap * index;
+          const isClassical = wire.startsWith("c");
           return (
             <g key={wire}>
+              <rect
+                x={18}
+                y={y - 18}
+                width={64}
+                height={36}
+                rx={18}
+                fill={isClassical ? "#eef2f7" : "#eef2ff"}
+                stroke={isClassical ? "#cbd5e1" : "#c7d7ff"}
+              />
               <text
-                x={20}
-                y={y + 5}
+                x={50}
+                y={y + 6}
+                textAnchor="middle"
                 fontSize="18"
                 fontWeight="600"
-                fill="#64748b"
+                fill={isClassical ? "#64748b" : "#415fcf"}
               >
                 {wire}
               </text>
               <line
-                x1={startX}
+                x1={startX - 16}
                 y1={y}
-                x2={width - startX / 2}
+                x2={width - 52}
                 y2={y}
-                stroke="#94a3b8"
-                strokeWidth="3"
+                stroke={isClassical ? "#bcc9d8" : "#93a6bf"}
+                strokeWidth="4"
                 strokeLinecap="round"
+                strokeDasharray={isClassical ? "10 10" : undefined}
+              />
+              <line
+                x1={startX - 16}
+                y1={y - 1}
+                x2={width - 52}
+                y2={y - 1}
+                stroke={isClassical ? "#f8fafc" : "#e8eef7"}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.95"
               />
             </g>
           );
         })}
 
-        {story.circuit.map((node, index) => {
+        {nodes.map((node, index) => {
           const x = startX + columnGap * node.column;
           const y = startY + laneGap * node.lane;
           const tone = TONE_STYLES[node.tone ?? "primary"];
+          const isSelected = node.id === selectedNodeId;
 
           if (node.type === "control") {
             const targetY = startY + laneGap * (node.targetLane ?? node.lane);
             return (
-              <g key={`${node.type}-${index}`}>
+              <g
+                key={node.id ?? `${node.type}-${index}`}
+                filter="url(#gate-glow)"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectNode(node.id);
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <line
                   x1={x}
                   y1={y}
                   x2={x}
                   y2={targetY}
                   stroke={tone.stroke}
-                  strokeWidth="4"
+                  strokeWidth={isSelected ? "5" : "4"}
                   strokeLinecap="round"
                 />
-                <circle cx={x} cy={y} r="10" fill={tone.stroke} />
+                <circle cx={x} cy={y} r={isSelected ? "13" : "11"} fill={tone.stroke} />
+                <circle cx={x} cy={y} r="4" fill="#ffffff" opacity="0.35" />
+                {isSelected ? (
+                  <circle cx={x} cy={y} r="20" fill="none" stroke="#1d4ed8" strokeWidth="2.5" strokeDasharray="4 5" />
+                ) : null}
               </g>
             );
           }
 
           if (node.type === "target") {
             return (
-              <g key={`${node.type}-${index}`}>
-                <circle cx={x} cy={y} r="18" fill="#ffffff" stroke={tone.stroke} strokeWidth="4" />
-                <line x1={x - 10} y1={y} x2={x + 10} y2={y} stroke={tone.stroke} strokeWidth="4" />
-                <line x1={x} y1={y - 10} x2={x} y2={y + 10} stroke={tone.stroke} strokeWidth="4" />
+              <g
+                key={node.id ?? `${node.type}-${index}`}
+                filter="url(#gate-glow)"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectNode(node.id);
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                <circle cx={x} cy={y} r={isSelected ? "25" : "22"} fill="#ffffff" stroke={tone.stroke} strokeWidth="4" />
+                <circle cx={x} cy={y} r="3.5" fill={tone.stroke} />
+                <line x1={x - 12} y1={y} x2={x + 12} y2={y} stroke={tone.stroke} strokeWidth="4" />
+                <line x1={x} y1={y - 12} x2={x} y2={y + 12} stroke={tone.stroke} strokeWidth="4" />
+                {isSelected ? (
+                  <circle cx={x} cy={y} r="31" fill="none" stroke="#1d4ed8" strokeWidth="2.5" strokeDasharray="4 5" />
+                ) : null}
               </g>
             );
           }
 
           if (node.type === "label") {
+            const linkedMeasure = story.circuit.find(
+              (candidate) =>
+                candidate.type === "measure" &&
+                candidate.column === node.column &&
+                candidate.lane < node.lane,
+            );
+
             return (
-              <g key={`${node.type}-${index}`}>
+              <g
+                key={node.id ?? `${node.type}-${index}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectNode(node.id);
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                {linkedMeasure ? (
+                  <line
+                    x1={x}
+                    y1={startY + laneGap * linkedMeasure.lane + gateHeight / 2 - 6}
+                    x2={x}
+                    y2={y - labelHeight / 2 - 8}
+                    stroke="#94a3b8"
+                    strokeWidth="2.5"
+                    strokeDasharray="6 8"
+                    strokeLinecap="round"
+                  />
+                ) : null}
                 <rect
-                  x={x - 34}
-                  y={y - 20}
-                  width="84"
-                  height="34"
-                  rx="16"
-                  fill="#e2e8f0"
+                  x={x - labelWidth / 2}
+                  y={y - labelHeight / 2}
+                  width={labelWidth}
+                  height={labelHeight}
+                  rx="20"
+                  fill="url(#label-surface)"
+                  stroke="#d4dde9"
+                  filter="url(#node-shadow)"
                 />
+                <circle cx={x - 34} cy={y} r="7" fill="#c8d4e4" />
+                <circle cx={x - 34} cy={y} r="2.5" fill="#ffffff" />
                 <text
-                  x={x + 8}
-                  y={y + 2}
+                  x={x + 10}
+                  y={y + 5}
                   textAnchor="middle"
-                  fontSize="13"
-                  fontWeight="600"
+                  fontSize="16"
+                  fontWeight="700"
                   fill="#475569"
                 >
                   {node.label}
                 </text>
+                {isSelected ? (
+                  <rect
+                    x={x - labelWidth / 2 - 8}
+                    y={y - labelHeight / 2 - 8}
+                    width={labelWidth + 16}
+                    height={labelHeight + 16}
+                    rx="24"
+                    fill="none"
+                    stroke="#1d4ed8"
+                    strokeWidth="2.5"
+                    strokeDasharray="4 5"
+                  />
+                ) : null}
+              </g>
+            );
+          }
+
+          if (node.type === "measure") {
+            return (
+              <g
+                key={node.id ?? `${node.type}-${index}`}
+                filter="url(#node-shadow)"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectNode(node.id);
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                <rect
+                  x={x - gateWidth / 2}
+                  y={y - gateHeight / 2}
+                  width={gateWidth}
+                  height={gateHeight}
+                  rx="22"
+                  fill="url(#measure-surface)"
+                  stroke={tone.stroke}
+                  strokeWidth={isSelected ? "5" : "4"}
+                />
+                <path
+                  d={`M ${x - 15} ${y - 10} Q ${x} ${y - 22} ${x + 15} ${y - 10}`}
+                  fill="none"
+                  stroke={tone.stroke}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <text
+                  x={x}
+                  y={y + 13}
+                  textAnchor="middle"
+                  fontSize="24"
+                  fontWeight="800"
+                  fill={tone.text}
+                >
+                  {node.label}
+                </text>
+                {isSelected ? (
+                  <rect
+                    x={x - gateWidth / 2 - 8}
+                    y={y - gateHeight / 2 - 8}
+                    width={gateWidth + 16}
+                    height={gateHeight + 16}
+                    rx="28"
+                    fill="none"
+                    stroke="#1d4ed8"
+                    strokeWidth="2.5"
+                    strokeDasharray="4 5"
+                  />
+                ) : null}
               </g>
             );
           }
 
           return (
-            <g key={`${node.type}-${index}`}>
+            <g
+              key={node.id ?? `${node.type}-${index}`}
+              filter="url(#node-shadow)"
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectNode(node.id);
+              }}
+              style={{ cursor: "pointer" }}
+            >
               <rect
-                x={x - 24}
-                y={y - 24}
-                width="52"
-                height="52"
-                rx="14"
+                x={x - gateWidth / 2}
+                y={y - gateHeight / 2}
+                width={gateWidth}
+                height={gateHeight}
+                rx="22"
                 fill={tone.fill}
                 stroke={tone.stroke}
-                strokeWidth="3"
+                strokeWidth={isSelected ? "5" : "4"}
+              />
+              <rect
+                x={x - gateWidth / 2 + 8}
+                y={y - gateHeight / 2 + 8}
+                width={gateWidth - 16}
+                height={16}
+                rx="8"
+                fill="#ffffff"
+                opacity="0.42"
               />
               <text
-                x={x + 2}
-                y={y + 6}
+                x={x}
+                y={y + 9}
                 textAnchor="middle"
-                fontSize="20"
-                fontWeight="700"
+                fontSize={node.label && node.label.length > 1 ? "18" : "24"}
+                fontWeight="800"
                 fill={tone.text}
               >
                 {node.label}
               </text>
+              {isSelected ? (
+                <rect
+                  x={x - gateWidth / 2 - 8}
+                  y={y - gateHeight / 2 - 8}
+                  width={gateWidth + 16}
+                  height={gateHeight + 16}
+                  rx="28"
+                  fill="none"
+                  stroke="#1d4ed8"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 5"
+                />
+              ) : null}
             </g>
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+function CircuitEditorPanel({
+  wires,
+  nodes,
+  selectedNode,
+  isDirty,
+  geminiApiKey,
+  geminiInstruction,
+  geminiError,
+  geminiStatus,
+  geminiModelName,
+  geminiBusy,
+  onSelectNode,
+  onAddNode,
+  onReset,
+  onDeleteNode,
+  onUpdateNode,
+  onGeminiApiKeyChange,
+  onGeminiInstructionChange,
+  onGeminiUpdate,
+}: {
+  wires: string[];
+  nodes: EditableCircuitNode[];
+  selectedNode: EditableCircuitNode | null;
+  isDirty: boolean;
+  geminiApiKey: string;
+  geminiInstruction: string;
+  geminiError: string | null;
+  geminiStatus: string | null;
+  geminiModelName: string | null;
+  geminiBusy: boolean;
+  onSelectNode: (nodeId: string | null) => void;
+  onAddNode: (type: EditableInsertType) => void;
+  onReset: () => void;
+  onDeleteNode: (nodeId: string) => void;
+  onUpdateNode: (nodeId: string, updater: (node: EditableCircuitNode) => EditableCircuitNode) => void;
+  onGeminiApiKeyChange: (value: string) => void;
+  onGeminiInstructionChange: (value: string) => void;
+  onGeminiUpdate: () => void;
+}) {
+  const quantumLanes = wires
+    .map((wire, index) => ({ wire, index }))
+    .filter((item) => item.wire.startsWith("q"));
+  const laneOptions =
+    selectedNode?.type === "label"
+      ? wires.map((wire, index) => ({ wire, index }))
+      : quantumLanes;
+
+  return (
+    <div className="rounded-[24px] border border-[#d8e2f3] bg-white p-4 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Direct edit
+          </div>
+          <h3 className="mt-1 text-[1rem] font-semibold tracking-[-0.02em] text-slate-900">
+            Tune the circuit on the canvas
+          </h3>
+        </div>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            isDirty ? "bg-[#fff7ed] text-[#c2410c]" : "bg-[#eef2ff] text-[#2f5be3]"
+          }`}
+        >
+          {isDirty ? "Draft edits" : "Generated template"}
+        </span>
+      </div>
+
+      <p className="mt-3 text-sm leading-6 text-slate-600">
+        Click any gate, measurement, or label in the canvas to edit it. Add operations here to sketch variants before you rerun the canonical simulator flow.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onAddNode("gate")}
+          className="inline-flex items-center gap-2 rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3] transition hover:bg-[#dbe5ff]"
+        >
+          <Plus className="h-4 w-4" />
+          Add gate
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddNode("measure")}
+          className="inline-flex items-center gap-2 rounded-full bg-[#ecfdf5] px-3 py-2 text-xs font-semibold text-[#157052] transition hover:bg-[#d8faea]"
+        >
+          <Plus className="h-4 w-4" />
+          Add measure
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddNode("control")}
+          className="inline-flex items-center gap-2 rounded-full bg-[#f5f3ff] px-3 py-2 text-xs font-semibold text-[#6d28d9] transition hover:bg-[#ece8ff]"
+        >
+          <Plus className="h-4 w-4" />
+          Add control
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddNode("label")}
+          className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+        >
+          <Plus className="h-4 w-4" />
+          Add label
+        </button>
+        <button
+          type="button"
+          onClick={onReset}
+          className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset canvas
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-[18px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+        {selectedNode ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  Editing {selectedNode.type}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Lane {wires[selectedNode.lane] ?? selectedNode.lane} · Column {selectedNode.column}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onDeleteNode(selectedNode.id)}
+                className="inline-flex items-center gap-2 rounded-full bg-[#fff1f2] px-3 py-2 text-xs font-semibold text-[#b91c1c] transition hover:bg-[#ffe4e6]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Node type
+                </span>
+                <select
+                  value={selectedNode.type}
+                  onChange={(event) =>
+                    onUpdateNode(selectedNode.id, (node) =>
+                      sanitizeEditableNode(
+                        {
+                          ...node,
+                          type: event.target.value as EditableCircuitNode["type"],
+                        },
+                        wires,
+                      ),
+                    )
+                  }
+                  className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                >
+                  <option value="gate">Gate</option>
+                  <option value="measure">Measure</option>
+                  <option value="control">Control</option>
+                  <option value="target">Target</option>
+                  <option value="label">Label</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Tone
+                </span>
+                <select
+                  value={selectedNode.tone ?? defaultToneForNodeType(selectedNode.type)}
+                  onChange={(event) =>
+                    onUpdateNode(selectedNode.id, (node) => ({
+                      ...node,
+                      tone: event.target.value as EditableCircuitNode["tone"],
+                    }))
+                  }
+                  className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                >
+                  {EDITOR_TONE_OPTIONS.map((tone) => (
+                    <option key={tone} value={tone}>
+                      {tone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Lane
+                </span>
+                <select
+                  value={selectedNode.lane}
+                  onChange={(event) =>
+                    onUpdateNode(selectedNode.id, (node) =>
+                      sanitizeEditableNode(
+                        {
+                          ...node,
+                          lane: Number(event.target.value),
+                        },
+                        wires,
+                      ),
+                    )
+                  }
+                  className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                >
+                  {laneOptions.map((option) => (
+                    <option key={option.index} value={option.index}>
+                      {option.wire}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Column
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={selectedNode.column}
+                  onChange={(event) =>
+                    onUpdateNode(selectedNode.id, (node) => ({
+                      ...node,
+                      column: Math.max(0, Number(event.target.value) || 0),
+                    }))
+                  }
+                  className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                />
+              </label>
+
+              {selectedNode.type === "control" ? (
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Target lane
+                  </span>
+                  <select
+                    value={selectedNode.targetLane ?? selectedNode.lane}
+                    onChange={(event) =>
+                      onUpdateNode(selectedNode.id, (node) =>
+                        sanitizeEditableNode(
+                          {
+                            ...node,
+                            targetLane: Number(event.target.value),
+                          },
+                          wires,
+                        ),
+                      )
+                    }
+                    className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                  >
+                    {quantumLanes
+                      .filter((option) => option.index !== selectedNode.lane)
+                      .map((option) => (
+                        <option key={option.index} value={option.index}>
+                          {option.wire}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : null}
+
+              {selectedNode.type !== "control" && selectedNode.type !== "target" ? (
+                <label className="block sm:col-span-2">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Label
+                  </span>
+                  <input
+                    value={selectedNode.label ?? ""}
+                    onChange={(event) =>
+                      onUpdateNode(selectedNode.id, (node) => ({
+                        ...node,
+                        label: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                    placeholder={defaultLabelForNodeType(selectedNode.type) ?? "Label"}
+                  />
+                </label>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-slate-900">Select a node to edit</div>
+            <p className="text-sm leading-6 text-slate-600">
+              The canvas is now interactive. Click a gate or label to adjust its lane, column, tone, and meaning.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {nodes.map((node) => (
+                <button
+                  key={node.id}
+                  type="button"
+                  onClick={() => onSelectNode(node.id)}
+                  className="rounded-full border border-[#d8e2f3] bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+                >
+                  {node.type}
+                  {node.label ? ` · ${node.label}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-[20px] border border-[#d8e2f3] bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Gemini draft assist
+            </div>
+            <h4 className="mt-1 text-sm font-semibold text-slate-900">
+              Bring your own Gemini key for circuit edits
+            </h4>
+          </div>
+          <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#2f5be3]">
+            Optional
+          </span>
+        </div>
+
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          The key is used only for this request and is not stored by Quantum Foundry. Gemini updates the draft canvas and explanation, while the canonical simulator flow stays local and deterministic.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Gemini API key
+            </span>
+            <input
+              type="password"
+              value={geminiApiKey}
+              onChange={(event) => onGeminiApiKeyChange(event.target.value)}
+              placeholder="Paste your Gemini API key for this tab"
+              className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Update instruction
+            </span>
+            <textarea
+              value={geminiInstruction}
+              onChange={(event) => onGeminiInstructionChange(event.target.value)}
+              rows={4}
+              placeholder="Example: turn this into a Bell-state style draft and add a clearer readout label."
+              className="w-full resize-none rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-[#2f5be3]"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onGeminiUpdate}
+              disabled={geminiBusy}
+              className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.22)] transition hover:-translate-y-[1px] disabled:cursor-wait disabled:opacity-70"
+            >
+              <Sparkles className="h-4 w-4" />
+              {geminiBusy ? "Updating draft..." : "Update with Gemini"}
+            </button>
+            <div className="text-xs leading-5 text-slate-500">
+              Best for draft edits like Bell-state variants, extra measurements, or alternate gate sequences.
+            </div>
+          </div>
+        </div>
+
+        {geminiStatus ? (
+          <div className="mt-4 rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
+              Gemini update
+            </div>
+            {geminiStatus}
+            {geminiModelName ? (
+              <div className="mt-2 text-xs text-slate-500">Model: {geminiModelName}</div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {geminiError ? (
+          <div className="mt-4 rounded-[16px] border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm leading-6 text-[#b91c1c]">
+            {geminiError}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-[18px] bg-[#f8fafc] p-4 text-sm leading-6 text-slate-600">
+        Local and Gemini edits update the visual circuit and the draft Cirq code preview immediately. Running the simulator still returns to the generated template path until custom-circuit execution is added.
+      </div>
     </div>
   );
 }
@@ -1013,6 +2018,18 @@ function BuildPageContent() {
   const [workspaceRun, setWorkspaceRun] = useState<CircuitRun | null>(null);
   const [architecture, setArchitecture] = useState<ArchitectureMap | null>(null);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [editorNodes, setEditorNodes] = useState<EditableCircuitNode[]>(() =>
+    withEditableNodeIds(getStarterStory(initialKey).circuit, getStarterStory(initialKey).wires),
+  );
+  const [selectedEditorNodeId, setSelectedEditorNodeId] = useState<string | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [geminiInstruction, setGeminiInstruction] = useState("");
+  const [geminiExplanation, setGeminiExplanation] = useState<string | null>(null);
+  const [geminiGuideReply, setGeminiGuideReply] = useState<string | null>(null);
+  const [geminiModelName, setGeminiModelName] = useState<string | null>(null);
+  const [geminiStatus, setGeminiStatus] = useState<string | null>(null);
+  const [geminiError, setGeminiError] = useState<string | null>(null);
   const [exportingType, setExportingType] = useState<Exclude<ArtifactType, "job_output"> | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
@@ -1024,6 +2041,7 @@ function BuildPageContent() {
   const [backgroundRunState, setBackgroundRunState] = useState<"idle" | "queued" | "hydrating">("idle");
   const requestIdRef = useRef(0);
   const restoredSessionRef = useRef<string | null>(null);
+  const restoredDraftRef = useRef<string | null>(null);
   const skippedInitialRestoredRunRef = useRef<string | null>(null);
   const handledExportJobRef = useRef<string | null>(null);
   const handledBackgroundJobRef = useRef<string | null>(null);
@@ -1032,6 +2050,7 @@ function BuildPageContent() {
   const { data: sessionDetail } = useSession(activeSessionId);
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
+  const geminiUpdateMutation = useGeminiCircuitUpdate();
   const submitJobMutation = useSubmitJob();
   const { data: exportJob } = useJob(exportJobId);
   const { data: backgroundJob } = useJob(backgroundJobId);
@@ -1078,6 +2097,108 @@ function BuildPageContent() {
     () => mergeLiveStory(story, workspaceRun, architecture, selectedUseCase),
     [architecture, selectedUseCase, story, workspaceRun],
   );
+  const editableDisplayStory = useMemo(
+    () => ({
+      ...displayStory,
+      guideReply: geminiGuideReply ?? displayStory.guideReply,
+      explanation: geminiExplanation ?? displayStory.explanation,
+      circuit: editorNodes.map(toCircuitVisualNode),
+      code: editorDirty ? buildDraftCircuitCode(displayStory.wires, editorNodes) : displayStory.code,
+    }),
+    [displayStory, editorDirty, editorNodes, geminiExplanation, geminiGuideReply],
+  );
+  const selectedEditorNode = useMemo(
+    () => editorNodes.find((node) => node.id === selectedEditorNodeId) ?? null,
+    [editorNodes, selectedEditorNodeId],
+  );
+  const hasGeminiDraft = Boolean(geminiExplanation || geminiGuideReply || geminiModelName);
+
+  const clearGeminiDraftState = useCallback(
+    ({ preserveInstruction = false }: { preserveInstruction?: boolean } = {}) => {
+      setGeminiExplanation(null);
+      setGeminiGuideReply(null);
+      setGeminiModelName(null);
+      setGeminiStatus(null);
+      setGeminiError(null);
+      if (!preserveInstruction) {
+        setGeminiInstruction("");
+      }
+    },
+    [],
+  );
+
+  const resetEditorFromGenerated = useCallback(() => {
+    const nextNodes = withEditableNodeIds(displayStory.circuit, displayStory.wires);
+    setEditorNodes(nextNodes);
+    setSelectedEditorNodeId(nextNodes[0]?.id ?? null);
+    setEditorDirty(false);
+    clearGeminiDraftState({ preserveInstruction: true });
+  }, [clearGeminiDraftState, displayStory.circuit, displayStory.wires]);
+
+  useEffect(() => {
+    resetEditorFromGenerated();
+  }, [resetEditorFromGenerated]);
+
+  useEffect(() => {
+    if (!activeSessionId || !sessionDetail) return;
+    if (restoredDraftRef.current === sessionDetail.id) return;
+
+    restoredDraftRef.current = sessionDetail.id;
+    const restoredDraft = restoreSavedDraft(sessionDetail.notes, displayStory.wires);
+    if (!restoredDraft) {
+      clearGeminiDraftState();
+      return;
+    }
+
+    setEditorNodes(restoredDraft.nodes);
+    setSelectedEditorNodeId(restoredDraft.nodes[0]?.id ?? null);
+    setEditorDirty(true);
+    setGeminiExplanation(restoredDraft.explanation);
+    setGeminiGuideReply(restoredDraft.guideResponse);
+    setGeminiModelName(restoredDraft.modelName);
+    setGeminiError(null);
+    setGeminiStatus(
+      restoredDraft.source === "gemini"
+        ? "Restored the last Gemini-assisted draft from this saved workspace."
+        : "Restored the last draft edits from this saved workspace.",
+    );
+  }, [activeSessionId, clearGeminiDraftState, displayStory.wires, sessionDetail]);
+
+  function updateEditorNode(
+    nodeId: string,
+    updater: (node: EditableCircuitNode) => EditableCircuitNode,
+  ) {
+    setEditorNodes((current) =>
+      current.map((node) =>
+        node.id === nodeId ? sanitizeEditableNode(updater(node), displayStory.wires) : node,
+      ),
+    );
+    setEditorDirty(true);
+    setSaveState("idle");
+  }
+
+  function addEditorNode(type: EditableInsertType) {
+    setEditorNodes((current) => {
+      const nextNode = createEditableNode(
+        type,
+        displayStory.wires,
+        current,
+        selectedEditorNode?.lane ?? null,
+      );
+      setSelectedEditorNodeId(nextNode.id);
+      return [...current, nextNode];
+    });
+    setEditorDirty(true);
+    setSaveState("idle");
+    setOutputTab("code");
+  }
+
+  function deleteEditorNode(nodeId: string) {
+    setEditorNodes((current) => current.filter((node) => node.id !== nodeId));
+    setSelectedEditorNodeId(null);
+    setEditorDirty(true);
+    setSaveState("idle");
+  }
 
   const hydrateBackgroundRun = useCallback(
     async (runId: string, jobResult: Record<string, unknown> | null) => {
@@ -1124,6 +2245,7 @@ function BuildPageContent() {
       setWorkspaceError(null);
       setExportError(null);
       setSaveState("idle");
+      clearGeminiDraftState({ preserveInstruction: true });
 
       try {
         const activeStory = getStarterStory(starterKey);
@@ -1166,7 +2288,7 @@ function BuildPageContent() {
         }
       }
     },
-    [activeUseCaseId, currentSessionId],
+    [activeUseCaseId, clearGeminiDraftState, currentSessionId],
   );
 
   useEffect(() => {
@@ -1310,6 +2432,8 @@ function BuildPageContent() {
     handledBackgroundJobRef.current = null;
     setBackgroundJobId(null);
     setBackgroundRunState("idle");
+    restoredDraftRef.current = null;
+    clearGeminiDraftState();
     setSelectedKey(nextKey);
     setOutputTab("results");
     setFocusedCard(null);
@@ -1323,14 +2447,20 @@ function BuildPageContent() {
     selectStarter(nextKey);
   }
 
-  function runSimulation() {
+  function refreshWorkspaceFromTemplate() {
     setOutputTab("results");
+    resetEditorFromGenerated();
     void loadWorkspace(selectedKey);
+  }
+
+  function runSimulation() {
+    refreshWorkspaceFromTemplate();
   }
 
   async function queueBackgroundRun() {
     const activeStory = getStarterStory(selectedKey);
     handledBackgroundJobRef.current = null;
+    resetEditorFromGenerated();
     setBackgroundRunState("queued");
     setSimulationState("running");
     setWorkspaceError(null);
@@ -1355,6 +2485,59 @@ function BuildPageContent() {
           ? error.message
           : "The background run could not be queued.",
       );
+    }
+  }
+
+  async function updateDraftWithGemini() {
+    if (!geminiApiKey.trim()) {
+      setGeminiError("Add a Gemini API key to request a draft update.");
+      return;
+    }
+
+    if (!geminiInstruction.trim()) {
+      setGeminiError("Describe how Gemini should update the current circuit draft.");
+      return;
+    }
+
+    setGeminiError(null);
+    setGeminiStatus("Sending the current draft to Gemini and validating the returned circuit shape.");
+
+    try {
+      const response = await geminiUpdateMutation.mutateAsync({
+        api_key: geminiApiKey.trim(),
+        instruction: geminiInstruction.trim(),
+        starter_key: selectedKey,
+        wires: displayStory.wires,
+        nodes: editorNodes.map(toDraftApiNode),
+        prompt: displayStory.prompt,
+        guide_response: editableDisplayStory.guideReply,
+        explanation: editableDisplayStory.explanation,
+        use_case_title: selectedUseCase?.title,
+      });
+
+      const nextNodes = withEditableNodeIds(
+        response.nodes.map(fromDraftApiNode),
+        displayStory.wires,
+      );
+
+      setEditorNodes(nextNodes);
+      setSelectedEditorNodeId(nextNodes[0]?.id ?? null);
+      setEditorDirty(true);
+      setGeminiGuideReply(response.guide_response);
+      setGeminiExplanation(response.explanation);
+      setGeminiModelName(response.model_name);
+      setGeminiStatus(
+        `Draft updated with ${response.model_name}. Re-run the simulator to compare this Gemini-assisted draft against the local template path.`,
+      );
+      setSaveState("idle");
+      setOutputTab("code");
+    } catch (error) {
+      setGeminiError(
+        error instanceof Error
+          ? error.message
+          : "Gemini could not update the draft circuit.",
+      );
+      setGeminiStatus(null);
     }
   }
 
@@ -1399,6 +2582,11 @@ function BuildPageContent() {
         notes: {
           last_saved_at: new Date().toISOString(),
           last_architecture_id: architecture?.id ?? null,
+          draft_circuit_nodes: editorDirty ? editorNodes.map(toDraftApiNode) : null,
+          draft_explanation: geminiExplanation,
+          draft_guide_response: geminiGuideReply,
+          draft_model_name: geminiModelName,
+          draft_source: hasGeminiDraft ? "gemini" : editorDirty ? "manual" : null,
         },
         latest_circuit_run_id: workspaceRun.id,
       };
@@ -1430,7 +2618,9 @@ function BuildPageContent() {
   }
 
   function openSavedSession(session: SavedSession) {
+    const sessionStory = getStarterStory(normalizeStarterKey(session.starter_key));
     restoredSessionRef.current = null;
+    restoredDraftRef.current = null;
     skippedInitialRestoredRunRef.current = null;
     handledExportJobRef.current = null;
     setExportJobId(null);
@@ -1443,10 +2633,14 @@ function BuildPageContent() {
     setExportError(null);
     setWorkspaceRun(null);
     setArchitecture(null);
+    setEditorNodes(withEditableNodeIds(sessionStory.circuit, sessionStory.wires));
+    setSelectedEditorNodeId(null);
+    setEditorDirty(false);
     setCurrentSessionId(session.id);
     setCurrentProjectId(session.project_id);
     setProjectName(session.project_name ?? DEFAULT_PROJECT_NAME);
     setSessionTitle(session.title);
+    clearGeminiDraftState();
     syncQuery(normalizeStarterKey(session.starter_key), {
       sessionId: session.id,
       useCaseId: session.selected_use_case_id,
@@ -1455,6 +2649,7 @@ function BuildPageContent() {
 
   function resetWorkspace() {
     restoredSessionRef.current = null;
+    restoredDraftRef.current = null;
     skippedInitialRestoredRunRef.current = null;
     handledExportJobRef.current = null;
     setExportJobId(null);
@@ -1465,10 +2660,14 @@ function BuildPageContent() {
     setCurrentProjectId(null);
     setWorkspaceRun(null);
     setArchitecture(null);
+    setEditorNodes(withEditableNodeIds(story.circuit, story.wires));
+    setSelectedEditorNodeId(null);
+    setEditorDirty(false);
     setProjectName(DEFAULT_PROJECT_NAME);
     setSessionTitle(buildDefaultSessionTitle(selectedKey, selectedUseCase));
     setSaveState("idle");
     setSaveError(null);
+    clearGeminiDraftState();
     syncQuery(selectedKey, {
       sessionId: null,
       useCaseId: activeUseCaseId,
@@ -1496,6 +2695,20 @@ function BuildPageContent() {
           },
         });
         setExportJobId(job.id);
+        return;
+      }
+
+      if (type === "cirq_code" && editorDirty) {
+        const blob = new Blob([editableDisplayStory.code], { type: "text/x-python" });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = `${selectedKey}_draft.py`;
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(href);
         return;
       }
 
@@ -1601,6 +2814,7 @@ function BuildPageContent() {
               type="button"
               onClick={() => {
                 setOutputTab("notes");
+                resetEditorFromGenerated();
                 void loadWorkspace(selectedKey);
               }}
               disabled={isLoadingWorkspace}
@@ -1622,10 +2836,11 @@ function BuildPageContent() {
         <div className="mb-6 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => {
-              setOutputTab("notes");
-              void loadWorkspace(selectedKey);
-            }}
+              onClick={() => {
+                setOutputTab("notes");
+                resetEditorFromGenerated();
+                void loadWorkspace(selectedKey);
+              }}
             disabled={isLoadingWorkspace}
             className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.25)]"
           >
@@ -1778,27 +2993,66 @@ function BuildPageContent() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]">
-                      {displayStory.concept}
+                      {editableDisplayStory.concept}
                     </span>
                     <span className="rounded-full bg-[#f8fafc] px-3 py-2 text-xs font-semibold text-slate-500">
                       Cirq code
                     </span>
+                    <span
+                      className={`rounded-full px-3 py-2 text-xs font-semibold ${
+                        editorDirty ? "bg-[#fff7ed] text-[#c2410c]" : "bg-[#ecfdf5] text-[#157052]"
+                      }`}
+                    >
+                      {editorDirty ? "UI edits active" : "Generated circuit"}
+                    </span>
+                    {hasGeminiDraft ? (
+                      <span className="rounded-full bg-[#f5f3ff] px-3 py-2 text-xs font-semibold text-[#6d28d9]">
+                        Gemini draft assist
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
-                <CircuitCanvas story={displayStory} />
+                <CircuitCanvas
+                  story={editableDisplayStory}
+                  nodes={editorNodes}
+                  selectedNodeId={selectedEditorNodeId}
+                  onSelectNode={setSelectedEditorNodeId}
+                />
 
-                <div className="mt-4 rounded-[22px] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Guide explanation
+                <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+                  <div className="rounded-[22px] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Guide explanation
+                    </div>
+                    {editableDisplayStory.explanation}
                   </div>
-                  {displayStory.explanation}
+                  <CircuitEditorPanel
+                    wires={editableDisplayStory.wires}
+                    nodes={editorNodes}
+                    selectedNode={selectedEditorNode}
+                    isDirty={editorDirty}
+                    geminiApiKey={geminiApiKey}
+                    geminiInstruction={geminiInstruction}
+                    geminiError={geminiError}
+                    geminiStatus={geminiStatus}
+                    geminiModelName={geminiModelName}
+                    geminiBusy={geminiUpdateMutation.isPending}
+                    onSelectNode={setSelectedEditorNodeId}
+                    onAddNode={addEditorNode}
+                    onReset={resetEditorFromGenerated}
+                    onDeleteNode={deleteEditorNode}
+                    onUpdateNode={updateEditorNode}
+                    onGeminiApiKeyChange={setGeminiApiKey}
+                    onGeminiInstructionChange={setGeminiInstruction}
+                    onGeminiUpdate={updateDraftWithGemini}
+                  />
                 </div>
               </div>
             </div>
 
             <ResultsPanel
-              story={displayStory}
+              story={editableDisplayStory}
               activeTab={outputTab}
               simulationState={simulationState}
               setActiveTab={setOutputTab}
@@ -1824,10 +3078,10 @@ function BuildPageContent() {
               onReset={resetWorkspace}
             />
             <div ref={assessmentRef}>
-              <AssessmentCard story={displayStory} focused={focusedCard === "assessment"} />
+              <AssessmentCard story={editableDisplayStory} focused={focusedCard === "assessment"} />
             </div>
             <div ref={architectureRef}>
-              <ArchitectureCard story={displayStory} focused={focusedCard === "architecture"} />
+              <ArchitectureCard story={editableDisplayStory} focused={focusedCard === "architecture"} />
             </div>
             <ExportCard
               canExport={Boolean(workspaceRun)}

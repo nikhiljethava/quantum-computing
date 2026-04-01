@@ -19,6 +19,7 @@ import {
   fetchSessions,
   fetchUseCase,
   fetchUseCases,
+  geminiUpdateCircuit,
   runCircuit,
   submitJob,
   updateSession,
@@ -28,6 +29,7 @@ import {
   ArchitectureRequest,
   AssessmentInputs,
   CircuitRunCreate,
+  GeminiCircuitUpdateRequest,
   IndustryTag,
   Job,
   JobCreate,
@@ -140,6 +142,12 @@ export function useCircuitRun(id: string | null) {
     queryKey: ["circuit-run", id],
     queryFn: () => fetchCircuitRun(id!),
     enabled: !!id,
+  });
+}
+
+export function useGeminiCircuitUpdate() {
+  return useMutation({
+    mutationFn: (body: GeminiCircuitUpdateRequest) => geminiUpdateCircuit(body),
   });
 }
 

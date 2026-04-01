@@ -7,7 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.db.session import get_db
 from foundry_backend.models.models import CircuitRun, Session, UseCase
-from foundry_backend.schemas.schemas import CircuitRunCreate, CircuitRunRead, CircuitTemplateRead
+from foundry_backend.schemas.schemas import (
+    CircuitRunCreate,
+    CircuitRunRead,
+    CircuitTemplateRead,
+    GeminiCircuitUpdateRequest,
+    GeminiCircuitUpdateResponse,
+)
+from foundry_backend.services.gemini_circuit_assistant import (
+    GeminiCircuitError,
+    update_circuit_with_gemini,
+)
 from foundry_backend.services.hybrid_lab import create_circuit_run, list_templates, serialize_circuit_run
 
 router = APIRouter()
@@ -78,3 +88,23 @@ async def get_circuit_run(
     if not run:
         raise HTTPException(status_code=404, detail=f"CircuitRun {run_id} not found.")
     return CircuitRunRead.model_validate(serialize_circuit_run(run))
+
+
+@router.post(
+    "/gemini-update",
+    response_model=GeminiCircuitUpdateResponse,
+    summary="Update a draft circuit with Gemini",
+    description=(
+        "Use a user-supplied Gemini API key ephemerally to suggest an updated draft circuit, "
+        "guide response, and explanation for the editable Build canvas. The key is not stored."
+    ),
+)
+async def gemini_update_circuit(
+    body: GeminiCircuitUpdateRequest,
+) -> GeminiCircuitUpdateResponse:
+    """Return a Gemini-assisted circuit draft update for the frontend editor."""
+
+    try:
+        return await update_circuit_with_gemini(body)
+    except GeminiCircuitError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
