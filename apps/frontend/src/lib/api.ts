@@ -30,6 +30,7 @@ import {
 } from "@/types/api";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const REQUEST_TIMEOUT_MS = 12000;
 
 class ApiError extends Error {
   constructor(
@@ -42,10 +43,33 @@ class ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
-  });
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json", ...init?.headers },
+      signal: controller.signal,
+      ...init,
+    });
+  } catch (error) {
+    globalThis.clearTimeout(timeoutId);
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(
+        504,
+        `The backend did not respond within ${Math.round(REQUEST_TIMEOUT_MS / 1000)} seconds.`,
+      );
+    }
+
+    throw new ApiError(
+      503,
+      `Unable to reach the backend at ${BASE_URL}.`,
+    );
+  }
+
+  globalThis.clearTimeout(timeoutId);
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);

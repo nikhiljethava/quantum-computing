@@ -1,6 +1,6 @@
 """Extend artifacts for export bundle support.
 
-Revision ID: 0002_extend_artifacts_for_exports
+Revision ID: 0002_artifact_exports
 Revises: 0001_initial_quantum_foundry
 Create Date: 2026-03-29 13:30:00.000000
 """
@@ -12,19 +12,20 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 
-revision: str = "0002_extend_artifacts_for_exports"
+revision: str = "0002_artifact_exports"
 down_revision: str | None = "0001_initial_quantum_foundry"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
 
-artifact_type = sa.Enum(
+artifact_type = postgresql.ENUM(
     "job_output",
     "cirq_code",
     "assessment_json",
     "architecture_json",
     "session_summary",
     name="artifacttype",
+    create_type=False,
 )
 
 

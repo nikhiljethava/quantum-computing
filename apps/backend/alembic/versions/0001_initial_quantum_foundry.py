@@ -18,7 +18,7 @@ branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
 
-industry_tag = sa.Enum(
+industry_tag = postgresql.ENUM(
     "pharma",
     "finance",
     "logistics",
@@ -27,16 +27,31 @@ industry_tag = sa.Enum(
     "aerospace",
     "other",
     name="industrytag",
+    create_type=False,
 )
-project_status = sa.Enum("draft", "active", "archived", name="projectstatus")
-job_status = sa.Enum("PENDING", "RUNNING", "COMPLETED", "FAILED", name="jobstatus")
-job_type = sa.Enum(
+project_status = postgresql.ENUM(
+    "draft",
+    "active",
+    "archived",
+    name="projectstatus",
+    create_type=False,
+)
+job_status = postgresql.ENUM(
+    "PENDING",
+    "RUNNING",
+    "COMPLETED",
+    "FAILED",
+    name="jobstatus",
+    create_type=False,
+)
+job_type = postgresql.ENUM(
     "coin_flip",
     "bell_state",
     "grover",
     "routing",
     "chemistry",
     name="jobtype",
+    create_type=False,
 )
 
 

@@ -2909,14 +2909,14 @@ function BuildPageContent() {
           </div>
         ) : null}
 
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_330px]">
+        <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[220px_minmax(0,1.35fr)_330px]">
           <WorkspaceRail
             active="hybrid-lab"
             tip="Use the starter prompts to move from intuition into a credible prototype path without leaving the workspace."
           />
 
-          <div className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-[0.95fr_1.35fr]">
+          <div className="min-w-0 space-y-5 lg:col-start-2">
+            <div className="grid gap-5 xl:grid-cols-[0.95fr_1.35fr] 2xl:grid-cols-1">
               <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
@@ -2981,7 +2981,7 @@ function BuildPageContent() {
                 </button>
               </div>
 
-              <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+              <div className="min-w-0 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
@@ -3020,8 +3020,8 @@ function BuildPageContent() {
                   onSelectNode={setSelectedEditorNodeId}
                 />
 
-                <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-                  <div className="rounded-[22px] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
+                <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-1">
+                  <div className="min-w-0 rounded-[22px] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
                     <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                       Guide explanation
                     </div>
@@ -3059,7 +3059,7 @@ function BuildPageContent() {
             />
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-5 lg:col-start-2 2xl:col-start-auto">
             <WorkspaceMemoryCard
               currentProjectId={currentProjectId}
               projectName={projectName}
@@ -3105,7 +3105,7 @@ function BuildPageFallback() {
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-6 shadow-[0_35px_90px_rgba(15,23,42,0.18)]">
         <div className="mb-6 h-8 w-56 rounded-full bg-slate-200" />
         <div className="mb-4 h-14 max-w-[520px] rounded-[24px] bg-slate-200" />
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_330px]">
+        <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[220px_minmax(0,1.35fr)_330px]">
           <div className="skeleton h-[620px]" />
           <div className="space-y-5">
             <div className="skeleton h-[360px]" />

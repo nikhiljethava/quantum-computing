@@ -1,7 +1,7 @@
 """Add worker-backed session summary export job type.
 
-Revision ID: 0003_add_session_summary_export_job_type
-Revises: 0002_extend_artifacts_for_exports
+Revision ID: 0003_summary_export_job
+Revises: 0002_artifact_exports
 Create Date: 2026-03-31 10:30:00.000000
 """
 
@@ -11,8 +11,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0003_add_session_summary_export_job_type"
-down_revision: str | None = "0002_extend_artifacts_for_exports"
+revision: str = "0003_summary_export_job"
+down_revision: str | None = "0002_artifact_exports"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
