@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     # Job execution abstraction ("local" | "cloud_tasks")
     # TODO(gcp-deploy): switch to "cloud_tasks" and configure Cloud Tasks queue
     job_backend: str = "local"
+    cloud_tasks_project_id: str = ""
+    cloud_tasks_location: str = ""
+    cloud_tasks_queue: str = ""
+    cloud_tasks_worker_url: str = ""
+    cloud_tasks_service_account_email: str = ""
+    cloud_tasks_audience: str = ""
 
     # CORS — allow all origins in development; restrict in production
     cors_origins_str: str = "http://localhost:3000,http://localhost:3001"

@@ -1,9 +1,9 @@
 """
 Worker main loop — polls the PostgreSQL DB for PENDING jobs, runs circuits, saves results.
 
-This is the DB-backed queue implementation for local development.
-TODO(gcp-deploy): replace this polling loop with a Cloud Tasks push handler
-                  (HTTP endpoint that receives a task payload and calls _execute_job).
+This remains the DB-backed queue implementation for local development.
+Cloud Run deployments use the sibling HTTP task app, which reuses the same job
+execution helpers defined in this module.
 """
 
 import asyncio
@@ -31,6 +31,7 @@ DATABASE_URL = os.environ.get(
 )
 STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "local")
 ARTIFACT_DIR = os.environ.get("ARTIFACT_DIR", "./artifacts")
+GCS_BUCKET = os.environ.get("GCS_BUCKET", "")
 POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL_SECONDS", "2"))
 
 # ---------------------------------------------------------------------------
@@ -39,7 +40,11 @@ POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL_SECONDS", "2"))
 engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
-storage = get_storage_backend(backend=STORAGE_BACKEND, artifact_dir=ARTIFACT_DIR)
+storage = get_storage_backend(
+    backend=STORAGE_BACKEND,
+    artifact_dir=ARTIFACT_DIR,
+    gcs_bucket=GCS_BUCKET,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +217,56 @@ async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload:
     return await _execute_circuit_job(db, job_id=job_id, job_type=job_type, payload=payload)
 
 
+async def process_job_record(db: AsyncSession, job) -> None:
+    """Execute a single job row and persist status transitions."""
+
+    # Import models here to avoid loading ORM before engine is ready.
+    from foundry_backend.models.models import Artifact, ArtifactType, JobStatus  # type: ignore[import]
+
+    if job.status == JobStatus.completed:
+        return
+
+    job.status = JobStatus.running
+    job.started_at = datetime.now(tz=timezone.utc)
+    job.error_message = None
+    await db.commit()
+
+    try:
+        result = await _execute_job(db, job_id=str(job.id), job_type=job.job_type.value, payload=job.payload)
+        job.result = result
+        if result.get("job_output_artifact_uri"):
+            artifact = Artifact(
+                job_id=job.id,
+                artifact_type=ArtifactType.job_output,
+                filename=f"{job.id}_circuit.txt",
+                content_type="text/plain",
+                storage_uri=str(result["job_output_artifact_uri"]),
+                size_bytes=int(result.get("job_output_size", 0)),
+            )
+            db.add(artifact)
+        job.status = JobStatus.completed
+        logger.info("Job %s completed (%s)", job.id, job.job_type.value)
+    except Exception as exc:
+        job.status = JobStatus.failed
+        job.error_message = str(exc)
+        logger.exception("Job %s failed: %s", job.id, exc)
+    finally:
+        job.completed_at = datetime.now(tz=timezone.utc)
+        await db.commit()
+
+
+async def process_job_by_id(db: AsyncSession, job_id: uuid.UUID) -> object:
+    """Load a job row by ID and process it once."""
+
+    from foundry_backend.models.models import Job  # type: ignore[import]
+
+    job = await db.get(Job, job_id)
+    if job is None:
+        raise ValueError(f"Job {job_id} not found.")
+    await process_job_record(db, job)
+    return job
+
+
 # ---------------------------------------------------------------------------
 # Polling loop
 # ---------------------------------------------------------------------------
@@ -223,7 +278,7 @@ async def poll_once(db: AsyncSession) -> int:
     Returns the number of jobs processed.
     """
     # Import models here to avoid loading ORM before engine is ready
-    from foundry_backend.models.models import Artifact, ArtifactType, Job, JobStatus  # type: ignore[import]
+    from foundry_backend.models.models import Job, JobStatus  # type: ignore[import]
 
     stmt = (
         select(Job)
@@ -235,32 +290,7 @@ async def poll_once(db: AsyncSession) -> int:
     rows = (await db.execute(stmt)).scalars().all()
 
     for job in rows:
-        job.status = JobStatus.running
-        job.started_at = datetime.now(tz=timezone.utc)
-        await db.commit()
-
-        try:
-            result = await _execute_job(db, job_id=str(job.id), job_type=job.job_type.value, payload=job.payload)
-            job.result = result
-            if result.get("job_output_artifact_uri"):
-                artifact = Artifact(
-                    job_id=job.id,
-                    artifact_type=ArtifactType.job_output,
-                    filename=f"{job.id}_circuit.txt",
-                    content_type="text/plain",
-                    storage_uri=str(result["job_output_artifact_uri"]),
-                    size_bytes=int(result.get("job_output_size", 0)),
-                )
-                db.add(artifact)
-            job.status = JobStatus.completed
-            logger.info("Job %s completed (%s)", job.id, job.job_type.value)
-        except Exception as exc:
-            job.status = JobStatus.failed
-            job.error_message = str(exc)
-            logger.exception("Job %s failed: %s", job.id, exc)
-        finally:
-            job.completed_at = datetime.now(tz=timezone.utc)
-            await db.commit()
+        await process_job_record(db, job)
 
     return len(rows)
 

@@ -1,0 +1,254 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: us-central1
+  _AR_REPOSITORY: quantum-foundry
+  _BACKEND_SERVICE: quantum-foundry-backend
+  _WORKER_SERVICE: quantum-foundry-worker
+  _FRONTEND_SERVICE: quantum-foundry-frontend
+  _MIGRATE_JOB: quantum-foundry-migrate
+  _SEED_JOB: quantum-foundry-seed
+  _GCS_BUCKET: ""
+  _DATABASE_URL_SECRET: quantum-foundry-database-url
+  _CLOUD_SQL_CONNECTION_NAME: ""
+  _CLOUD_TASKS_LOCATION: us-central1
+  _CLOUD_TASKS_QUEUE: quantum-foundry-jobs
+  _RUNTIME_SERVICE_ACCOUNT: ""
+  _TASKS_INVOKER_SERVICE_ACCOUNT: ""
+  _EXTRA_BACKEND_CORS_ORIGINS: ""
+
+timeout: 3600s
+
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        [[ -n "${_GCS_BUCKET}" ]] || { echo "_GCS_BUCKET is required."; exit 1; }
+        [[ -n "${_DATABASE_URL_SECRET}" ]] || { echo "_DATABASE_URL_SECRET is required."; exit 1; }
+        [[ -n "${_TASKS_INVOKER_SERVICE_ACCOUNT}" ]] || {
+          echo "_TASKS_INVOKER_SERVICE_ACCOUNT is required for Cloud Tasks -> Cloud Run auth.";
+          exit 1;
+        }
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud artifacts repositories describe "${_AR_REPOSITORY}" \
+          --location="${_REGION}" >/dev/null 2>&1 || \
+        gcloud artifacts repositories create "${_AR_REPOSITORY}" \
+          --repository-format=docker \
+          --location="${_REGION}" \
+          --description="Quantum Foundry deploy images"
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud tasks queues describe "${_CLOUD_TASKS_QUEUE}" \
+          --location="${_CLOUD_TASKS_LOCATION}" >/dev/null 2>&1 || \
+        gcloud tasks queues create "${_CLOUD_TASKS_QUEUE}" \
+          --location="${_CLOUD_TASKS_LOCATION}"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/backend/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_BACKEND_SERVICE}:$COMMIT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/worker/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_WORKER_SERVICE}:$COMMIT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_BACKEND_SERVICE}:$COMMIT_SHA
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_WORKER_SERVICE}:$COMMIT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-worker
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        runtime_flag=()
+        if [[ -n "${_RUNTIME_SERVICE_ACCOUNT}" ]]; then
+          runtime_flag+=(--service-account="${_RUNTIME_SERVICE_ACCOUNT}")
+        fi
+
+        cloudsql_flag=()
+        if [[ -n "${_CLOUD_SQL_CONNECTION_NAME}" ]]; then
+          cloudsql_flag+=(--add-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
+        fi
+
+        gcloud run deploy "${_WORKER_SERVICE}" \
+          --image="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_WORKER_SERVICE}:$COMMIT_SHA" \
+          --region="${_REGION}" \
+          --platform=managed \
+          --no-allow-unauthenticated \
+          --set-env-vars="ENVIRONMENT=production,STORAGE_BACKEND=gcs,GCS_BUCKET=${_GCS_BUCKET}" \
+          --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
+          "${runtime_flag[@]}" \
+          "${cloudsql_flag[@]}"
+
+        gcloud run services add-iam-policy-binding "${_WORKER_SERVICE}" \
+          --region="${_REGION}" \
+          --member="serviceAccount:${_TASKS_INVOKER_SERVICE_ACCOUNT}" \
+          --role="roles/run.invoker"
+
+        gcloud run services describe "${_WORKER_SERVICE}" \
+          --region="${_REGION}" \
+          --format="value(status.url)" > /workspace/worker_url.txt
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: run-migrations-and-seed
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        runtime_flag=()
+        if [[ -n "${_RUNTIME_SERVICE_ACCOUNT}" ]]; then
+          runtime_flag+=(--service-account="${_RUNTIME_SERVICE_ACCOUNT}")
+        fi
+
+        cloudsql_flag=()
+        if [[ -n "${_CLOUD_SQL_CONNECTION_NAME}" ]]; then
+          cloudsql_flag+=(--add-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
+        fi
+
+        common_env="ENVIRONMENT=production,STORAGE_BACKEND=gcs,GCS_BUCKET=${_GCS_BUCKET}"
+        image_uri="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_BACKEND_SERVICE}:$COMMIT_SHA"
+
+        gcloud run jobs deploy "${_MIGRATE_JOB}" \
+          --image="${image_uri}" \
+          --region="${_REGION}" \
+          --command="alembic" \
+          --args="upgrade,head" \
+          --set-env-vars="${common_env}" \
+          --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
+          "${runtime_flag[@]}" \
+          "${cloudsql_flag[@]}"
+
+        gcloud run jobs execute "${_MIGRATE_JOB}" \
+          --region="${_REGION}" \
+          --wait
+
+        gcloud run jobs deploy "${_SEED_JOB}" \
+          --image="${image_uri}" \
+          --region="${_REGION}" \
+          --command="python" \
+          --args="-m,foundry_backend.seeds.seed_use_cases" \
+          --set-env-vars="${common_env}" \
+          --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
+          "${runtime_flag[@]}" \
+          "${cloudsql_flag[@]}"
+
+        gcloud run jobs execute "${_SEED_JOB}" \
+          --region="${_REGION}" \
+          --wait
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-backend
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        runtime_flag=()
+        if [[ -n "${_RUNTIME_SERVICE_ACCOUNT}" ]]; then
+          runtime_flag+=(--service-account="${_RUNTIME_SERVICE_ACCOUNT}")
+        fi
+
+        cloudsql_flag=()
+        if [[ -n "${_CLOUD_SQL_CONNECTION_NAME}" ]]; then
+          cloudsql_flag+=(--add-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
+        fi
+
+        worker_url="$(cat /workspace/worker_url.txt)"
+        gcloud run deploy "${_BACKEND_SERVICE}" \
+          --image="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_BACKEND_SERVICE}:$COMMIT_SHA" \
+          --region="${_REGION}" \
+          --platform=managed \
+          --allow-unauthenticated \
+          --set-env-vars="ENVIRONMENT=production,STORAGE_BACKEND=gcs,JOB_BACKEND=cloud_tasks,GCS_BUCKET=${_GCS_BUCKET},CORS_ORIGINS_STR=https://placeholder.invalid,CLOUD_TASKS_PROJECT_ID=$PROJECT_ID,CLOUD_TASKS_LOCATION=${_CLOUD_TASKS_LOCATION},CLOUD_TASKS_QUEUE=${_CLOUD_TASKS_QUEUE},CLOUD_TASKS_WORKER_URL=${worker_url},CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL=${_TASKS_INVOKER_SERVICE_ACCOUNT},CLOUD_TASKS_AUDIENCE=${worker_url}" \
+          --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
+          "${runtime_flag[@]}" \
+          "${cloudsql_flag[@]}"
+
+        gcloud run services describe "${_BACKEND_SERVICE}" \
+          --region="${_REGION}" \
+          --format="value(status.url)" > /workspace/backend_url.txt
+
+  - name: gcr.io/cloud-builders/docker
+    id: build-frontend
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        backend_url="$(cat /workspace/backend_url.txt)"
+        docker build \
+          -f apps/frontend/Dockerfile \
+          --build-arg "NEXT_PUBLIC_API_URL=${backend_url}" \
+          -t "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_FRONTEND_SERVICE}:$COMMIT_SHA" \
+          apps/frontend
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_FRONTEND_SERVICE}:$COMMIT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-frontend-and-finalize-cors
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        runtime_flag=()
+        if [[ -n "${_RUNTIME_SERVICE_ACCOUNT}" ]]; then
+          runtime_flag+=(--service-account="${_RUNTIME_SERVICE_ACCOUNT}")
+        fi
+
+        backend_url="$(cat /workspace/backend_url.txt)"
+
+        gcloud run deploy "${_FRONTEND_SERVICE}" \
+          --image="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_FRONTEND_SERVICE}:$COMMIT_SHA" \
+          --region="${_REGION}" \
+          --platform=managed \
+          --allow-unauthenticated \
+          --set-env-vars="NEXT_PUBLIC_API_URL=${backend_url}" \
+          "${runtime_flag[@]}"
+
+        frontend_url="$(gcloud run services describe "${_FRONTEND_SERVICE}" \
+          --region="${_REGION}" \
+          --format="value(status.url)")"
+
+        cors_origins="${frontend_url}"
+        if [[ -n "${_EXTRA_BACKEND_CORS_ORIGINS}" ]]; then
+          cors_origins="${cors_origins},${_EXTRA_BACKEND_CORS_ORIGINS}"
+        fi
+
+        gcloud run services update "${_BACKEND_SERVICE}" \
+          --region="${_REGION}" \
+          --update-env-vars="CORS_ORIGINS_STR=${cors_origins}"
+
+        printf 'Frontend URL: %s\nBackend URL: %s\nWorker URL: %s\n' \
+          "${frontend_url}" \
+          "${backend_url}" \
+          "$(cat /workspace/worker_url.txt)"

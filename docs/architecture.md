@@ -65,6 +65,21 @@ flowchart LR
     W --> FS
 ```
 
+## Cloud Run launch shape
+
+```mermaid
+flowchart LR
+    U["Browser"] --> CF["Cloud Run frontend"]
+    CF --> CB["Cloud Run backend"]
+    CB --> SQL[("Cloud SQL Postgres")]
+    CB --> GCS[("Cloud Storage artifacts")]
+    CB --> CT["Cloud Tasks queue"]
+    CT --> CW["Cloud Run worker"]
+    CW --> SQL
+    CW --> GCS
+    CW --> Core["foundry-core"]
+```
+
 ## Product flows
 
 ### Synchronous build flow
@@ -139,7 +154,7 @@ sequenceDiagram
 
 - Deploy `apps/frontend`, `apps/backend`, and `apps/worker` to Cloud Run.
 - Move PostgreSQL to Cloud SQL.
-- Swap local artifact storage for Cloud Storage through a storage adapter.
-- Swap the local polling worker path for Cloud Tasks or a queue-backed Cloud Run
-  handler through a queue adapter.
+- Use the storage adapter to switch from local artifacts to Cloud Storage.
+- Use the job adapter to switch from the local polling loop to Cloud Tasks with
+  a Cloud Run worker endpoint.
 - Add auth adapters for internal preview later, not during the local MVP.

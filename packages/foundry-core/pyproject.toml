@@ -11,6 +11,8 @@ dependencies = [
     "cirq-core>=1.3.0",
     "numpy>=1.26.0",
     "pydantic>=2.6.0",
+    "google-cloud-storage>=2.16.0",
+    "google-cloud-tasks>=2.16.0",
 ]
 
 [project.optional-dependencies]

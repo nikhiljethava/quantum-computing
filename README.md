@@ -47,6 +47,7 @@ The app now includes a complete local demo experience with:
 │       ├── src/foundry_core
 │       └── tests
 ├── .env.example
+├── cloudbuild.yaml
 ├── docker-compose.yml
 └── Makefile
 ```
@@ -177,11 +178,27 @@ make dev-worker
 - The repo is designed to run locally first, then move to Cloud Run with Cloud
   SQL, Cloud Storage, and Cloud Tasks adapters later.
 
+## Cloud Build launch path
+
+The repo now includes [cloudbuild.yaml](/Users/nikhiljethava/Documents/Codex/quantum-computing/cloudbuild.yaml)
+for a first GCP launch path:
+
+- `apps/frontend` -> Cloud Run frontend service
+- `apps/backend` -> Cloud Run API service
+- `apps/worker` -> Cloud Run task worker service
+- PostgreSQL -> Cloud SQL
+- artifact exports -> Cloud Storage
+- async jobs -> Cloud Tasks -> worker HTTP endpoint
+
+See [docs/gcp-cloud-build.md](/Users/nikhiljethava/Documents/Codex/quantum-computing/docs/gcp-cloud-build.md)
+for prerequisites, required secrets, service-account roles, and the exact
+`gcloud builds submit` command.
+
 ## GCP and MCP path
 
 - Cloud Run is the first hosted target for frontend, backend, and worker.
 - Cloud SQL is the first persistence target.
-- Cloud Storage and Cloud Tasks remain adapter-backed migration paths.
+- Cloud Storage and Cloud Tasks are now first-class adapter-backed deploy paths.
 - MCP is optional and reserved for retrieval and enterprise connectors, not
   core product logic.
 

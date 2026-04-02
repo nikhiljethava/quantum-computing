@@ -162,8 +162,8 @@ class Assessment(Base):
 class Job(Base):
     """
     Tracks an async circuit simulation job.
-    The worker polls this table (DB-backed queue) to pick up PENDING jobs.
-    TODO(gcp-deploy): replace polling with Cloud Tasks push or Pub/Sub subscription.
+    Local development uses a DB-backed poller. Cloud deployments can dispatch the
+    same records to a Cloud Tasks-backed worker service.
     """
 
     __tablename__ = "jobs"

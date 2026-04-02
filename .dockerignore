@@ -1,0 +1,12 @@
+.git
+.gitignore
+.pytest_cache
+.ruff_cache
+.venv
+artifacts
+**/__pycache__
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+apps/frontend/.next
+apps/frontend/node_modules

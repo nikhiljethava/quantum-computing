@@ -137,6 +137,7 @@ async def download_artifact(
     storage = get_storage_backend(
         backend=settings.storage_backend,
         artifact_dir=settings.artifact_dir,
+        gcs_bucket=settings.gcs_bucket,
     )
     content = await storage.load(artifact.storage_uri)
 

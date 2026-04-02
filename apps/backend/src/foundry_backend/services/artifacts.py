@@ -162,6 +162,7 @@ async def create_export_artifact(
     storage = get_storage_backend(
         backend=settings.storage_backend,
         artifact_dir=settings.artifact_dir,
+        gcs_bucket=settings.gcs_bucket,
     )
     storage_uri = await storage.save(content=content, filename=filename, content_type=content_type)
 

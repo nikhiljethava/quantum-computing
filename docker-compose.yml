@@ -26,6 +26,7 @@ services:
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
       JOB_BACKEND: ${JOB_BACKEND:-local}
       ARTIFACT_DIR: ${DOCKER_ARTIFACT_DIR:-/app/artifacts}
+      GCS_BUCKET: ${GCS_BUCKET:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       CORS_ORIGINS_STR: ${CORS_ORIGINS_STR:-http://localhost:3000,http://localhost:3001}
     ports:
@@ -49,6 +50,7 @@ services:
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
       JOB_BACKEND: ${JOB_BACKEND:-local}
       ARTIFACT_DIR: ${DOCKER_ARTIFACT_DIR:-/app/artifacts}
+      GCS_BUCKET: ${GCS_BUCKET:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-2}
     volumes:
@@ -58,11 +60,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    command: python -m foundry_worker.main
 
   frontend:
     build:
       context: apps/frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
@@ -74,6 +79,7 @@ services:
       - /app/.next
     depends_on:
       - backend
+    command: npm run dev -- --hostname 0.0.0.0 --port 3000
 
 volumes:
   postgres_data:
