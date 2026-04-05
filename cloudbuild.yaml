@@ -144,7 +144,7 @@ steps:
 
         cloudsql_flag=()
         if [[ -n "${_CLOUD_SQL_CONNECTION_NAME}" ]]; then
-          cloudsql_flag+=(--add-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
+          cloudsql_flag+=(--set-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
         fi
 
         common_env="ENVIRONMENT=production,STORAGE_BACKEND=gcs,GCS_BUCKET=${_GCS_BUCKET}"
