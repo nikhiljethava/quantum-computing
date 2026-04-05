@@ -19,13 +19,13 @@ substitutions:
   _FRONTEND_SERVICE: quantum-foundry-frontend
   _MIGRATE_JOB: quantum-foundry-migrate
   _SEED_JOB: quantum-foundry-seed
-  _GCS_BUCKET: ""
+  _GCS_BUCKET: "cloudhub-apptopology-golden-quantum-foundry-artifacts"
   _DATABASE_URL_SECRET: quantum-foundry-database-url
-  _CLOUD_SQL_CONNECTION_NAME: ""
+  _CLOUD_SQL_CONNECTION_NAME: "cloudhub-apptopology-golden:us-central1:quantum-foundry-db"
   _CLOUD_TASKS_LOCATION: us-central1
   _CLOUD_TASKS_QUEUE: quantum-foundry-jobs
-  _RUNTIME_SERVICE_ACCOUNT: ""
-  _TASKS_INVOKER_SERVICE_ACCOUNT: ""
+  _RUNTIME_SERVICE_ACCOUNT: "quantum-app-build-sa@cloudhub-apptopology-golden.iam.gserviceaccount.com"
+  _TASKS_INVOKER_SERVICE_ACCOUNT: "quantum-foundry-tasks@cloudhub-apptopology-golden.iam.gserviceaccount.com"
   _EXTRA_BACKEND_CORS_ORIGINS: ""
 
 timeout: 3600s
@@ -262,3 +262,12 @@ steps:
           "${frontend_url}" \
           "${backend_url}" \
           "$(cat /workspace/worker_url.txt)"
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: create-apphub-app
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud apphub applications describe quantum-foundry --location=us-central1 >/dev/null 2>&1 || \
+        gcloud apphub applications create quantum-foundry --location=us-central1 --scope-type=REGIONAL --environment-type=DEVELOPMENT
