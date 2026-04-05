@@ -1,3 +1,13 @@
+# To trigger this build from Cloud Build:
+# 1. Connect this repository to your GCP project.
+# 2. Create a trigger pointing to this cloudbuild.yaml file.
+# 3. Add the following user-defined substitutions in the trigger configuration:
+#   _GCS_BUCKET: [Your GCS Bucket Name]
+#   _CLOUD_SQL_CONNECTION_NAME: [PROJECT_ID:REGION:INSTANCE]
+#   _RUNTIME_SERVICE_ACCOUNT: [Service Account Email for Cloud Run]
+#   _TASKS_INVOKER_SERVICE_ACCOUNT: [Service Account Email for Cloud Tasks]
+# 4. Built-in variables like COMMIT_SHA will be handled automatically by the trigger.
+
 options:
   logging: CLOUD_LOGGING_ONLY
 
