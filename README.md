@@ -161,6 +161,17 @@ This repo is already structured for a clean Google Cloud path:
 
 The included `cloudbuild.yaml` is designed to wire these pieces together.
 
+### Required Permissions for Cloud Build Trigger
+
+If you use a custom service account for the Cloud Build trigger (e.g., `quantum-app-build-sa@cloudhub-apptopology-golden.iam.gserviceaccount.com`), it requires the following IAM roles on the project:
+
+- **Artifact Registry Administrator** (`roles/artifactregistry.admin`): To create and push to the image repository.
+- **Cloud Run Administrator** (`roles/run.admin`): To deploy services and jobs.
+- **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`): To bind and access the database URL secret.
+- **Cloud Tasks Administrator** (`roles/cloudtasks.admin`): To create work queues.
+- **Service Account User** (`roles/iam.serviceAccountUser`): To act as the runtime service account for Cloud Run services.
+- **Storage Administrator** (`roles/storage.admin`): To access the deployment artifacts bucket.
+
 ---
 
 ## How to access the app on GCP
