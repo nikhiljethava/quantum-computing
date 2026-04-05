@@ -36,6 +36,9 @@ steps:
     args:
       - -ceu
       - |
+        echo "DEBUG: _GCS_BUCKET='${_GCS_BUCKET}'"
+        echo "DEBUG: _DATABASE_URL_SECRET='${_DATABASE_URL_SECRET}'"
+        echo "DEBUG: _TASKS_INVOKER_SERVICE_ACCOUNT='${_TASKS_INVOKER_SERVICE_ACCOUNT}'"
         [[ -n "${_GCS_BUCKET}" ]] || { echo "_GCS_BUCKET is required."; exit 1; }
         [[ -n "${_DATABASE_URL_SECRET}" ]] || { echo "_DATABASE_URL_SECRET is required."; exit 1; }
         [[ -n "${_TASKS_INVOKER_SERVICE_ACCOUNT}" ]] || {
