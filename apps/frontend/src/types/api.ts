@@ -271,3 +271,14 @@ export interface SessionDetail extends SavedSession {
   latest_architecture: ArchitectureMap | null;
   artifacts: Artifact[];
 }
+
+export interface CityUsageSummary {
+  city: string;
+  count: number;
+}
+
+export interface PageUsageSummary {
+  total_loads: number;
+  by_city: CityUsageSummary[];
+}
+

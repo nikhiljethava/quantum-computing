@@ -291,3 +291,18 @@ class Artifact(Base):
     architecture_record: Mapped["ArchitectureRecord | None"] = relationship(
         "ArchitectureRecord", back_populates="artifacts"
     )
+
+
+class PageUsage(Base):
+    """
+    Tracks page loads and user location for analytics.
+    """
+
+    __tablename__ = "page_usages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    page_path: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    city: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )

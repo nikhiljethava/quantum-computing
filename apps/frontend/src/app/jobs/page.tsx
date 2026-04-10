@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -17,8 +17,9 @@ import {
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import { getArtifactDownloadUrl } from "@/lib/api";
+import { fetchUsageSummary, getArtifactDownloadUrl, recordUsage } from "@/lib/api";
 import { useJob, useJobs } from "@/lib/hooks";
+import { PageUsageSummary } from "@/types/api";
 import { getStarterStory, normalizeStarterKey } from "@/lib/studio-mocks";
 import { Job, JobStatus, JobType } from "@/types/api";
 
@@ -517,6 +518,19 @@ function EmptyJobState() {
 function JobsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [usageSummary, setUsageSummary] = useState<PageUsageSummary | null>(null);
+
+  useEffect(() => {
+    // Record usage (Mock city for demo)
+    const cities = ["Seattle", "San Francisco", "New York", "London", "Tokyo"];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    recordUsage({ page_path: "/jobs", city: randomCity }).catch(console.error);
+
+    // Fetch summary
+    fetchUsageSummary("/jobs")
+      .then(setUsageSummary)
+      .catch(console.error);
+  }, []);
   const rawStatus = searchParams.get("status");
   const filter =
     rawStatus === "PENDING" ||
@@ -634,6 +648,45 @@ function JobsPageContent() {
 
           {selectedJob ? <JobDetailPanel job={selectedJob} /> : <EmptyJobState />}
         </div>
+
+        {usageSummary && (
+          <div className="mt-6 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
+            <div className="mb-4">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Usage Statistics (Last 30 Days)
+              </div>
+              <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
+                Page loads and user locations
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Total Page Loads
+                </div>
+                <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-900">
+                  {usageSummary.total_loads}
+                </div>
+              </div>
+              <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Top Cities
+                </div>
+                <div className="mt-2 space-y-2">
+                  {usageSummary.by_city.map((item) => (
+                    <div key={item.city} className="flex justify-between text-sm">
+                      <span className="font-semibold text-slate-700">{item.city}</span>
+                      <span className="text-slate-500">{item.count} loads</span>
+                    </div>
+                  ))}
+                  {usageSummary.by_city.length === 0 && (
+                    <div className="text-sm text-slate-500">No data available</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

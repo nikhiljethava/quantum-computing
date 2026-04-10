@@ -20,6 +20,7 @@ import {
   Project,
   ProjectCreate,
   ProjectList,
+  PageUsageSummary,
   SavedSession,
   SessionCreate,
   SessionDetail,
@@ -203,4 +204,18 @@ export async function createArtifact(body: ArtifactCreate): Promise<Artifact> {
 
 export function getArtifactDownloadUrl(artifactId: string): string {
   return `${BASE_URL}/api/v1/artifacts/${artifactId}/download`;
+}
+
+export async function recordUsage(body: { page_path: string; city: string }): Promise<any> {
+  return apiFetch("/api/v1/usage", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchUsageSummary(page_path?: string): Promise<PageUsageSummary> {
+  const query = new URLSearchParams();
+  if (page_path) query.set("page_path", page_path);
+  const qs = query.toString() ? `?${query}` : "";
+  return apiFetch<PageUsageSummary>(`/api/v1/usage${qs}`);
 }

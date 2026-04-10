@@ -410,3 +410,36 @@ class SessionDetailRead(SessionRead):
     latest_circuit_run: CircuitRunRead | None = None
     latest_architecture: ArchitectureRead | None = None
     artifacts: list[ArtifactRead] = Field(default_factory=list)
+
+
+class PageUsageCreate(BaseModel):
+    """Request body for recording a page view."""
+
+    page_path: str = Field(..., min_length=1, max_length=255)
+    city: str = Field(..., min_length=1, max_length=100)
+
+
+class PageUsageRead(BaseModel):
+    """Read model for a page view."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    page_path: str
+    city: str
+    created_at: datetime
+
+
+class CityUsageSummary(BaseModel):
+    """Summary of usage for a specific city."""
+
+    city: str
+    count: int
+
+
+class PageUsageSummary(BaseModel):
+    """Aggregated usage data for the last 30 days."""
+
+    total_loads: int
+    by_city: list[CityUsageSummary]
+
