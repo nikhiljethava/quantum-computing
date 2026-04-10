@@ -16,7 +16,7 @@ steps:
       - apps/backend/Dockerfile
       - -t
       - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPOSITORY}/${_BACKEND_SERVICE}:latest
-      - apps/backend
+      - .
 
   - name: gcr.io/cloud-builders/docker
     id: push-backend
