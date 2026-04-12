@@ -416,7 +416,7 @@ class PageUsageCreate(BaseModel):
     """Request body for recording a page view."""
 
     page_path: str = Field(..., min_length=1, max_length=255)
-    city: str = Field(..., min_length=1, max_length=100)
+    visitor_id: str = Field(..., min_length=8, max_length=64)
 
 
 class PageUsageRead(BaseModel):
@@ -426,6 +426,7 @@ class PageUsageRead(BaseModel):
 
     id: uuid.UUID
     page_path: str
+    visitor_id: str | None = None
     city: str
     created_at: datetime
 
@@ -440,6 +441,7 @@ class CityUsageSummary(BaseModel):
 class PageUsageSummary(BaseModel):
     """Aggregated usage data for the last 30 days."""
 
-    total_loads: int
+    total_visits: int
+    unique_visitors: int
+    window_days: int = 30
     by_city: list[CityUsageSummary]
-

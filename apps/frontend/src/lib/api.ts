@@ -21,6 +21,7 @@ import {
   ProjectCreate,
   ProjectList,
   PageUsageSummary,
+  PageUsageRecord,
   SavedSession,
   SessionCreate,
   SessionDetail,
@@ -206,8 +207,8 @@ export function getArtifactDownloadUrl(artifactId: string): string {
   return `${BASE_URL}/api/v1/artifacts/${artifactId}/download`;
 }
 
-export async function recordUsage(body: { page_path: string; city: string }): Promise<any> {
-  return apiFetch("/api/v1/usage", {
+export async function recordUsage(body: { page_path: string; visitor_id: string }): Promise<PageUsageRecord> {
+  return apiFetch<PageUsageRecord>("/api/v1/usage", {
     method: "POST",
     body: JSON.stringify(body),
   });

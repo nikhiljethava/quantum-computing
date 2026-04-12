@@ -1,23 +1,31 @@
 """Usage tracking routes."""
 
 from datetime import timedelta
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.db.session import get_db
 from foundry_backend.models.models import PageUsage
 from foundry_backend.schemas.schemas import CityUsageSummary, PageUsageCreate, PageUsageRead, PageUsageSummary
+from foundry_backend.services.usage import extract_city_from_headers
 
 router = APIRouter()
 
 
 @router.post("", response_model=PageUsageRead, summary="Record a page view")
 async def record_usage(
-    usage_in: PageUsageCreate, db: AsyncSession = Depends(get_db)
+    usage_in: PageUsageCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
 ) -> PageUsage:
-    """Record a page view with path and city."""
-    usage = PageUsage(page_path=usage_in.page_path, city=usage_in.city)
+    """Record a page view with path, visitor ID, and resolved city."""
+
+    usage = PageUsage(
+        page_path=usage_in.page_path,
+        visitor_id=usage_in.visitor_id,
+        city=extract_city_from_headers(request.headers),
+    )
     db.add(usage)
     await db.commit()
     await db.refresh(usage)
@@ -31,28 +39,33 @@ async def get_usage_summary(
     """Get aggregated usage data for the last 30 days."""
     thirty_days_ago = func.now() - timedelta(days=30)
 
-    # Total loads
-    total_query = select(func.count()).select_from(PageUsage).where(PageUsage.created_at >= thirty_days_ago)
+    filters = [
+        PageUsage.created_at >= thirty_days_ago,
+        PageUsage.visitor_id.is_not(None),
+    ]
     if page_path:
-        total_query = total_query.where(PageUsage.page_path == page_path)
+        filters.append(PageUsage.page_path == page_path)
 
+    total_query = select(func.count()).select_from(PageUsage).where(*filters)
     total_result = await db.execute(total_query)
-    total_loads = total_result.scalar() or 0
+    total_visits = total_result.scalar() or 0
 
-    # Group by city
+    unique_query = select(func.count(func.distinct(PageUsage.visitor_id))).where(*filters)
+    unique_result = await db.execute(unique_query)
+    unique_visitors = unique_result.scalar() or 0
+
     city_query = (
         select(PageUsage.city, func.count().label("count"))
-        .where(PageUsage.created_at >= thirty_days_ago)
+        .where(*filters)
         .group_by(PageUsage.city)
         .order_by(desc("count"))
     )
-    if page_path:
-        city_query = city_query.where(PageUsage.page_path == page_path)
 
     city_result = await db.execute(city_query)
-    by_city = [
-        CityUsageSummary(city=row[0], count=row[1])
-        for row in city_result.all()
-    ]
+    by_city = [CityUsageSummary(city=row[0], count=row[1]) for row in city_result.all()]
 
-    return PageUsageSummary(total_loads=total_loads, by_city=by_city)
+    return PageUsageSummary(
+        total_visits=total_visits,
+        unique_visitors=unique_visitors,
+        by_city=by_city,
+    )

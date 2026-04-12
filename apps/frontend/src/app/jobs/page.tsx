@@ -42,6 +42,21 @@ function formatTime(value: string | null) {
   return formatter.format(new Date(value));
 }
 
+function getOrCreateVisitorId() {
+  const storageKey = "qf_visitor_id";
+  const existing = globalThis.localStorage.getItem(storageKey);
+  if (existing) {
+    return existing;
+  }
+
+  const visitorId =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  globalThis.localStorage.setItem(storageKey, visitorId);
+  return visitorId;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -519,17 +534,41 @@ function JobsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [usageSummary, setUsageSummary] = useState<PageUsageSummary | null>(null);
+  const [usageState, setUsageState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    // Record usage (Mock city for demo)
-    const cities = ["Seattle", "San Francisco", "New York", "London", "Tokyo"];
-    const randomCity = cities[Math.floor(Math.random() * cities.length)];
-    recordUsage({ page_path: "/jobs", city: randomCity }).catch(console.error);
+    let cancelled = false;
 
-    // Fetch summary
-    fetchUsageSummary("/jobs")
-      .then(setUsageSummary)
-      .catch(console.error);
+    async function loadUsage() {
+      setUsageState("loading");
+
+      try {
+        const visitorId = getOrCreateVisitorId();
+        const sessionKey = `qf_page_visit:${visitorId}:/jobs`;
+
+        if (!globalThis.sessionStorage.getItem(sessionKey)) {
+          await recordUsage({ page_path: "/jobs", visitor_id: visitorId });
+          globalThis.sessionStorage.setItem(sessionKey, new Date().toISOString());
+        }
+
+        const summary = await fetchUsageSummary("/jobs");
+        if (!cancelled) {
+          setUsageSummary(summary);
+          setUsageState("ready");
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setUsageSummary(null);
+          setUsageState("error");
+        }
+      }
+    }
+
+    loadUsage();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const rawStatus = searchParams.get("status");
   const filter =
@@ -649,44 +688,60 @@ function JobsPageContent() {
           {selectedJob ? <JobDetailPanel job={selectedJob} /> : <EmptyJobState />}
         </div>
 
-        {usageSummary && (
-          <div className="mt-6 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
-            <div className="mb-4">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Usage Statistics (Last 30 Days)
-              </div>
-              <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
-                Page loads and user locations
-              </h2>
+        <div className="mt-6 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
+          <div className="mb-4">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Usage Statistics (Last 30 Days)
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Total Page Loads
-                </div>
-                <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-900">
-                  {usageSummary.total_loads}
-                </div>
+            <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
+              Visits and traffic locations
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Tracks the last 30 days of visits to the Jobs page and shows the cities resolved from trusted proxy geo headers when available.
+            </p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+            <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Total visits
               </div>
-              <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Top Cities
-                </div>
-                <div className="mt-2 space-y-2">
-                  {usageSummary.by_city.map((item) => (
+              <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-900">
+                {usageSummary?.total_visits ?? (usageState === "loading" ? "..." : "0")}
+              </div>
+            </div>
+            <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Unique visitors
+              </div>
+              <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-900">
+                {usageSummary?.unique_visitors ?? (usageState === "loading" ? "..." : "0")}
+              </div>
+            </div>
+            <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Top cities
+              </div>
+              <div className="mt-2 space-y-2">
+                {usageState === "loading" ? (
+                  <div className="text-sm text-slate-500">Loading visit data...</div>
+                ) : usageState === "error" ? (
+                  <div className="text-sm text-amber-700">
+                    Usage analytics are not available right now. Check that the backend usage route and migration are deployed.
+                  </div>
+                ) : usageSummary?.by_city.length ? (
+                  usageSummary.by_city.map((item) => (
                     <div key={item.city} className="flex justify-between text-sm">
                       <span className="font-semibold text-slate-700">{item.city}</span>
-                      <span className="text-slate-500">{item.count} loads</span>
+                      <span className="text-slate-500">{item.count} visits</span>
                     </div>
-                  ))}
-                  {usageSummary.by_city.length === 0 && (
-                    <div className="text-sm text-slate-500">No data available</div>
-                  )}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-500">No tracked locations yet.</div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
       </section>
     </div>
   );

@@ -277,8 +277,17 @@ export interface CityUsageSummary {
   count: number;
 }
 
-export interface PageUsageSummary {
-  total_loads: number;
-  by_city: CityUsageSummary[];
+export interface PageUsageRecord {
+  id: string;
+  page_path: string;
+  visitor_id: string | null;
+  city: string;
+  created_at: string;
 }
 
+export interface PageUsageSummary {
+  total_visits: number;
+  unique_visitors: number;
+  window_days: number;
+  by_city: CityUsageSummary[];
+}
