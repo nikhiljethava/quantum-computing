@@ -363,18 +363,19 @@ function AssessPageContent() {
               Idea evaluator
             </span>
             <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#157052]">
-              Live QALS-lite
+              Decision recommendation
             </span>
             <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
               Deterministic heuristic
             </span>
           </div>
           <h1 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-[-0.05em] text-slate-900">
-            Assess credible quantum readiness
+            Decide the next move for a quantum use case
           </h1>
           <p className="mt-3 max-w-[760px] text-[1.02rem] leading-8 text-slate-600">
             Use a real seeded industry case, tune the assumptions openly, and let
-            the product explain what is prototype-ready versus what still belongs in a longer-term roadmap.
+            the product recommend the next move: classical now, hybrid pilot now,
+            watchlist, or research only.
           </p>
         </div>
 
@@ -470,7 +471,7 @@ function AssessPageContent() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    QALS-lite inputs
+                    Decision inputs
                   </div>
                   <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
                     Adjust the assumptions in plain language
@@ -483,7 +484,7 @@ function AssessPageContent() {
                   className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  {isPending ? "Scoring..." : "Run QALS-lite"}
+                  {isPending ? "Generating..." : "Generate recommendation"}
                 </button>
               </div>
 
@@ -670,7 +671,7 @@ function AssessPageContent() {
 
               <details className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700">
-                  QALS-lite score details
+                  QALS-lite details
                 </summary>
                 <div className="mt-4 grid gap-4 md:grid-cols-[220px_1fr]">
                   <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
@@ -746,7 +747,7 @@ function AssessPageContent() {
                 </>
               ) : (
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Pick a seeded use case to see the live QALS-lite reasoning.
+                  Pick a seeded use case to see the live decision rationale.
                 </p>
               )}
             </div>

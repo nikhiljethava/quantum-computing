@@ -180,25 +180,27 @@ def _derive_recommendation(
     evidence_count: int,
     has_pilot_blueprint: bool,
 ) -> AssessmentRecommendation:
-    if (
-        horizon == "near-term"
-        and qals_score >= 0.55
-        and evidence_count >= 2
-        and has_pilot_blueprint
-    ):
-        return "hybrid_pilot_now"
+    if horizon == "near-term" and qals_score >= 0.55 and evidence_count >= 2:
+        if has_pilot_blueprint:
+            return "hybrid_pilot_now"
+        return "watchlist"
 
     if horizon == "long-term" and qals_score < 0.55:
         return "research_only"
 
-    if classical_hardness in {"easy", "medium"} and qals_score < 0.35:
-        return "classical_now"
-
     if 0.35 <= qals_score < 0.55:
         return "watchlist"
 
+    if classical_hardness in {"easy", "medium"} and qals_score < 0.35:
+        return "classical_now"
+
+    if qals_score >= 0.55 and not has_pilot_blueprint:
+        return "watchlist"
+
     if qals_score < 0.35:
-        return "classical_now" if horizon == "near-term" else "research_only"
+        if horizon == "near-term":
+            return "classical_now"
+        return "research_only"
 
     if horizon == "long-term":
         return "research_only"

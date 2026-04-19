@@ -77,6 +77,19 @@ BASE_EVIDENCE = [
             [],
             "research_only",
         ),
+        (
+            {
+                "problem_size": "large",
+                "data_structure": "structured",
+                "classical_hardness": "hard",
+                "timeline": "1-2 years",
+            },
+            3.5,
+            "near-term",
+            {},
+            BASE_EVIDENCE,
+            "watchlist",
+        ),
     ],
 )
 def test_run_assessment_returns_expected_recommendation(
