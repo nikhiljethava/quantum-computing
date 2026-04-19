@@ -27,6 +27,30 @@ export type ArtifactType =
   | "architecture_json"
   | "session_summary";
 export type ProjectStatus = "draft" | "active" | "archived";
+export type AssessmentRecommendation =
+  | "classical_now"
+  | "hybrid_pilot_now"
+  | "watchlist"
+  | "research_only";
+
+export interface UseCaseBlueprint {
+  persona: string;
+  business_kpi: string;
+  classical_baseline: string;
+  hybrid_pattern: string;
+  pilot_scope_weeks: number;
+  sample_input: string;
+  success_thresholds: string[];
+  next_90_days: string[];
+}
+
+export interface UseCaseEvidenceItem {
+  title: string;
+  publisher: string;
+  published_at: string;
+  claim: string;
+  source_url: string;
+}
 
 export interface UseCase {
   id: string;
@@ -36,6 +60,10 @@ export interface UseCase {
   quantum_approach: string;
   complexity_score: number;
   horizon: Horizon;
+  featured: boolean;
+  featured_rank: number | null;
+  blueprint: Partial<UseCaseBlueprint>;
+  evidence_items: UseCaseEvidenceItem[];
   created_at: string;
 }
 
@@ -58,6 +86,11 @@ export interface Assessment {
   qals_score: number;
   verdict: string;
   score_breakdown: Record<string, number>;
+  recommendation: AssessmentRecommendation;
+  why_promising: string[];
+  why_not_now: string[];
+  top_blockers: string[];
+  next_90_days: string[];
   created_at: string;
 }
 

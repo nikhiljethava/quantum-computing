@@ -39,10 +39,22 @@ import {
   SessionUpdate,
 } from "@/types/api";
 
-export function useUseCases(industry?: IndustryTag) {
+export function useUseCases(
+  industryOrParams?:
+    | IndustryTag
+    | {
+        industry?: IndustryTag;
+        featured_only?: boolean;
+        limit?: number;
+      },
+) {
+  const params =
+    typeof industryOrParams === "string" || typeof industryOrParams === "undefined"
+      ? { industry: industryOrParams }
+      : industryOrParams;
   return useQuery({
-    queryKey: ["use-cases", industry],
-    queryFn: () => fetchUseCases({ industry }),
+    queryKey: ["use-cases", params],
+    queryFn: () => fetchUseCases(params),
   });
 }
 

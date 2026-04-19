@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  BarChart3,
   CheckCircle2,
   ClipboardList,
+  FileBadge2,
+  FlaskConical,
   Loader2,
   RefreshCw,
   Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
@@ -21,7 +23,12 @@ import {
   getStarterStory,
   normalizeStarterKey,
 } from "@/lib/studio-mocks";
-import { Assessment, AssessmentInputs, UseCase } from "@/types/api";
+import {
+  Assessment,
+  AssessmentInputs,
+  AssessmentRecommendation,
+  UseCase,
+} from "@/types/api";
 
 const QUESTIONS: Array<{
   key: keyof AssessmentInputs;
@@ -114,63 +121,135 @@ function buildDefaultInputs(starter: StarterKey, useCase: UseCase): AssessmentIn
   };
 }
 
-function deriveTimeHorizon(score: number) {
-  if (score >= 0.75) return "Hybrid experiment now";
-  if (score >= 0.55) return "Prototype now";
-  if (score >= 0.35) return "Hardware-gated later";
-  return "Classical now";
+const RECOMMENDATION_META: Record<
+  AssessmentRecommendation,
+  {
+    label: string;
+    eyebrow: string;
+    summary: string;
+    badgeClassName: string;
+    panelClassName: string;
+  }
+> = {
+  classical_now: {
+    label: "Classical now",
+    eyebrow: "Best immediate path",
+    summary: "Keep the workload in a strong classical lane for now and revisit quantum only if the constraints materially change.",
+    badgeClassName: "bg-slate-900/10 text-slate-800",
+    panelClassName: "border-slate-200 bg-[linear-gradient(135deg,#ffffff,#f8fafc)]",
+  },
+  hybrid_pilot_now: {
+    label: "Hybrid pilot now",
+    eyebrow: "Primary recommendation",
+    summary: "This is strong enough for a simulator-first hybrid pilot with a real KPI, a bounded scope, and evidence behind it.",
+    badgeClassName: "bg-[#dcfce7] text-[#166534]",
+    panelClassName: "border-[#b7e4c7] bg-[linear-gradient(135deg,#f3fff7,#ecfdf5)]",
+  },
+  watchlist: {
+    label: "Watchlist",
+    eyebrow: "Promising, not ready",
+    summary: "The case is directionally credible, but the evidence or pilot design still needs to sharpen before committing.",
+    badgeClassName: "bg-[#fef3c7] text-[#92400e]",
+    panelClassName: "border-[#f7d58d] bg-[linear-gradient(135deg,#fffdf5,#fff7db)]",
+  },
+  research_only: {
+    label: "Research only",
+    eyebrow: "Longer-horizon fit",
+    summary: "Treat this as a research track for now. The idea may matter later, but it is not a near-term business pilot yet.",
+    badgeClassName: "bg-[#ede9fe] text-[#6d28d9]",
+    panelClassName: "border-[#d9ccff] bg-[linear-gradient(135deg,#faf7ff,#f5f3ff)]",
+  },
+};
+
+function deriveFallbackRecommendation(useCase: UseCase | null): AssessmentRecommendation {
+  if (!useCase) return "watchlist";
+  if (useCase.horizon === "near-term") return "watchlist";
+  if (useCase.horizon === "long-term") return "research_only";
+  return "watchlist";
 }
 
-function deriveConfidence(score: number) {
-  if (score >= 0.7) return "Medium confidence";
-  if (score >= 0.45) return "Moderate confidence";
-  return "Lower confidence";
-}
-
-function buildExplanation(
-  useCase: UseCase,
-  story: ReturnType<typeof getStarterStory>,
-  inputs: AssessmentInputs,
-  assessment: Assessment,
-) {
-  const score = assessment.qals_score;
-  return [
-    `${useCase.title} is anchored to the ${useCase.industry} industry and starts from a complexity score of ${useCase.complexity_score.toFixed(1)} / 5.`,
-    `${story.label} keeps the recommendation simulation-first, with ${inputs.classical_hardness.replace("_", " ")} classical pressure and ${inputs.data_structure.replace("_", " ")} structure.`,
-    score >= 0.55
-      ? "The current inputs point toward a credible prototype or hybrid experiment, not a claim of direct quantum advantage."
-      : "The current inputs suggest the best next step is more framing and evidence before positioning this as a near-term quantum candidate.",
-  ];
-}
-
-function buildAssumptions(
-  inputs: AssessmentInputs,
-  useCase: UseCase,
-) {
-  const assumptions = [
-    `The team can isolate one sub-problem inside ${useCase.title} instead of promising an end-to-end workload rewrite.`,
-    "Simulation-first output is acceptable for the first prototype and stakeholder review cycle.",
-  ];
-
-  if (inputs.timeline === "now") {
-    assumptions.push("A near-term delivery expectation may still favor strong classical baselines over quantum experimentation.");
-  } else if (inputs.data_structure === "unstructured") {
-    assumptions.push("The data may need substantial classical preprocessing before any quantum kernel becomes credible.");
-  } else {
-    assumptions.push("The problem can be expressed cleanly enough for a narrow hybrid quantum kernel to be meaningful.");
+function buildFallbackWhyPromising(useCase: UseCase | null): string[] {
+  if (!useCase) {
+    return ["Pick a seeded use case to generate a recommendation and supporting rationale."];
   }
 
-  return assumptions;
+  const reasons = [
+    `${useCase.title} is already framed as a concrete ${useCase.industry} workflow instead of a vague quantum concept.`,
+  ];
+
+  if (useCase.blueprint.hybrid_pattern) {
+    reasons.push("The use-case blueprint already describes how a hybrid workflow could fit beside the classical stack.");
+  }
+
+  if (useCase.evidence_items.length >= 2) {
+    reasons.push(`There are ${useCase.evidence_items.length} evidence items attached to the use case today.`);
+  }
+
+  return reasons;
 }
 
-function buildSignals(
-  story: ReturnType<typeof getStarterStory>,
-  useCase: UseCase,
-) {
-  return [
-    `${useCase.title} is being used as the public-facing reference workload for this assessment path.`,
-    ...story.assessment.publicSignals.slice(0, 2),
+function buildFallbackWhyNotNow(useCase: UseCase | null): string[] {
+  if (!useCase) {
+    return ["The assessment needs a selected use case before it can call out the tradeoffs clearly."];
+  }
+
+  const reasons = [
+    "The recommendation is still based on deterministic heuristics, not a benchmark claim.",
   ];
+
+  if (useCase.horizon === "long-term") {
+    reasons.push("This use case is explicitly long-term, which keeps it out of an immediate pilot lane.");
+  }
+
+  if (!useCase.blueprint.next_90_days?.length) {
+    reasons.push("A concrete 90-day benchmark plan has not been filled in yet.");
+  }
+
+  return reasons;
+}
+
+function buildFallbackBlockers(useCase: UseCase | null): string[] {
+  if (!useCase) {
+    return ["Select a use case to see blockers and next actions."];
+  }
+
+  const blockers = [];
+
+  if (useCase.horizon === "long-term") {
+    blockers.push("The use case sits on a longer hardware and algorithm timeline.");
+  }
+
+  if (useCase.evidence_items.length < 2) {
+    blockers.push("The evidence base is still thin for a stronger recommendation.");
+  }
+
+  if (!useCase.blueprint.hybrid_pattern) {
+    blockers.push("The hybrid workflow is not scoped tightly enough yet.");
+  }
+
+  return blockers.length ? blockers : ["The main blocker is turning the blueprint into a disciplined benchmark plan."];
+}
+
+function buildFallbackNext90Days(useCase: UseCase | null): string[] {
+  if (useCase?.blueprint.next_90_days?.length) {
+    return useCase.blueprint.next_90_days;
+  }
+
+  return [
+    "Define one narrow workflow and KPI before expanding the scope.",
+    "Benchmark the classical baseline against a simulator-first experiment on the same data.",
+    "Revisit the recommendation once the benchmark evidence is documented.",
+  ];
+}
+
+function formatPublishedDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function formatPercent(score: number) {
@@ -253,17 +332,27 @@ function AssessPageContent() {
     await runAssessment(selectedUseCase, inputs);
   }
 
-  const timeHorizon = result ? deriveTimeHorizon(result.qals_score) : story.assessment.horizon;
-  const confidence = result ? deriveConfidence(result.qals_score) : story.assessment.confidence;
-  const explanation = selectedUseCase && inputs && result
-    ? buildExplanation(selectedUseCase, story, inputs, result)
-    : story.assessment.explanation;
-  const assumptions = selectedUseCase && inputs
-    ? buildAssumptions(inputs, selectedUseCase)
-    : story.assessment.assumptions;
-  const publicSignals = selectedUseCase
-    ? buildSignals(story, selectedUseCase)
-    : story.assessment.publicSignals;
+  const recommendation = result?.recommendation ?? deriveFallbackRecommendation(selectedUseCase);
+  const recommendationMeta = RECOMMENDATION_META[recommendation];
+  const whyPromising = result?.why_promising?.length
+    ? result.why_promising
+    : buildFallbackWhyPromising(selectedUseCase);
+  const whyNotNow = result?.why_not_now?.length
+    ? result.why_not_now
+    : buildFallbackWhyNotNow(selectedUseCase);
+  const topBlockers = result?.top_blockers?.length
+    ? result.top_blockers
+    : buildFallbackBlockers(selectedUseCase);
+  const next90Days = result?.next_90_days?.length
+    ? result.next_90_days
+    : buildFallbackNext90Days(selectedUseCase);
+  const evidenceItems = selectedUseCase?.evidence_items ?? [];
+  const buildHref = selectedUseCase
+    ? `/build?starter=${story.key}&use_case_id=${selectedUseCase.id}`
+    : `/build?starter=${story.key}`;
+  const exploreHref = selectedUseCase
+    ? `/explore?use_case_id=${selectedUseCase.id}`
+    : "/explore";
 
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
@@ -429,56 +518,179 @@ function AssessPageContent() {
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Live result
+            <div className="space-y-5">
+              <div className={`rounded-[28px] border p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)] ${recommendationMeta.panelClassName}`}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="max-w-[760px]">
+                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      {recommendationMeta.eyebrow}
                     </div>
-                    <div className="mt-3 flex items-end gap-3">
-                      <div className="text-[4rem] font-black tracking-[-0.06em] text-[#2f5be3]">
-                        {result ? formatPercent(result.qals_score) : story.assessment.score}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <h2 className="text-[clamp(1.9rem,3vw,2.8rem)] font-black tracking-[-0.05em] text-slate-900">
+                        {recommendationMeta.label}
+                      </h2>
+                      <span className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${recommendationMeta.badgeClassName}`}>
+                        {selectedUseCase?.horizon ?? "assessment"}
+                      </span>
+                    </div>
+                    <p className="mt-3 max-w-[680px] text-sm leading-7 text-slate-600">
+                      {recommendationMeta.summary}
+                    </p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Starter lane
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-slate-800">{story.label}</div>
                       </div>
-                      <div className="pb-3 text-lg font-semibold text-slate-500">/ 100</div>
+                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Evidence items
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-slate-800">{evidenceItems.length}</div>
+                      </div>
+                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Pilot scope
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-slate-800">
+                          {selectedUseCase?.blueprint.pilot_scope_weeks
+                            ? `${selectedUseCase.blueprint.pilot_scope_weeks} weeks`
+                            : "Scope pending"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="rounded-[18px] bg-[#eaf7f2] px-4 py-3 text-sm font-semibold text-[#158c61]">
-                    {result?.verdict ?? story.assessment.verdict}
+
+                  <div className="min-w-[220px] rounded-[24px] border border-white/80 bg-white/85 p-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      CTA
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      <Link
+                        href={buildHref}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px]"
+                      >
+                        Go to Build
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        href={exploreHref}
+                        className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Back to Explore
+                      </Link>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                  {[
-                    ["Time horizon", timeHorizon],
-                    ["Confidence", confidence],
-                    ["Primary concept", story.concept],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        {label}
-                      </div>
-                      <div className="mt-2 text-sm font-semibold text-slate-800">{value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 rounded-[24px] border border-[#e2e8f0] bg-[#f8fbff] p-5">
+              <div className="grid gap-5 xl:grid-cols-2">
+                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <BarChart3 className="h-4 w-4 text-[#2f5be3]" />
-                    Why the score landed here
+                    <CheckCircle2 className="h-4 w-4 text-[#158c61]" />
+                    Why this could work
                   </div>
                   <div className="space-y-3">
-                    {explanation.map((item) => (
-                      <div key={item} className="flex gap-3 text-sm leading-6 text-slate-600">
-                        <span className="mt-[7px] h-2 w-2 rounded-full bg-[#2f5be3]" />
-                        <span>{item}</span>
+                    {whyPromising.map((item) => (
+                      <div key={item} className="rounded-[18px] border border-[#dcfce7] bg-[#f3fff7] p-4 text-sm leading-6 text-slate-700">
+                        {item}
                       </div>
                     ))}
                   </div>
-                  {result ? (
-                    <div className="mt-5 space-y-3">
-                      {Object.entries(result.score_breakdown).map(([label, value]) => (
+                </div>
+
+                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ShieldAlert className="h-4 w-4 text-[#c2410c]" />
+                    What blocks it today
+                  </div>
+                  <div className="space-y-3">
+                    {topBlockers.map((item) => (
+                      <div key={item} className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-sm leading-6 text-slate-700">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {whyNotNow.map((item) => (
+                      <div key={item} className="text-sm leading-6 text-slate-500">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ClipboardList className="h-4 w-4 text-[#2f5be3]" />
+                    Best next 90 days
+                  </div>
+                  <div className="space-y-3">
+                    {next90Days.map((item) => (
+                      <div key={item} className="rounded-[18px] border border-[#dbeafe] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-700">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <FileBadge2 className="h-4 w-4 text-[#2f5be3]" />
+                    Evidence
+                  </div>
+                  <div className="space-y-3">
+                    {evidenceItems.length ? evidenceItems.map((item) => (
+                      <div key={`${item.title}-${item.published_at}`} className="rounded-[20px] border border-[#e2e8f0] bg-[#fbfdff] p-4">
+                        <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                        <div className="mt-2 text-sm leading-6 text-slate-600">{item.claim}</div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate-400">
+                          <span>{item.publisher}</span>
+                          <span>•</span>
+                          <span>{formatPublishedDate(item.published_at)}</span>
+                        </div>
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex items-center text-sm font-semibold text-[#2f5be3] transition hover:text-[#1d4ed8]"
+                        >
+                          Open source
+                        </a>
+                      </div>
+                    )) : (
+                      <div className="rounded-[20px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] p-4 text-sm leading-6 text-slate-500">
+                        No structured evidence items are attached to this use case yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <details className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700">
+                  QALS-lite score details
+                </summary>
+                <div className="mt-4 grid gap-4 md:grid-cols-[220px_1fr]">
+                  <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      qals_score
+                    </div>
+                    <div className="mt-2 text-[2.6rem] font-black tracking-[-0.05em] text-[#2f5be3]">
+                      {result ? formatPercent(result.qals_score) : story.assessment.score}
+                    </div>
+                    <div className="text-sm font-semibold text-slate-500">
+                      {result?.verdict ?? story.assessment.verdict}
+                    </div>
+                  </div>
+                  <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <FlaskConical className="h-4 w-4 text-[#2f5be3]" />
+                      Score breakdown
+                    </div>
+                    <div className="space-y-3">
+                      {(result ? Object.entries(result.score_breakdown) : []).map(([label, value]) => (
                         <div key={label}>
                           <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
                             <span className="font-semibold uppercase tracking-[0.14em]">
@@ -494,64 +706,29 @@ function AssessPageContent() {
                           </div>
                         </div>
                       ))}
+                      {!result ? (
+                        <div className="text-sm leading-6 text-slate-500">
+                          Run the assessment to populate the weighted QALS-lite breakdown.
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <ClipboardList className="h-4 w-4 text-[#2f5be3]" />
-                    Missing assumptions
-                  </div>
-                  <div className="space-y-3">
-                    {assumptions.map((item) => (
-                      <div key={item} className="rounded-[18px] bg-[#f8fafc] p-4 text-sm leading-6 text-slate-600">
-                        {item}
-                      </div>
-                    ))}
                   </div>
                 </div>
-
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <CheckCircle2 className="h-4 w-4 text-[#158c61]" />
-                    Similar public signals
-                  </div>
-                  <div className="space-y-3">
-                    {publicSignals.map((item) => (
-                      <div key={item} className="rounded-[18px] border border-[#e2e8f0] p-4 text-sm leading-6 text-slate-600">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              </details>
             </div>
           </div>
 
           <div className="space-y-5">
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
               <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Recommended next action
+                Decision notes
               </div>
               <p className="mt-3 text-sm leading-7 text-slate-600">
-                {selectedUseCase
-                  ? `Open the ${story.label} lane in Hybrid Lab and keep the selected use case attached so the circuit, architecture map, and exports stay in one narrative.`
-                  : story.assessment.nextAction}
+                The recommendation is deterministic and simulation-first. It is meant to guide the next product move, not to imply benchmarked quantum advantage.
               </p>
-              <Link
-                href={
-                  selectedUseCase
-                    ? `/build?starter=${story.key}&use_case_id=${selectedUseCase.id}`
-                    : `/build?starter=${story.key}`
-                }
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px]"
-              >
-                Open Hybrid Lab
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <div className="mt-4 rounded-[20px] border border-[#e2e8f0] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
+                Keep the selected use case attached when you move into Build so the circuit, architecture map, and exported narrative stay in one thread.
+              </div>
             </div>
 
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">

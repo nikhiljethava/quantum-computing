@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, JSON, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -91,6 +91,10 @@ class UseCase(Base):
     quantum_approach: Mapped[str] = mapped_column(Text, nullable=False)
     complexity_score: Mapped[float] = mapped_column(Float, nullable=False, default=3.0)
     horizon: Mapped[str] = mapped_column(String(20), nullable=False, default="mid-term")
+    featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    featured_rank: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    blueprint: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    evidence_items: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

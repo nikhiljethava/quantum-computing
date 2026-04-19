@@ -1,15 +1,25 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Globe, ArrowRight, Info, SlidersHorizontal, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileBadge2,
+  Globe,
+  Info,
+  Layers3,
+  Rocket,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import Link from "next/link";
-import { useUseCases } from "@/lib/hooks";
-import { IndustryTag, UseCase } from "@/types/api";
-import { AssessModal } from "@/components/assessment/AssessModal";
-import { getStarterByIndustry } from "@/lib/studio-mocks";
 
-// ── Constants ──────────────────────────────────────────────────────────────
+import { AssessModal } from "@/components/assessment/AssessModal";
+import { useUseCases } from "@/lib/hooks";
+import { getStarterByIndustry } from "@/lib/studio-mocks";
+import { IndustryTag, UseCase } from "@/types/api";
 
 const INDUSTRIES: { value: IndustryTag | "all"; label: string; emoji: string }[] = [
   { value: "all", label: "All Industries", emoji: "🌐" },
@@ -21,155 +31,291 @@ const INDUSTRIES: { value: IndustryTag | "all"; label: string; emoji: string }[]
   { value: "aerospace", label: "Aerospace", emoji: "🛸" },
 ];
 
-const HORIZON_COLORS: Record<string, string> = {
-  "near-term": "#2dd4bf",
-  "mid-term": "#f59e0b",
-  "long-term": "#a78bfa",
+const HORIZON_LABELS: Record<string, string> = {
+  "near-term": "Hybrid research now",
+  "mid-term": "Pilot with scoped chemistry or simulation",
+  "long-term": "Fault-tolerant later",
 };
 
-function ComplexityBar({ score }: { score: number }) {
-  const pct = ((score - 1) / 4) * 100;
-  return (
-    <div style={{ marginTop: "0.5rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--color-text-muted)", marginBottom: "4px" }}>
-        <span>Implementation Complexity</span>
-        <span style={{ color: "var(--color-text-secondary)" }}>{score.toFixed(1)} / 5</span>
-      </div>
-      <div style={{ height: "4px", background: "var(--color-nebula)", borderRadius: "2px", overflow: "hidden" }}>
-        <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: `linear-gradient(90deg, var(--color-glow-primary), var(--color-glow-accent))`,
-            borderRadius: "2px",
-            transition: "width 0.6s ease",
-          }}
-        />
-      </div>
-    </div>
-  );
+function formatPublishedDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function UseCaseCard({
-  uc,
-  onAssess,
+function FeaturedUseCaseCard({
+  useCase,
   onDetails,
+  onAssess,
 }: {
-  uc: UseCase;
-  onAssess: (uc: UseCase) => void;
-  onDetails: (uc: UseCase) => void;
+  useCase: UseCase;
+  onDetails: (useCase: UseCase) => void;
+  onAssess: (useCase: UseCase) => void;
 }) {
-  const horizonColor = HORIZON_COLORS[uc.horizon] ?? "#94a3b8";
-  const starter = getStarterByIndustry(uc.industry);
+  const starter = getStarterByIndustry(useCase.industry);
+  const evidenceItems = useCase.evidence_items.slice(0, 2);
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.94 }}
-      transition={{ duration: 0.25 }}
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ duration: 0.28 }}
+      className="glass"
+      style={{
+        padding: "1.5rem",
+        borderRadius: "1.5rem",
+        background:
+          "linear-gradient(180deg, rgba(10,18,42,0.92) 0%, rgba(10,18,42,0.8) 100%)",
+        display: "grid",
+        gap: "1rem",
+      }}
     >
-      <div
-        className="glass"
-        style={{
-          padding: "1.5rem",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          transition: "transform 0.2s, border-color 0.2s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-          (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(99,102,241,0.4)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = "";
-          (e.currentTarget as HTMLDivElement).style.borderColor = "";
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
-          <span
-            className="chip"
-            style={{
-              background: `${horizonColor}18`,
-              color: horizonColor,
-              border: `1px solid ${horizonColor}40`,
-            }}
-          >
-            {uc.horizon}
-          </span>
-          <span
-            className="chip"
-            style={{
-              background: "rgba(99,102,241,0.1)",
-              color: "var(--color-glow-primary)",
-              border: "1px solid rgba(99,102,241,0.2)",
-              textTransform: "capitalize",
-            }}
-          >
-            {uc.industry}
-          </span>
-        </div>
-
-        <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.5rem", lineHeight: 1.3 }}>
-          {uc.title}
-        </h3>
-        <p style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", lineHeight: 1.6, flexGrow: 1, marginBottom: "1rem" }}>
-          {uc.description}
-        </p>
-
-        {/* Quantum approach */}
-        <div
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+        <span
+          className="chip"
           style={{
-            background: "rgba(99,102,241,0.06)",
-            border: "1px solid rgba(99,102,241,0.12)",
-            borderRadius: "0.5rem",
-            padding: "0.75rem",
-            marginBottom: "1rem",
+            background: "rgba(99,102,241,0.14)",
+            color: "var(--color-glow-primary)",
+            border: "1px solid rgba(99,102,241,0.3)",
           }}
         >
-          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--color-glow-primary)", marginBottom: "0.375rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Quantum Approach
+          Featured scenario #{useCase.featured_rank}
+        </span>
+        <span className="chip" style={{ textTransform: "capitalize" }}>
+          {useCase.industry}
+        </span>
+        <span
+          className="chip"
+          style={{
+            background: "rgba(45,212,191,0.12)",
+            color: "var(--color-glow-secondary)",
+            border: "1px solid rgba(45,212,191,0.24)",
+          }}
+        >
+          {HORIZON_LABELS[useCase.horizon] ?? useCase.horizon}
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gap: "0.5rem" }}>
+        <h3 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>{useCase.title}</h3>
+        <p
+          style={{
+            fontSize: "0.95rem",
+            color: "var(--color-text-secondary)",
+            lineHeight: 1.7,
+            margin: 0,
+          }}
+        >
+          {useCase.description}
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "0.875rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "1rem",
+            padding: "0.9rem",
+            background: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <div style={{ fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: "0.35rem" }}>
+            Persona
           </div>
-          <p style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", lineHeight: 1.55, margin: 0 }}>
-            {uc.quantum_approach}
-          </p>
+          <div style={{ fontWeight: 600, lineHeight: 1.5 }}>{useCase.blueprint.persona ?? "Business sponsor"}</div>
         </div>
-
-        <ComplexityBar score={uc.complexity_score} />
-
-        {/* Actions */}
-        <div style={{ display: "grid", gap: "0.5rem", marginTop: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-            <button
-              className="btn-ghost"
-              style={{ justifyContent: "center", fontSize: "0.8rem", padding: "0.5rem" }}
-              onClick={() => onDetails(uc)}
-              id={`details-${uc.id}`}
-            >
-              <Info size={13} /> View Details
-            </button>
-            <button
-              className="btn-primary"
-              style={{ justifyContent: "center", fontSize: "0.8rem", padding: "0.5rem" }}
-              onClick={() => onAssess(uc)}
-              id={`assess-${uc.id}`}
-            >
-              <SlidersHorizontal size={13} /> Assess Fit
-            </button>
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "1rem",
+            padding: "0.9rem",
+            background: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <div style={{ fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: "0.35rem" }}>
+            Business KPI
           </div>
-          <Link
-            href={`/build?starter=${starter}&use_case_id=${uc.id}`}
-            className="btn-ghost"
-            style={{ justifyContent: "center", padding: "0.6rem 0.875rem", fontSize: "0.8rem" }}
-          >
-            Open Hybrid Lab <ArrowRight size={13} />
-          </Link>
+          <div style={{ fontWeight: 600, lineHeight: 1.5 }}>{useCase.blueprint.business_kpi ?? "Pilot KPI still being scoped"}</div>
+        </div>
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "1rem",
+            padding: "0.9rem",
+            background: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <div style={{ fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: "0.35rem" }}>
+            Pilot scope
+          </div>
+          <div style={{ fontWeight: 600, lineHeight: 1.5 }}>
+            {useCase.blueprint.pilot_scope_weeks ?? 8} week simulator-first sprint
+          </div>
         </div>
       </div>
+
+      <div
+        style={{
+          border: "1px solid rgba(99,102,241,0.18)",
+          borderRadius: "1rem",
+          padding: "1rem",
+          background: "rgba(99,102,241,0.07)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.55rem" }}>
+          <FileBadge2 size={14} color="var(--color-glow-primary)" />
+          <div style={{ fontSize: "0.76rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-glow-primary)", fontWeight: 700 }}>
+            Why this is credible
+          </div>
+        </div>
+        <div style={{ display: "grid", gap: "0.65rem" }}>
+          {evidenceItems.map((item) => (
+            <div key={item.title} style={{ display: "grid", gap: "0.2rem" }}>
+              <div style={{ fontWeight: 700, lineHeight: 1.45 }}>{item.title}</div>
+              <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
+                {item.claim}
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "var(--color-text-muted)" }}>
+                {item.publisher} · {formatPublishedDate(item.published_at)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+        <button className="btn-ghost" onClick={() => onDetails(useCase)}>
+          <Info size={14} /> View Blueprint
+        </button>
+        <button className="btn-primary" onClick={() => onAssess(useCase)}>
+          <SlidersHorizontal size={14} /> Assess Fit
+        </button>
+        <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
+          Open Hybrid Lab <ArrowRight size={14} />
+        </Link>
+      </div>
     </motion.div>
+  );
+}
+
+function CatalogUseCaseCard({
+  useCase,
+  onDetails,
+  onAssess,
+}: {
+  useCase: UseCase;
+  onDetails: (useCase: UseCase) => void;
+  onAssess: (useCase: UseCase) => void;
+}) {
+  const starter = getStarterByIndustry(useCase.industry);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.22 }}
+      className="glass"
+      style={{
+        padding: "1.25rem",
+        display: "grid",
+        gap: "0.9rem",
+        height: "100%",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start" }}>
+        <div style={{ display: "grid", gap: "0.25rem" }}>
+          <span className="chip" style={{ width: "fit-content", textTransform: "capitalize" }}>
+            {useCase.industry}
+          </span>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>{useCase.title}</h3>
+        </div>
+        <span
+          className="chip"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--color-text-secondary)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          {HORIZON_LABELS[useCase.horizon] ?? useCase.horizon}
+        </span>
+      </div>
+
+      <p style={{ color: "var(--color-text-secondary)", lineHeight: 1.65, margin: 0 }}>
+        {useCase.description}
+      </p>
+
+      <div
+        style={{
+          border: "1px solid rgba(99,102,241,0.16)",
+          borderRadius: "0.9rem",
+          padding: "0.85rem",
+          background: "rgba(99,102,241,0.05)",
+        }}
+      >
+        <div style={{ fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-glow-primary)", fontWeight: 700, marginBottom: "0.35rem" }}>
+          Why quantum might help
+        </div>
+        <div style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
+          {useCase.quantum_approach}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+        <button className="btn-ghost" onClick={() => onDetails(useCase)}>
+          <Info size={14} /> View Details
+        </button>
+        <button className="btn-primary" onClick={() => onAssess(useCase)}>
+          <SlidersHorizontal size={14} /> Assess Fit
+        </button>
+        <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
+          Open Hybrid Lab <ArrowRight size={14} />
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
+function ModalSection({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--color-border)",
+        borderRadius: "1rem",
+        padding: "1rem",
+        background: "rgba(255,255,255,0.04)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.55rem" }}>
+        {icon}
+        <div style={{ fontSize: "0.76rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", fontWeight: 700 }}>
+          {label}
+        </div>
+      </div>
+      <div style={{ color: "var(--color-text-secondary)", lineHeight: 1.7 }}>{children}</div>
+    </div>
   );
 }
 
@@ -181,12 +327,7 @@ function UseCaseDetailModal({
   onClose: () => void;
 }) {
   const starter = getStarterByIndustry(useCase.industry);
-  const maturityLabel =
-    useCase.horizon === "near-term"
-      ? "Today demo / hybrid research now"
-      : useCase.horizon === "mid-term"
-        ? "Hybrid research now"
-        : "Fault-tolerant later";
+  const pilotWeeks = useCase.blueprint.pilot_scope_weeks ?? 8;
 
   return (
     <>
@@ -203,182 +344,249 @@ function UseCaseDetailModal({
           backdropFilter: "blur(4px)",
         }}
       />
-
       <motion.div
-        initial={{ opacity: 0, x: 40 }}
+        initial={{ opacity: 0, x: 48 }}
         animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 40 }}
+        exit={{ opacity: 0, x: 48 }}
         style={{
           position: "fixed",
           top: 0,
           right: 0,
           bottom: 0,
-          width: "min(520px, 100vw)",
+          width: "min(680px, 100vw)",
           background: "var(--color-space)",
           borderLeft: "1px solid var(--color-border)",
           zIndex: 101,
           overflowY: "auto",
-          padding: "2rem",
-          display: "flex",
-          flexDirection: "column",
+          padding: "1.5rem",
+          display: "grid",
+          gap: "1rem",
+          alignContent: "start",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-          <div>
-            <div
-              className="chip"
-              style={{
-                background: "rgba(99,102,241,0.1)",
-                color: "var(--color-glow-primary)",
-                border: "1px solid rgba(99,102,241,0.2)",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <Info size={11} /> Use case detail
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {useCase.featured && (
+                <span
+                  className="chip"
+                  style={{
+                    background: "rgba(99,102,241,0.14)",
+                    color: "var(--color-glow-primary)",
+                    border: "1px solid rgba(99,102,241,0.3)",
+                  }}
+                >
+                  Featured scenario #{useCase.featured_rank}
+                </span>
+              )}
+              <span className="chip" style={{ textTransform: "capitalize" }}>
+                {useCase.industry}
+              </span>
             </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, lineHeight: 1.25 }}>{useCase.title}</h2>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>{useCase.title}</h2>
+            <p style={{ color: "var(--color-text-secondary)", lineHeight: 1.7, margin: 0 }}>
+              {useCase.description}
+            </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close use case details"
-            style={{ background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer", padding: "0.25rem" }}
+            style={{ background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer" }}
           >
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.5rem" }}>
-          <span className="chip" style={{ background: "rgba(99,102,241,0.1)", color: "var(--color-glow-primary)", border: "1px solid rgba(99,102,241,0.2)", textTransform: "capitalize" }}>
-            {useCase.industry}
-          </span>
-          <span className="chip" style={{ background: "rgba(45,212,191,0.12)", color: "var(--color-glow-secondary)", border: "1px solid rgba(45,212,191,0.2)" }}>
-            {maturityLabel}
-          </span>
-          <span className="chip" style={{ background: "rgba(255,255,255,0.06)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
-            Complexity {useCase.complexity_score.toFixed(1)} / 5
-          </span>
+        <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <ModalSection icon={<Info size={14} color="var(--color-glow-primary)" />} label="Persona">
+            <strong style={{ color: "var(--color-text-primary)" }}>
+              {useCase.blueprint.persona ?? "Business sponsor"}
+            </strong>
+          </ModalSection>
+          <ModalSection icon={<Rocket size={14} color="var(--color-glow-secondary)" />} label="Business KPI">
+            {useCase.blueprint.business_kpi ?? "Define the KPI in the pilot charter."}
+          </ModalSection>
+          <ModalSection icon={<Layers3 size={14} color="var(--color-glow-primary)" />} label="Why classical gets hard">
+            {useCase.blueprint.classical_baseline ?? useCase.description}
+          </ModalSection>
+          <ModalSection icon={<ArrowRight size={14} color="var(--color-glow-secondary)" />} label="Hybrid workflow">
+            {useCase.blueprint.hybrid_pattern ?? useCase.quantum_approach}
+          </ModalSection>
         </div>
 
-        <div style={{ display: "grid", gap: "1rem" }}>
-          {[
-            ["Problem statement", useCase.description],
-            [
-              "Why classical gets hard",
-              `As the workload scales, ${useCase.description.toLowerCase()} This pushes cost, time, or accuracy limits for purely classical baselines.`,
-            ],
-            ["Why quantum might help", useCase.quantum_approach],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              style={{
-                border: "1px solid var(--color-border)",
-                borderRadius: "1rem",
-                padding: "1rem",
-                background: "rgba(255,255,255,0.04)",
-              }}
-            >
-              <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>
-                {label}
-              </div>
-              <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
-                {value}
-              </div>
+        <ModalSection icon={<FileBadge2 size={14} color="var(--color-glow-primary)" />} label="Why this is credible">
+          <div style={{ display: "grid", gap: "0.85rem" }}>
+            {useCase.evidence_items.length > 0 ? (
+              useCase.evidence_items.map((item) => (
+                <div key={item.title} style={{ display: "grid", gap: "0.2rem" }}>
+                  <div style={{ color: "var(--color-text-primary)", fontWeight: 700 }}>{item.title}</div>
+                  <div>{item.claim}</div>
+                  <a
+                    href={item.source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "var(--color-glow-primary)", fontSize: "0.82rem" }}
+                  >
+                    {item.publisher} · {formatPublishedDate(item.published_at)}
+                  </a>
+                </div>
+              ))
+            ) : (
+              <div>No public evidence items are attached to this use case yet.</div>
+            )}
+          </div>
+        </ModalSection>
+
+        <ModalSection icon={<CheckCircle2 size={14} color="var(--color-glow-secondary)" />} label={`${pilotWeeks}-week pilot scope`}>
+          <div style={{ display: "grid", gap: "0.8rem" }}>
+            <div>
+              <strong style={{ color: "var(--color-text-primary)" }}>Sample input:</strong>{" "}
+              {useCase.blueprint.sample_input ?? "Scoped enterprise dataset"}
             </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            marginTop: "1.5rem",
-            border: "1px solid rgba(99,102,241,0.16)",
-            borderRadius: "1rem",
-            padding: "1rem",
-            background: "rgba(99,102,241,0.06)",
-          }}
-        >
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-glow-primary)", marginBottom: "0.5rem" }}>
-            Recommended starter lane
+            <div>
+              <strong style={{ color: "var(--color-text-primary)" }}>Success thresholds:</strong>
+              <ul style={{ margin: "0.45rem 0 0 1.1rem", padding: 0, display: "grid", gap: "0.35rem" }}>
+                {(useCase.blueprint.success_thresholds ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <strong style={{ color: "var(--color-text-primary)" }}>Next 90 days:</strong>
+              <ul style={{ margin: "0.45rem 0 0 1.1rem", padding: 0, display: "grid", gap: "0.35rem" }}>
+                {(useCase.blueprint.next_90_days ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
-            Open this use case in the Hybrid Lab with the <strong style={{ color: "var(--color-text-primary)" }}>{getStarterByIndustry(useCase.industry).replaceAll("_", " ")}</strong> starter so the circuit, assessment, and architecture stay tied to the same narrative.
-          </div>
-        </div>
+        </ModalSection>
 
-        <div style={{ display: "grid", gap: "0.75rem", marginTop: "1.5rem" }}>
-          <button
-            className="btn-primary"
-            style={{ justifyContent: "center" }}
-            onClick={onClose}
-          >
-            Close Details
-          </button>
-          <Link
-            href={`/assess?starter=${starter}&use_case_id=${useCase.id}`}
-            className="btn-ghost"
-            style={{ justifyContent: "center" }}
-          >
+        <div style={{ display: "grid", gap: "0.75rem" }}>
+          <Link href={`/assess?starter=${starter}&use_case_id=${useCase.id}`} className="btn-primary" style={{ justifyContent: "center" }}>
             Open Assess View <ArrowRight size={14} />
           </Link>
-          <Link
-            href={`/build?starter=${starter}&use_case_id=${useCase.id}`}
-            className="btn-ghost"
-            style={{ justifyContent: "center" }}
-          >
+          <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost" style={{ justifyContent: "center" }}>
             Open Hybrid Lab <ArrowRight size={14} />
           </Link>
+          <button className="btn-ghost" onClick={onClose} style={{ justifyContent: "center" }}>
+            Close blueprint
+          </button>
         </div>
       </motion.div>
     </>
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-
 export default function ExploreClient() {
   const [industry, setIndustry] = useState<IndustryTag | "all">("all");
+  const [showFullCatalog, setShowFullCatalog] = useState(false);
   const [assessTarget, setAssessTarget] = useState<UseCase | null>(null);
   const [detailTarget, setDetailTarget] = useState<UseCase | null>(null);
 
-  const { data, isLoading, isError } = useUseCases(
-    industry === "all" ? undefined : industry
-  );
+  const { data, isLoading, isError, error } = useUseCases({
+    industry: industry === "all" ? undefined : industry,
+    featured_only: !showFullCatalog,
+    limit: showFullCatalog ? 50 : 12,
+  });
+
+  const items = data?.items ?? [];
 
   return (
     <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "3rem 1.5rem 6rem" }}>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="chip" style={{ background: "rgba(45,212,191,0.1)", color: "var(--color-glow-secondary)", border: "1px solid rgba(45,212,191,0.25)", marginBottom: "1rem" }}>
-          <Globe size={11} /> Industry Atlas
+      <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+        <div
+          className="chip"
+          style={{
+            background: "rgba(45,212,191,0.1)",
+            color: "var(--color-glow-secondary)",
+            border: "1px solid rgba(45,212,191,0.24)",
+            marginBottom: "1rem",
+          }}
+        >
+          <Globe size={11} /> Explore
         </div>
-        <h1 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)", marginBottom: "0.75rem" }}>
-          Explore Quantum Use Cases
-        </h1>
-        <p style={{ color: "var(--color-text-secondary)", maxWidth: "560px", marginBottom: "2rem", lineHeight: 1.7 }}>
-          {data?.total ?? "..."} curated use cases across {INDUSTRIES.length - 1} industries.
-          Click <strong style={{ color: "var(--color-text-primary)" }}>Assess Fit</strong> to run the
-          QALS-lite readiness score for any use case.
-        </p>
 
-        {/* Industry filter */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2.5rem" }}>
+        <div
+          className="glass"
+          style={{
+            padding: "1.5rem",
+            marginBottom: "1.5rem",
+            background:
+              "radial-gradient(circle at top right, rgba(99,102,241,0.18), transparent 38%), rgba(9,16,38,0.88)",
+          }}
+        >
+          <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "minmax(0, 1.5fr) minmax(280px, 0.9fr)" }}>
+            <div style={{ display: "grid", gap: "0.8rem" }}>
+              <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)", margin: 0 }}>
+                Start with three flagship hybrid scenarios
+              </h1>
+              <p style={{ color: "var(--color-text-secondary)", lineHeight: 1.75, maxWidth: "58rem", margin: 0 }}>
+                Explore now opens with deeper business-ready blueprints instead of a shallow gallery.
+                Each featured scenario includes the buyer persona, business KPI, classical baseline,
+                hybrid pattern, evidence, and a 6-12 week pilot path.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem" }}>
+                <button
+                  className={showFullCatalog ? "btn-ghost" : "btn-primary"}
+                  onClick={() => setShowFullCatalog(false)}
+                >
+                  Featured scenarios
+                </button>
+                <button
+                  className={showFullCatalog ? "btn-primary" : "btn-ghost"}
+                  onClick={() => setShowFullCatalog(true)}
+                >
+                  Show full catalog
+                </button>
+              </div>
+            </div>
+            <div
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "1.25rem",
+                padding: "1rem",
+                background: "rgba(255,255,255,0.04)",
+                display: "grid",
+                gap: "0.75rem",
+              }}
+            >
+              <div style={{ fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-muted)", fontWeight: 700 }}>
+                Explore stance
+              </div>
+              <div style={{ color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
+                Default to a smaller set of credible scenarios first, then let people expand into the
+                broader atlas when they want the full long-tail catalog.
+              </div>
+              <div style={{ display: "grid", gap: "0.5rem" }}>
+                <div className="chip" style={{ width: "fit-content" }}>
+                  3 featured scenarios by default
+                </div>
+                <div className="chip" style={{ width: "fit-content" }}>
+                  Full catalog remains accessible
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
           {INDUSTRIES.map(({ value, label, emoji }) => (
             <button
               key={value}
-              id={`filter-${value}`}
               onClick={() => setIndustry(value)}
               style={{
-                padding: "0.4rem 0.875rem",
+                padding: "0.42rem 0.9rem",
                 borderRadius: "9999px",
                 border: `1px solid ${industry === value ? "var(--color-glow-primary)" : "var(--color-border)"}`,
                 background: industry === value ? "rgba(99,102,241,0.15)" : "transparent",
                 color: industry === value ? "var(--color-glow-primary)" : "var(--color-text-secondary)",
-                fontSize: "0.8rem",
-                fontWeight: 500,
+                fontSize: "0.82rem",
+                fontWeight: 600,
                 cursor: "pointer",
-                transition: "all 0.15s",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.375rem",
+                gap: "0.4rem",
               }}
             >
               {emoji} {label}
@@ -387,44 +595,76 @@ export default function ExploreClient() {
         </div>
       </motion.div>
 
-      {/* Grid */}
       {isLoading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.5rem" }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: "360px" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem" }}>
+          {Array.from({ length: showFullCatalog ? 6 : 3 }).map((_, index) => (
+            <div key={index} className="skeleton" style={{ height: showFullCatalog ? "340px" : "420px" }} />
           ))}
         </div>
       )}
 
       {isError && (
-        <div className="glass" style={{ padding: "2rem", textAlign: "center", color: "var(--color-glow-warn)" }}>
-          <Info size={20} style={{ marginBottom: "0.5rem" }} />
-          <p>Unable to load use cases. Is the backend running?</p>
-          <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
-            Start with: <code>docker compose up</code> or <code>uvicorn foundry_backend.main:app</code>
-          </p>
+        <div className="glass" style={{ padding: "1.75rem", color: "var(--color-glow-warn)" }}>
+          <div style={{ display: "grid", gap: "0.45rem" }}>
+            <div style={{ fontWeight: 700 }}>Explore could not load the use-case catalog.</div>
+            <div style={{ color: "var(--color-text-secondary)" }}>
+              {error instanceof Error ? error.message : "Check whether the backend is running and seeded."}
+            </div>
+          </div>
         </div>
       )}
 
       {data && (
-        <AnimatePresence mode="popLayout">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: "1.5rem",
-            }}
-          >
-            {data.items.map((uc) => (
-              <UseCaseCard
-                key={uc.id}
-                uc={uc}
-                onAssess={setAssessTarget}
-                onDetails={setDetailTarget}
-              />
-            ))}
+        <div style={{ display: "grid", gap: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                {showFullCatalog ? "Full catalog" : "Featured scenarios"}
+              </div>
+              <div style={{ color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
+                {showFullCatalog
+                  ? `${data.total} accessible use cases across the full atlas.`
+                  : `${items.length} ranked scenarios with deeper evidence and pilot framing.`}
+              </div>
+            </div>
           </div>
-        </AnimatePresence>
+
+          <AnimatePresence mode="popLayout">
+            {items.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: showFullCatalog
+                    ? "repeat(auto-fit, minmax(320px, 1fr))"
+                    : "repeat(auto-fit, minmax(360px, 1fr))",
+                  gap: "1.5rem",
+                }}
+              >
+                {items.map((useCase) =>
+                  showFullCatalog ? (
+                    <CatalogUseCaseCard
+                      key={useCase.id}
+                      useCase={useCase}
+                      onDetails={setDetailTarget}
+                      onAssess={setAssessTarget}
+                    />
+                  ) : (
+                    <FeaturedUseCaseCard
+                      key={useCase.id}
+                      useCase={useCase}
+                      onDetails={setDetailTarget}
+                      onAssess={setAssessTarget}
+                    />
+                  ),
+                )}
+              </div>
+            ) : (
+              <div className="glass" style={{ padding: "1.5rem", color: "var(--color-text-secondary)" }}>
+                No use cases match the current filter yet. Try switching industries or opening the full catalog.
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
 
       <AnimatePresence>

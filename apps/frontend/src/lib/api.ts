@@ -83,10 +83,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function fetchUseCases(params?: {
   industry?: IndustryTag;
+  featured_only?: boolean;
   limit?: number;
 }): Promise<UseCaseList> {
   const query = new URLSearchParams();
   if (params?.industry) query.set("industry", params.industry);
+  if (params?.featured_only) query.set("featured_only", "true");
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString() ? `?${query}` : "";
   return apiFetch<UseCaseList>(`/api/v1/use-cases${qs}`);

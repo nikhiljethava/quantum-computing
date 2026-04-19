@@ -21,6 +21,10 @@ class UseCaseRead(BaseModel):
     quantum_approach: str
     complexity_score: float
     horizon: str
+    featured: bool = False
+    featured_rank: int | None = None
+    blueprint: dict[str, Any] = Field(default_factory=dict)
+    evidence_items: list[dict[str, str]] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -140,6 +144,11 @@ class AssessmentRead(BaseModel):
     qals_score: float
     verdict: str
     score_breakdown: dict[str, Any]
+    recommendation: Literal["classical_now", "hybrid_pilot_now", "watchlist", "research_only"]
+    why_promising: list[str] = Field(default_factory=list)
+    why_not_now: list[str] = Field(default_factory=list)
+    top_blockers: list[str] = Field(default_factory=list)
+    next_90_days: list[str] = Field(default_factory=list)
     created_at: datetime
 
 

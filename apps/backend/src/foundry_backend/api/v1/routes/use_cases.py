@@ -19,14 +19,27 @@ router = APIRouter()
 @router.get("", response_model=UseCaseList)
 async def list_use_cases(
     industry: IndustryTag | None = Query(None, description="Filter by industry tag."),
+    featured_only: bool = Query(
+        False,
+        description="When true, return only the ranked flagship scenarios for Explore.",
+    ),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> UseCaseList:
     """Return a paginated list of seeded industry use cases."""
-    stmt = select(UseCase).order_by(UseCase.complexity_score)
+    stmt = select(UseCase)
     if industry:
         stmt = stmt.where(UseCase.industry == industry)
+    if featured_only:
+        stmt = stmt.where(UseCase.featured.is_(True))
+
+    stmt = stmt.order_by(
+        UseCase.featured.desc(),
+        UseCase.featured_rank.asc().nullslast(),
+        UseCase.complexity_score,
+        UseCase.title,
+    )
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total: int = (await db.execute(count_stmt)).scalar_one()
