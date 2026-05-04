@@ -142,9 +142,9 @@ steps:
           runtime_flag+=(--service-account="${_RUNTIME_SERVICE_ACCOUNT}")
         fi
 
-        cloudsql_flag=()
+        job_cloudsql_flag=()
         if [[ -n "${_CLOUD_SQL_CONNECTION_NAME}" ]]; then
-          cloudsql_flag+=(--add-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
+          job_cloudsql_flag+=(--set-cloudsql-instances="${_CLOUD_SQL_CONNECTION_NAME}")
         fi
 
         common_env="ENVIRONMENT=production,STORAGE_BACKEND=gcs,GCS_BUCKET=${_GCS_BUCKET}"
@@ -158,7 +158,7 @@ steps:
           --set-env-vars="${common_env}" \
           --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
           "${runtime_flag[@]}" \
-          "${cloudsql_flag[@]}"
+          "${job_cloudsql_flag[@]}"
 
         gcloud run jobs execute "${_MIGRATE_JOB}" \
           --region="${_REGION}" \
@@ -172,7 +172,7 @@ steps:
           --set-env-vars="${common_env}" \
           --set-secrets="DATABASE_URL=${_DATABASE_URL_SECRET}:latest" \
           "${runtime_flag[@]}" \
-          "${cloudsql_flag[@]}"
+          "${job_cloudsql_flag[@]}"
 
         gcloud run jobs execute "${_SEED_JOB}" \
           --region="${_REGION}" \
