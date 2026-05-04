@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: meta?.title ?? "Learning Path",
     description: meta?.description,
     openGraph: {
-      title: `${meta?.title ?? "Learning Path"} | GCP Quantum Foundry`,
+      title: `${meta?.title ?? "Learning Path"} | Quantum Foundry`,
       description: meta?.description,
     },
     alternates: {

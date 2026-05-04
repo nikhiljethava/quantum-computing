@@ -12,7 +12,7 @@ function absolute(path: string) {
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/learn", "/explore", "/assess", "/build", "/map"];
+  const staticRoutes = ["", "/about", "/learn", "/explore", "/assess", "/build", "/map"];
   const lessonPathRoutes = LESSON_PATHS.map((item) => `/learn/${item.path}`);
   const lessonRoutes = LESSONS.map((lesson) => `/learn/${lesson.path}/${lesson.slug}`);
   const useCaseRoutes = USE_CASE_PAGES.map((useCase) => `/use-cases/${useCase.slug}`);

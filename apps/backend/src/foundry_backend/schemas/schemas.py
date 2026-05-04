@@ -407,7 +407,7 @@ class CircuitRunRead(BaseModel):
 
 
 class GcpComponentRead(BaseModel):
-    """Serializable GCP architecture component."""
+    """Serializable Google Cloud architecture component."""
 
     id: str
     name: str

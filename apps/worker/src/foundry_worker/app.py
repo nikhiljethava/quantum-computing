@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title="GCP Quantum Foundry Worker",
+    title="Quantum Foundry Worker",
     description="Cloud Run task execution surface for worker-backed circuit and export jobs.",
     version="0.1.0",
     lifespan=lifespan,

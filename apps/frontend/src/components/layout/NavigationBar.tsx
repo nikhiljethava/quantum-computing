@@ -87,7 +87,7 @@ export function NavigationBar() {
                 fontWeight: 600,
               }}
             >
-              Powered by QSE
+              Personal project
             </span>
           </div>
         </Link>

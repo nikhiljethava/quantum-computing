@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "foundry-worker"
 version = "0.1.0"
-description = "Async simulation worker for GCP Quantum Foundry"
+description = "Async simulation worker for Quantum Foundry, an independent personal project."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111.0",

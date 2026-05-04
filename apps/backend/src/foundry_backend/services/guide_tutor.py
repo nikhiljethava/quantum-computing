@@ -1,4 +1,4 @@
-"""Context-aware Google-native guide tutor."""
+"""Context-aware Quantum Foundry guide tutor."""
 
 from typing import Any
 
@@ -91,8 +91,8 @@ async def ask_guide(db: AsyncSession, request: GuideAskRequest) -> dict[str, Any
     sources: list[dict[str, Any]] = [GOOGLE_SOURCES["cirq"], GOOGLE_SOURCES["cloud_run"]]
     actions: list[dict[str, str]] = []
     answer_parts = [
-        "I am the Google Quantum Foundry Guide. I will keep this simulation-first, "
-        "Google-native, and honest about what can be run today."
+        "I am the Quantum Foundry Guide. I will keep this simulation-first, "
+        "Cirq-based, and honest about what can be run today."
     ]
 
     lesson = context["lesson"]
@@ -110,7 +110,7 @@ async def ask_guide(db: AsyncSession, request: GuideAskRequest) -> dict[str, Any
             f"The classical baseline is: {blueprint.get('classical_baseline', use_case.description)}"
         )
         answer_parts.append(
-            f"The Google-native workflow should use {', '.join(blueprint.get('google_stack', ['Cirq', 'qsim', 'Cloud Run', 'Cloud Storage']))}."
+            f"The workflow can use these technologies descriptively: {', '.join(blueprint.get('google_stack', ['Cirq', 'qsim', 'Cloud Run', 'Cloud Storage']))}."
         )
         if use_case.evidence_items:
             answer_parts.append(f"Evidence signal: {use_case.evidence_items[0].get('claim', '')}")

@@ -148,7 +148,7 @@ export const USE_CASE_PAGES: UseCasePage[] = [
         publisher: "Quantum Science and Technology",
         publishedAt: "2020-01-09",
         claim:
-          "OpenFermion provides Google-native tooling for representing electronic structure problems for quantum simulation research.",
+          "OpenFermion provides publicly available tooling for representing electronic structure problems for quantum simulation research.",
         sourceUrl: "https://quantumai.google/openfermion",
       },
       {

@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: lesson?.title ?? "Lesson",
     description: lesson?.subtitle,
     openGraph: {
-      title: `${lesson?.title ?? "Lesson"} | Google Quantum Academy`,
+      title: `${lesson?.title ?? "Lesson"} | Quantum Academy`,
       description: lesson?.subtitle,
     },
     alternates: {
@@ -72,7 +72,7 @@ export default async function LessonPage({ params }: PageProps) {
                 {lesson.estimatedMinutes} min
               </GChip>
             </div>
-            <GSectionHeader eyebrow="Google Quantum Academy" title={lesson.title}>
+            <GSectionHeader eyebrow="Quantum Academy" title={lesson.title}>
               {lesson.subtitle}
             </GSectionHeader>
 
@@ -134,7 +134,7 @@ export default async function LessonPage({ params }: PageProps) {
 
           <GCard>
             <h2 className="text-lg font-black tracking-[-0.03em] text-slate-950">
-              Related Google-native sources
+              Related public sources
             </h2>
             <div className="mt-4 grid gap-2">
               {lesson.googleSourceLinks.map((source) => (

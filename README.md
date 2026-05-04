@@ -1,265 +1,252 @@
-# GCP Quantum Foundry
+# Quantum Foundry
 
-<p align="center">
-  <strong>A visual-first quantum launchpad for learning, assessing, and prototyping hybrid quantum-classical workflows on Google Cloud.</strong>
-</p>
+> **Independent personal project — not an official Google product.**<br>
+> This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
 
-<p align="center">
-  From <em>"what is a qubit?"</em> to <em>"how would this run on GCP?"</em> in one guided journey.
-</p>
+Quantum Foundry is a personal learning and prototyping app for exploring quantum computing concepts, simulating Cirq-based circuits, assessing possible industry use cases, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-App_Router-000000?logo=nextdotjs" alt="Next.js" />
-  <img src="https://img.shields.io/badge/FastAPI-Product_API-009688?logo=fastapi" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python" alt="Python 3.11" />
-  <img src="https://img.shields.io/badge/Google_Cloud-Cloud_Run-4285F4?logo=googlecloud" alt="Cloud Run" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Cloud_SQL-4169E1?logo=postgresql" alt="Cloud SQL" />
-</p>
+Recommended GitHub repository description:
 
----
+> Independent personal project for learning quantum computing with Cirq-based simulations and Google Cloud architecture patterns. Not an official Google product.
 
-## Why this project exists
+## What This Project Is
 
-Quantum computing is still difficult to approach for most product teams, architects, and enterprise customers.
+Quantum Foundry is an educational product scaffold that helps users:
 
-Most tools start too deep in the stack: circuits, gates, SDKs, or hardware access.  
-**GCP Quantum Foundry** starts somewhere more useful:
+- Learn quantum concepts with visual explanations.
+- Explore industry use cases with business context and evidence.
+- Assess readiness with transparent heuristics.
+- Build and simulate Cirq-based circuit templates.
+- Compare ideal and educational-noise simulation results.
+- Map hybrid workflows to Google Cloud architecture patterns.
+- Export educational artifacts such as Cirq code, JSON summaries, and Colab notebooks.
 
-- **Learn** the core concepts visually
-- **Explore** industry use cases and hybrid patterns
-- **Assess** whether an idea is a plausible quantum candidate
-- **Build** a toy circuit or prototype path
-- **Map** the workload to a real Google Cloud architecture
+## What This Project Is Not
 
-The product is designed to make quantum computing feel less like an isolated research topic and more like a **hybrid cloud workload**.
+- It is not an official Google product.
+- It is not endorsed, sponsored, reviewed, or maintained by Google.
+- It does not provide public access to Google quantum hardware.
+- It does not claim quantum advantage.
+- It is not a production quantum-computing service.
+- It is a personal educational and prototyping project.
 
----
+## Why This Project Exists
 
-## The guided journey
+Quantum computing can feel inaccessible because product teams often see either dense research material or overconfident business claims. Quantum Foundry is meant to sit in the middle: an approachable app that teaches concepts, encourages careful assessment, and shows how a simulator-first workflow could be prototyped with cloud services.
 
-```text
-Learn → Explore → Assess → Build → Map
-```
+## Product Walkthrough
 
-### Learn
-A concept-first surface for understanding qubits, superposition, entanglement, noise, and where quantum fits relative to classical computing.
+The intended journey is:
 
-### Explore
-An industry atlas that helps users discover use cases across chemistry, batteries, logistics, finance, and AI/ML research.
+1. **Learn** quantum concepts through structured lessons.
+2. **Explore** featured industry use cases before starting a blank workload form.
+3. **Assess** a use case with QALS-lite, a deterministic readiness heuristic.
+4. **Build** Cirq-based toy circuits and inspect simulation results.
+5. **Map** the workflow to Google Cloud architecture patterns.
+6. **Save and export** sessions, code, architecture JSON, and notebooks.
 
-### Assess
-A live **QALS-lite** workspace that estimates readiness, time horizon, and hybrid fit with transparent assumptions.
+## Core Surfaces
 
-### Build
-A prompt-to-circuit workspace that generates toy circuits, runs simulations, and produces developer-friendly artifacts.
+- `/` introduces the product and visible independent-project disclaimer.
+- `/learn` contains structured learning paths.
+- `/explore` highlights flagship use cases and keeps the catalog accessible.
+- `/assess` turns readiness scoring into a recommendation and next steps.
+- `/build` is the Cirq Lab for circuit templates, metrics, histograms, state preview, optional qsim fallback, and exports.
+- `/map` shows a simulator-first Google Cloud architecture map.
+- `/use-cases/[slug]` provides public, shareable use-case pages.
+- `/about` explains ownership, limitations, hardware access, and attribution.
 
-### Map
-A hybrid architecture mapper that shows how the workflow would run across Google Cloud services.
+## Technology Stack
 
----
+Frontend:
 
-## Architecture
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- TanStack Query
+- Framer Motion
 
-<p align="center">
-  <img src="docs/images/gcp-quantum-foundry-architecture.svg" alt="GCP Quantum Foundry architecture diagram" width="100%" />
-</p>
+Backend:
 
-### What the diagram shows
+- FastAPI
+- Pydantic v2
+- SQLAlchemy 2
+- Alembic
+- PostgreSQL
 
-- **Frontend**: a Cloud Run-hosted Next.js app for the full product experience
-- **Backend**: a FastAPI service for projects, sessions, assessments, circuits, architectures, artifacts, and job orchestration
-- **Worker**: a private Cloud Run worker for asynchronous simulations, exports, and long-running tasks
-- **State layer**: Cloud SQL for structured persistence and Cloud Storage for artifacts
-- **Async orchestration**: Cloud Tasks triggers the worker through an authenticated HTTP target
-- **Core logic**: shared `foundry-core` modules power QALS-lite, circuit templates, architecture mapping, and simulation-first quantum workflows
-- **Delivery path**: Cloud Build, Artifact Registry, and Cloud Run Jobs handle build, deploy, migration, and seeding
+Quantum and shared logic:
 
----
+- Cirq for circuit construction and simulation
+- qsim/qsimcirq as an optional simulator path when installed
+- OpenFermion hooks and learning content where applicable
+- `packages/foundry-core` for circuits, simulation helpers, assessment, mapping, storage, and jobs
 
-## What makes this app different
+Cloud deployment path:
 
-### 1. It starts with intuition, not with a blank code editor
-The first-run experience is designed for people who are quantum-curious, not just for people who already know the stack.
+- Cloud Run
+- Cloud SQL for PostgreSQL
+- Cloud Storage
+- Cloud Tasks
+- Cloud Build
+- Artifact Registry
+- Vertex AI/Gemini only when configured
 
-### 2. It is simulation-first by design
-This repo does **not** assume direct access to production QPUs. It focuses on credible learning, realistic readiness assessment, and hybrid prototyping.
+## Architecture Overview
 
-### 3. It treats quantum as a hybrid cloud workflow
-Instead of positioning quantum as a standalone black box, the app shows how classical preprocessing, quantum kernels, and post-processing work together on GCP.
-
-### 4. It creates artifacts, not just answers
-The app is built to generate assessments, diagrams, starter code, exports, and prototype-ready workflows.
-
----
-
-## Core product surfaces
-
-| Surface | Purpose |
-|---|---|
-| `/` | Learn surface with approachable quantum concepts |
-| `/explore` | Industry atlas and use-case gallery |
-| `/assess` | QALS-lite readiness workspace |
-| `/build` | Hybrid Lab for prompt-to-circuit and simulation |
-| `/map` | Architecture mapper |
-| `/projects` | Saved projects |
-| `/sessions` | Saved sessions |
-| `/jobs` | Worker activity and job status |
-| `:8000/docs` | FastAPI API docs |
-
----
-
-## Local quick start
-
-```bash
-cp .env.example .env
-make up
-make migrate
-```
-
-Then open:
-
-- Frontend: `http://localhost:3000`
-- Backend docs: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
-
----
-
-## Repo layout
+The repository is a monorepo:
 
 ```text
-.
-├── apps
-│   ├── backend
-│   ├── frontend
-│   └── worker
-├── docs
-│   ├── api.md
-│   ├── architecture.md
-│   ├── demo-script.md
-│   └── images
-├── packages
-│   └── foundry-core
-├── cloudbuild.yaml
-├── docker-compose.yml
-└── Makefile
+apps/frontend      Next.js frontend
+apps/backend       FastAPI backend
+apps/worker        Python worker for jobs and artifacts
+packages/foundry-core shared Python package
+docs               documentation hub
+infra              deployment skeletons
 ```
 
----
+Local development uses Docker Compose for PostgreSQL and service orchestration. Product records live in PostgreSQL. Exported artifacts use a storage abstraction so local storage can be swapped for Cloud Storage in deployment. Jobs use an abstraction so local worker processing can move toward Cloud Tasks and Cloud Run Jobs.
 
-## GCP deployment model
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-This repo is already structured for a clean Google Cloud path:
+## Simulation and Hardware-Access Guardrails
 
-- `quantum-foundry-frontend` → **Cloud Run** public frontend
-- `quantum-foundry-backend` → **Cloud Run** public API
-- `quantum-foundry-worker` → **Cloud Run** private worker
-- PostgreSQL → **Cloud SQL**
-- artifacts and exports → **Cloud Storage**
-- async jobs → **Cloud Tasks**
-- build/deploy pipeline → **Cloud Build + Artifact Registry**
-- migration and seed steps → **Cloud Run Jobs**
+- Simulation-first by default.
+- QALS-lite is a readiness heuristic, not a scientific proof.
+- Circuit results are educational unless otherwise stated.
+- Noise comparison is an educational approximation unless explicitly configured with a calibrated model.
+- Google quantum hardware access is restricted to approved groups. Quantum Foundry is simulation-first unless approved access is configured.
 
-The included `cloudbuild.yaml` is designed to wire these pieces together.
+## Local Development
 
-### Required Permissions for Cloud Build Trigger
+Prerequisites:
 
-If you use a custom service account for the Cloud Build trigger (e.g., `quantum-app-build-sa@cloudhub-apptopology-golden.iam.gserviceaccount.com`), it requires the following IAM roles on the project:
+- Node.js compatible with the frontend package.
+- Python 3.11.
+- Docker or Docker Desktop.
+- PostgreSQL through Docker Compose or a compatible local service.
 
-- **Artifact Registry Administrator** (`roles/artifactregistry.admin`): To create and push to the image repository.
-- **Cloud Run Administrator** (`roles/run.admin`): To deploy services and jobs.
-- **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`): To bind and access the database URL secret.
-- **Cloud Tasks Administrator** (`roles/cloudtasks.admin`): To create work queues.
-- **Service Account User** (`roles/iam.serviceAccountUser`): To act as the runtime service account for Cloud Run services.
-- **Storage Administrator** (`roles/storage.admin`): To access the deployment artifacts bucket.
-
----
-
-## How to access the app on GCP
-
-### Public app URL
-The app should be accessed through the **frontend Cloud Run service**:
+Common commands:
 
 ```bash
-gcloud run services describe quantum-foundry-frontend \
-  --region us-central1 \
-  --format='value(status.url)'
+docker compose up --build
 ```
 
-That command returns the live public URL for the app. Open that URL in your browser.
-
-### Public API URL
-If you need the backend endpoint:
+Frontend:
 
 ```bash
-gcloud run services describe quantum-foundry-backend \
-  --region us-central1 \
-  --format='value(status.url)'
+cd apps/frontend
+npm install
+npm run dev
 ```
 
-You can use the returned backend URL for:
-
-- `${BACKEND_URL}/docs` for FastAPI API docs
-- `${BACKEND_URL}/health` for the backend health check
-
-### Private worker URL
-The worker is not a user-facing endpoint. It is intended to be invoked by Cloud Tasks.
+Backend tests:
 
 ```bash
-gcloud run services describe quantum-foundry-worker \
-  --region us-central1 \
-  --format='value(status.url)'
+PYTHONPATH=packages/foundry-core/src:apps/backend/src:apps/worker/src \
+python3.11 -m pytest packages/foundry-core/tests apps/backend/tests
 ```
 
-### Hosted app routes
-Once you open the frontend Cloud Run URL, the main hosted routes are:
+Frontend checks:
 
-- `/` for Learn
-- `/explore` for the Industry Atlas
-- `/assess` for the QALS-lite workspace
-- `/build` for the Hybrid Lab
-- `/map` for the architecture mapper
-- `/projects` for saved projects
-- `/sessions` for saved sessions
-- `/jobs` for worker activity
+```bash
+cd apps/frontend
+npm run lint
+npm run build -- --webpack
+```
 
----
+See [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
 
-## Recommended production URL
+## Environment Variables
 
-For an internal or demo deployment, the default Cloud Run URL is fine.
+Configuration is documented in [.env.example](.env.example) and [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md). Do not commit real secrets.
 
-For a stronger production-facing experience, map the frontend to a custom domain such as:
+Important groups:
 
-- `https://foundry.<your-domain>.com`
-- `https://quantum.<your-domain>.com`
-- `https://quantum-foundry.<your-domain>.com`
+- Frontend API URL
+- Database URL
+- Storage backend and artifact path
+- Cloud Storage bucket
+- Job backend and Cloud Tasks queue
+- Vertex/Gemini guide configuration
+- Deployment metadata
 
-Recommended pattern:
+## Database and Migrations
 
-- public traffic → custom domain → frontend Cloud Run service
-- frontend → backend via configured API URL
-- backend → worker through Cloud Tasks + authenticated Cloud Run invocation
+The backend uses SQLAlchemy models and Alembic migrations. Run migrations before starting an environment that needs schema changes:
 
----
+```bash
+cd apps/backend
+alembic upgrade head
+```
 
-## Product guardrails
+Seed use cases:
 
-- **Simulation first**: Google quantum hardware access is restricted to approved groups. Quantum Foundry is simulation-first unless approved access is configured.
-- **QALS-lite is a heuristic**: it is a readiness aid, not a claim of quantum advantage
-- **One guide, one workspace**: the visible experience should feel cohesive, not like a generic multi-agent chatbot
-- **MCP remains optional**: connectors and retrieval adapters should not become the core product dependency
+```bash
+python -m foundry_backend.seeds.seed_use_cases
+```
 
----
+See [docs/DATABASE_AND_MIGRATIONS.md](docs/DATABASE_AND_MIGRATIONS.md).
 
-## Why this matters
+## Testing
 
-GCP Quantum Foundry is not just a toy demo.
+Primary checks:
 
-It is a product-shaped answer to a real gap in the market:
+- Backend and foundry-core: `pytest`
+- Frontend lint: `npm run lint`
+- Frontend production build: `npm run build -- --webpack`
+- Manual route smoke tests for `/`, `/learn`, `/explore`, `/assess`, `/build`, `/map`, `/about`, and `/use-cases/portfolio-optimization`
 
-- make quantum understandable to a broader audience
-- help teams identify plausible use cases earlier
-- connect quantum curiosity to hybrid cloud architecture
-- create a more natural on-ramp into Google Cloud services
+See [docs/TESTING.md](docs/TESTING.md).
 
-If the future of enterprise quantum is hybrid, visual, and guided, this is what that front door can look like.
+## Deployment
+
+The first hosted target is Cloud Run. The deployment path uses Cloud Build and Artifact Registry to build images, then deploys frontend, backend, worker, migration, and seed steps as configured.
+
+See:
+
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- [docs/CLOUD_BUILD.md](docs/CLOUD_BUILD.md)
+- [docs/GOOGLE_CLOUD_STACK.md](docs/GOOGLE_CLOUD_STACK.md)
+
+## Documentation Index
+
+Start with [docs/README.md](docs/README.md). It links to product, architecture, cloud, simulation, deployment, testing, troubleshooting, security, and contribution docs.
+
+## Roadmap
+
+Now:
+
+- Personal-project branding and disclaimers
+- Public route clarity
+- Documentation quality
+- Capability-aware UI language
+
+Next:
+
+- Persistent learning profiles
+- Deeper Vertex AI/Gemini guide configuration if needed
+- More OpenFermion learning examples
+
+Later:
+
+- Richer industry atlas
+- Badges or completion certificates
+- Approved-access hardware path only if applicable
+
+Won't do:
+
+- Claim official Google affiliation
+- Claim Google endorsement
+- Claim quantum advantage without strong evidence and qualification
+- Expose public Google hardware execution
+- Add non-Google quantum SDKs as primary exports
+
+See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Trademark and Attribution Notice
+
+Google, Google Cloud, GCP, Vertex AI, Gemini, Cirq, qsim, OpenFermion, and related names are trademarks or products of their respective owners. All references are descriptive. Quantum Foundry is independently created and maintained by Nikhil Jethava and is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC.
+
+## License
+
+License: TODO. Choose a license before encouraging reuse or redistribution.

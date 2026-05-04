@@ -12,7 +12,7 @@
 <g id="clust1" class="cluster">
 <title>cluster_runtime</title>
 <path fill="#fafbfd" stroke="#d7dce5" stroke-width="1.2" stroke-dasharray="5,2" d="M20,-8C20,-8 801,-8 801,-8 807,-8 813,-14 813,-20 813,-20 813,-465 813,-465 813,-471 807,-477 801,-477 801,-477 20,-477 20,-477 14,-477 8,-471 8,-465 8,-465 8,-20 8,-20 8,-14 14,-8 20,-8"/>
-<text text-anchor="start" x="121.5" y="-458.4" font-family="Inter,Arial,sans-serif" font-weight="bold" font-size="12.00">GCP Runtime</text>
+<text text-anchor="start" x="121.5" y="-458.4" font-family="Inter,Arial,sans-serif" font-weight="bold" font-size="12.00">Google Cloud Runtime</text>
 <text text-anchor="start" x="22" y="-436" font-family="Inter,Arial,sans-serif" font-size="10.00">Same codebase can run locally first with Docker Compose</text>
 </g>
 <g id="clust5" class="cluster">

@@ -1,7 +1,4 @@
-"""
-GCP Quantum Foundry — Backend
-FastAPI application entry point.
-"""
+"""Quantum Foundry backend application entry point."""
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -26,8 +23,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title="GCP Quantum Foundry API",
-    description="Backend API for the GCP Quantum Foundry — an interactive quantum launchpad.",
+    title="Quantum Foundry API",
+    description=(
+        "Backend API for Quantum Foundry, an independent personal project for "
+        "Cirq-based learning, simulation, and Google Cloud architecture mapping. "
+        "Not an official Google product."
+    ),
     version="0.1.0",
     lifespan=lifespan,
 )

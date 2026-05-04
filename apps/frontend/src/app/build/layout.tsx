@@ -6,9 +6,9 @@ import { HardwareAccessNote } from "@/components/HardwareAccessNote";
 export const metadata: Metadata = {
   title: "Cirq Lab",
   description:
-    "Build and run Google-native Cirq circuits, inspect histograms, optional qsim fallback, educational noise, and Colab exports.",
+    "Build and run Cirq-based circuits, inspect histograms, optional qsim fallback, educational noise, and Colab exports.",
   openGraph: {
-    title: "Cirq Lab | GCP Quantum Foundry",
+    title: "Cirq Lab | Quantum Foundry",
     description:
       "Run simulator-first Cirq labs and map the results to Google Cloud hybrid workflows.",
   },

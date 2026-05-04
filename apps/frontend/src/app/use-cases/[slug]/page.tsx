@@ -26,12 +26,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const useCase = getUseCasePage(slug);
 
   return {
-    title: useCase ? `${useCase.title} | Google Quantum Foundry` : "Use Case",
+    title: useCase ? `${useCase.title} | Quantum Foundry` : "Use Case",
     description: useCase
       ? `Learn how ${useCase.title} maps to Cirq simulation and Google Cloud hybrid workflows.`
       : undefined,
     openGraph: {
-      title: useCase ? `${useCase.title} | Google Quantum Foundry` : "Use Case",
+      title: useCase ? `${useCase.title} | Quantum Foundry` : "Use Case",
       description: useCase?.valueProposition,
     },
     alternates: {

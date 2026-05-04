@@ -13,8 +13,8 @@ router = APIRouter()
 @router.post(
     "/ask",
     response_model=GuideAskResponse,
-    summary="Ask the Google Quantum Foundry Guide",
-    description="Return a context-aware, Google-native explanation with citations and next actions.",
+    summary="Ask the Quantum Foundry Guide",
+    description="Return a context-aware explanation with citations and next actions.",
 )
 async def ask(
     body: GuideAskRequest,

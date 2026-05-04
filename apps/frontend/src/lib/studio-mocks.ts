@@ -185,7 +185,7 @@ print(result.histogram(key="bell"))`,
       ],
       publicSignals: [
         "Useful for onboarding PMs, architects, and field teams.",
-        "Works well when paired with a simple GCP architecture map.",
+        "Works well when paired with a simple Google Cloud architecture map.",
       ],
       nextAction: "Use Bell state as the bridge from Learn into Explore and Assess.",
     },

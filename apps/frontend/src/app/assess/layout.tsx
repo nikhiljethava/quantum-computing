@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     "Use a transparent QALS-lite heuristic to turn a quantum use case into a decision-style recommendation and next 90-day plan.",
   openGraph: {
-    title: "Assess Quantum Readiness | GCP Quantum Foundry",
+    title: "Assess Quantum Readiness | Quantum Foundry",
     description:
       "Decision-style recommendations for simulation-first quantum exploration.",
   },

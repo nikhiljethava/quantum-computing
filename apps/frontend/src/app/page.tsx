@@ -62,7 +62,7 @@ const JOURNEY = [
   { step: "02", icon: Globe, label: "Explore", desc: "Discover industry use cases", href: "/explore" },
   { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Score credible readiness", href: "/assess" },
   { step: "04", icon: FlaskConical, label: "Build", desc: "Simulate real quantum circuits", href: "/build" },
-  { step: "05", icon: Map, label: "Map", desc: "Visualize your GCP architecture", href: "/map" },
+  { step: "05", icon: Map, label: "Map", desc: "Visualize your cloud architecture", href: "/map" },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export default function HomePage() {
             }}
           >
             <Atom size={13} />
-            GCP Quantum Foundry · Simulation Mode
+            Quantum Foundry · Independent Simulation Lab
           </div>
 
           <h1
@@ -142,9 +142,9 @@ export default function HomePage() {
               lineHeight: 1.7,
             }}
           >
-            An interactive launchpad for PMs, architects, and technical buyers.
-            Learn core concepts, explore real industry applications, simulate
-            quantum circuits, and map your workload to Google Cloud.
+            Quantum Foundry is an independent personal project for learning quantum concepts,
+            exploring industry use cases, simulating Cirq-based circuits, and mapping hybrid
+            workflows to Google Cloud architecture patterns.
           </p>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>

@@ -1,12 +1,12 @@
 """
-GCP hybrid architecture mapper.
+Google Cloud hybrid architecture mapper.
 
-Generates a structured GCP component graph based on job/assessment context.
+Generates a structured Google Cloud component graph based on job/assessment context.
 This is a rule-based mapper, NOT an ML model.
 The output is consumed by the Architecture Mapper frontend page to render
 an interactive diagram.
 
-TODO(gcp-deploy): replace static component definitions with live GCP resource metadata.
+TODO(gcp-deploy): replace static component definitions with live Google Cloud resource metadata.
 """
 
 import dataclasses
@@ -29,7 +29,7 @@ class GcpComponent:
     name: str
     service: str
     description: str
-    # TODO(gcp-deploy): add icon_url pointing to GCP icon CDN
+    # TODO(gcp-deploy): add icon_url only if it cannot imply product affiliation.
 
 
 @dataclasses.dataclass
@@ -95,7 +95,7 @@ _COMPONENTS: dict[str, GcpComponent] = {
         id="frontend",
         name="Next.js Frontend",
         service="Cloud Run / Firebase Hosting",
-        description="The GCP Quantum Foundry web application.",
+        description="The Quantum Foundry web application.",
     ),
     "api_gateway": GcpComponent(
         id="api_gateway",
@@ -131,7 +131,7 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
                  verdict, industry, complexity.
 
     Returns:
-        ArchitectureMap describing the GCP deployment topology.
+        ArchitectureMap describing the Google Cloud deployment topology.
     """
     job_type: str = context.get("job_type", "")
     qals_score: float = context.get("qals_score", 0.0)
@@ -162,11 +162,11 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
 
     # Derive a meaningful title
     if job_type:
-        title = f"GCP Hybrid Architecture — {job_type.replace('_', ' ').title()} Workload"
+        title = f"Google Cloud Hybrid Architecture — {job_type.replace('_', ' ').title()} Workload"
     elif industry:
-        title = f"GCP Hybrid Architecture — {industry.title()} Use Case"
+        title = f"Google Cloud Hybrid Architecture — {industry.title()} Use Case"
     else:
-        title = "GCP Hybrid Architecture — General Quantum Foundry Deployment"
+        title = "Google Cloud Hybrid Architecture — General Quantum Foundry Deployment"
 
     hardware_summary = (
         HARDWARE_ACCESS_NOTE

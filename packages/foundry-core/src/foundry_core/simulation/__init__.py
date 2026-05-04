@@ -1,1 +1,1 @@
-"""Simulation inspection helpers for Google-native Cirq Lab experiences."""
+"""Simulation inspection helpers for Cirq Lab experiences."""

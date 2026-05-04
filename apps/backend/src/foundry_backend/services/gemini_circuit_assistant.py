@@ -217,7 +217,7 @@ def _build_prompt(body: GeminiCircuitUpdateRequest) -> str:
     }
 
     return (
-        "You are helping edit a toy quantum circuit inside GCP Quantum Foundry.\n"
+        "You are helping edit a toy quantum circuit inside Quantum Foundry, an independent personal project.\n"
         "Return a simulation-first draft update only. Do not claim quantum advantage, "
         "hardware access, or benchmark superiority.\n"
         "Keep the same wires list. Do not invent new wires. Use only these node types: "

@@ -228,7 +228,7 @@ class CircuitRun(Base):
 
 
 class ArchitectureRecord(Base):
-    """Persisted GCP architecture snapshot associated with a circuit run or assessment."""
+    """Persisted Google Cloud architecture snapshot associated with a circuit run or assessment."""
 
     __tablename__ = "architecture_records"
 

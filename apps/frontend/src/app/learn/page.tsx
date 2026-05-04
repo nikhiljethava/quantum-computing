@@ -8,13 +8,13 @@ import { GSectionHeader } from "@/components/ui/GSectionHeader";
 import { LESSON_PATHS, getLessonsByPath } from "@/content/lessons";
 
 export const metadata: Metadata = {
-  title: "Google Quantum Academy",
+  title: "Quantum Academy",
   description:
     "Learn quantum concepts with Cirq, qsim, OpenFermion, Google Colab, and Google Cloud learning paths.",
   openGraph: {
-    title: "Google Quantum Academy | GCP Quantum Foundry",
+    title: "Quantum Academy | Quantum Foundry",
     description:
-      "Structured Google-native quantum learning paths connected to runnable Cirq labs.",
+      "Structured quantum learning paths connected to runnable Cirq-based labs.",
   },
   alternates: {
     canonical: "/learn",
@@ -26,8 +26,8 @@ export default function LearnPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(135deg,#ffffff,#eef5ff)] p-6 shadow-[0_35px_90px_rgba(15,23,42,0.16)] md:p-8">
         <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-          <GSectionHeader eyebrow="Learn" title="Google Quantum Academy">
-            Learn quantum concepts, build Cirq circuits, simulate with Google-native tools,
+          <GSectionHeader eyebrow="Learn" title="Quantum Academy">
+            Learn quantum concepts, build Cirq circuits, simulate with publicly available tools,
             and map workloads to Google Cloud. The path is intentionally practical:
             understand the idea, run a small lab, then decide what belongs in a pilot.
           </GSectionHeader>

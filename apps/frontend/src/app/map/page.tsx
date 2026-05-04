@@ -317,7 +317,7 @@ function MapPageContent() {
               <div className="mb-5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                   <GitBranch className="h-4 w-4 text-[#2f5be3]" />
-                  Live GCP architecture
+                  Live Google Cloud architecture
                 </div>
                 <button
                   type="button"

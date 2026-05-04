@@ -337,7 +337,7 @@ function SessionDetailPanel({
               </div>
             ) : (
               <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-                No saved architecture map yet. Open the session in Build and generate the GCP view to attach it here.
+                No saved architecture map yet. Open the session in Build and generate the Google Cloud view to attach it here.
               </div>
             )}
           </div>

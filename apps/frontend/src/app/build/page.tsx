@@ -2136,7 +2136,7 @@ function ArchitectureCard({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            GCP architecture mapper
+            Google Cloud architecture mapper
           </div>
           <h3 className="mt-1 text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-900">
             Hybrid workflow in one view
@@ -3117,11 +3117,11 @@ function BuildPageContent() {
               ) : null}
             </div>
             <h1 className="text-[clamp(2.15rem,4vw,3.35rem)] font-black tracking-[-0.05em] text-slate-900">
-              Build a toy prototype, then map it to GCP
+              Build a toy prototype, then map it to Google Cloud
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
               One workspace for guided circuit generation, plain-English explanation,
-              simulation output, QALS-lite readiness, and a simulator-first GCP architecture story.
+              simulation output, QALS-lite readiness, and a simulator-first Google Cloud architecture story.
             </p>
             {workspaceError ? (
               <div className="mt-4 rounded-[18px] border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm text-[#b91c1c]">
@@ -3220,7 +3220,7 @@ function BuildPageContent() {
             className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
           >
             <GitBranch className="h-4 w-4" />
-            Map to GCP
+            Map to Google Cloud
           </button>
         </div>
 

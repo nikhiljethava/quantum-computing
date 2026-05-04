@@ -84,7 +84,7 @@ def generate_colab_notebook(
             "metadata": {},
             "source": _source(
                 f"""
-                # Google Quantum Foundry: Cirq Lab Notebook
+                # Quantum Foundry: Cirq Lab Notebook
 
                 - Circuit: **{label}**
                 - Concept: **{concept}**

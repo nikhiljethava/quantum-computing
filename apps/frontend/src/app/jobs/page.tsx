@@ -86,7 +86,7 @@ function formatJobType(jobType: JobType) {
     label: starter.label,
     badge: starter.badge,
     description:
-      "Persists a simulator-backed circuit run, then attaches a hybrid GCP architecture snapshot for the workspace.",
+      "Persists a simulator-backed circuit run, then attaches a hybrid Google Cloud architecture snapshot for the workspace.",
   };
 }
 

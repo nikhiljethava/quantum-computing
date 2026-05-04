@@ -1,4 +1,4 @@
-"""Route tests for the local Google-native guide provider."""
+"""Route tests for the local Quantum Foundry guide provider."""
 
 from datetime import datetime, timezone
 import uuid

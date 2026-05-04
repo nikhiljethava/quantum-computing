@@ -64,10 +64,10 @@ export function GuidePanel({
             Ask the Guide
           </div>
           <h2 className="mt-1 text-lg font-black tracking-[-0.03em] text-slate-950">
-            Google-native tutor
+            Quantum Foundry guide
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Local mode answers from app content and curated Google-native references. Vertex AI Gemini can be enabled by configuration later.
+            Local mode answers from app content and curated public references. Vertex AI Gemini can be enabled by configuration later.
           </p>
         </div>
       </div>

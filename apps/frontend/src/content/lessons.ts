@@ -76,7 +76,7 @@ function lesson(
     ],
     explanationMarkdown:
       options?.explanationMarkdown ??
-      `${title} is part of the Google Quantum Foundry learning path. The goal is to build intuition first, then connect the concept to Cirq simulation and Google Cloud architecture patterns.`,
+      `${title} is part of the Quantum Foundry learning path. The goal is to build intuition first, then connect the concept to Cirq-based simulation and Google Cloud architecture patterns.`,
     cirqCode: options?.cirqCode,
     buildTemplateKey: options?.buildTemplateKey,
     quiz:
@@ -110,7 +110,7 @@ export const LESSON_PATHS: LessonPathMeta[] = [
   {
     path: "cirq",
     title: "Cirq Fundamentals",
-    subtitle: "Learn the Google-native circuit model.",
+    subtitle: "Learn the Cirq-based circuit model.",
     level: "beginner",
     description: "Line qubits, gates, moments, measurement histograms, and the Cirq simulator.",
   },

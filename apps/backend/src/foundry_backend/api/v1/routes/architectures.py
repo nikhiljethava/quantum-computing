@@ -18,7 +18,7 @@ router = APIRouter()
 @router.post(
     "",
     response_model=ArchitectureRead,
-    summary="Generate a rule-based GCP architecture map",
+    summary="Generate a rule-based Google Cloud architecture map",
     description=(
         "Create a simulator-first hybrid architecture story from a circuit run, assessment, "
         "use case, or legacy async job. Circuit-run requests are persisted for later export."
@@ -28,7 +28,7 @@ async def get_architecture(
     body: ArchitectureRequest,
     db: AsyncSession = Depends(get_db),
 ) -> ArchitectureRead:
-    """Generate a GCP hybrid architecture map for the current workspace context."""
+    """Generate a Google Cloud hybrid architecture map for the current workspace context."""
 
     if body.circuit_run_id:
         circuit_run = await db.get(CircuitRun, body.circuit_run_id)

@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProviders } from "@/components/layout/QueryProviders";
 import { NavigationBar } from "@/components/layout/NavigationBar";
+import { Footer } from "@/components/layout/Footer";
+import { IndependentProjectNotice } from "@/components/IndependentProjectNotice";
 
 export const metadata: Metadata = {
   title: {
-    default: "GCP Quantum Foundry",
-    template: "%s | GCP Quantum Foundry",
+    default: "Quantum Foundry — Independent Quantum Learning Lab",
+    template: "%s | Quantum Foundry",
   },
   description:
-    "An interactive quantum launchpad for PMs, architects, and technical buyers. Learn quantum concepts, explore industry use cases, simulate circuits, and map to Google Cloud.",
+    "An independent personal project for learning quantum computing, building Cirq-based simulations, exploring use cases, and mapping hybrid workflows to Google Cloud architecture patterns.",
   keywords: ["quantum computing", "Google Cloud", "QAOA", "VQE", "Cirq", "hybrid quantum"],
   openGraph: {
-    title: "GCP Quantum Foundry",
-    description: "Learn, Explore, Assess, Build, and Map quantum workloads on Google Cloud.",
+    title: "Quantum Foundry — Independent Quantum Learning Lab",
+    description:
+      "An independent personal project for learning quantum computing with Cirq-based simulations and Google Cloud architecture patterns.",
     type: "website",
   },
 };
@@ -32,11 +35,13 @@ export default function RootLayout({
 
           {/* Global navigation */}
           <NavigationBar />
+          <IndependentProjectNotice compact />
 
           {/* Page content */}
           <main style={{ position: "relative", zIndex: 1 }}>
             {children}
           </main>
+          <Footer />
         </QueryProviders>
       </body>
     </html>

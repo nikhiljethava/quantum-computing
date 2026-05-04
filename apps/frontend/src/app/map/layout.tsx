@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     "Map simulator-first Cirq workflows to Cloud Run, Cloud Run Jobs, Cloud Storage, Cloud SQL, Cloud Tasks, BigQuery, and Vertex AI.",
   openGraph: {
-    title: "Google Cloud Architecture Map | GCP Quantum Foundry",
+    title: "Google Cloud Architecture Map | Quantum Foundry",
     description:
       "Explain hybrid quantum-classical architecture with Google Cloud services and honest hardware guardrails.",
   },

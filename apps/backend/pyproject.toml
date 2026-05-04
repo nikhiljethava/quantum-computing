@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "foundry-backend"
 version = "0.1.0"
-description = "FastAPI backend for GCP Quantum Foundry"
+description = "FastAPI backend for Quantum Foundry, an independent personal project."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111.0",
