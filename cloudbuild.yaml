@@ -260,7 +260,7 @@ steps:
 
         gcloud run services update "${_BACKEND_SERVICE}" \
           --region="${_REGION}" \
-          --update-env-vars="CORS_ORIGINS_STR=${cors_origins}"
+          --update-env-vars="^|^CORS_ORIGINS_STR=${cors_origins}"
 
         printf 'Frontend URL: %s\nBackend URL: %s\nWorker URL: %s\n' \
           "${frontend_url}" \
