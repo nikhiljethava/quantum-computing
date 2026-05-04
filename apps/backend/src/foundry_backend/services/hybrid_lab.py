@@ -11,6 +11,14 @@ from foundry_core.assessment.heuristic import run_qals_lite
 from foundry_core.circuits import CIRCUIT_REGISTRY
 from foundry_core.explainers import build_cirq_code, explain_circuit
 from foundry_core.mapping.gcp_mapper import ArchitectureMap, build_architecture_map
+from foundry_core.simulation.inspection import (
+    NOISE_METADATA_NOTE,
+    build_state_preview,
+    inspect_circuit,
+    run_ideal_histogram,
+    run_noisy_histogram,
+    run_qsim_histogram,
+)
 
 
 TEMPLATE_LIBRARY: dict[JobType, dict[str, Any]] = {
@@ -217,6 +225,11 @@ async def create_circuit_run(
     use_case: UseCase | None = None,
     session_id: uuid.UUID | None = None,
     parameter_overrides: dict[str, Any] | None = None,
+    repetitions: int | None = None,
+    simulator_backend: str = "cirq",
+    noise_enabled: bool = False,
+    noise_level: float = 0.0,
+    include_state_preview: bool = True,
 ) -> CircuitRun:
     """Run a synchronous toy circuit and persist the result for the Build workspace."""
 
@@ -226,7 +239,47 @@ async def create_circuit_run(
     template = TEMPLATE_LIBRARY[template_key]
     factory = CIRCUIT_REGISTRY[template_key.value]
     parameters = {**template["parameters"], **(parameter_overrides or {})}
+    if repetitions is not None:
+        parameters["repetitions"] = repetitions
     circuit_result = factory(**parameters)
+    resolved_repetitions = int(parameters.get("repetitions", repetitions or 1000))
+
+    circuit_metrics = inspect_circuit(circuit_result.circuit)
+    requested_backend = simulator_backend if simulator_backend in {"cirq", "qsim"} else "cirq"
+    simulator_warning = None
+    if requested_backend == "qsim":
+        ideal_histogram, simulator_warning = run_qsim_histogram(
+            circuit_result.circuit,
+            repetitions=resolved_repetitions,
+        )
+    else:
+        ideal_histogram = run_ideal_histogram(
+            circuit_result.circuit,
+            repetitions=resolved_repetitions,
+        )
+    actual_backend = "qsim" if requested_backend == "qsim" and simulator_warning is None else "cirq"
+    ideal_histogram_entries = _build_histogram_entries(ideal_histogram)
+
+    noisy_histogram_entries = None
+    if noise_enabled:
+        noisy_histogram_entries = _build_histogram_entries(
+            run_noisy_histogram(
+                circuit_result.circuit,
+                repetitions=resolved_repetitions,
+                noise_level=noise_level,
+            )
+        )
+
+    state_preview = (
+        build_state_preview(circuit_result.circuit)
+        if include_state_preview
+        else {
+            "available": False,
+            "reason": "State preview was disabled for this run.",
+            "top_amplitudes": [],
+            "basis_probabilities": [],
+        }
+    )
 
     assessment_preview = build_assessment_preview(template_key=template_key, use_case=use_case)
 
@@ -243,7 +296,7 @@ async def create_circuit_run(
         ),
         circuit_text=circuit_result.circuit_text,
         cirq_code=build_cirq_code(template_key=template_key.value, metadata=circuit_result.metadata),
-        histogram=_build_histogram_entries(circuit_result.histogram),
+        histogram=ideal_histogram_entries,
         measurements=circuit_result.measurements,
         run_metadata={
             **circuit_result.metadata,
@@ -251,6 +304,19 @@ async def create_circuit_run(
             "concept": template["concept"],
             "badge": template["badge"],
             "parameters": parameters,
+            "requested_simulator_backend": requested_backend,
+            "simulator_backend": actual_backend,
+            "simulator_warning": simulator_warning,
+            "num_qubits": circuit_metrics["num_qubits"],
+            "gate_count": circuit_metrics["gate_count"],
+            "circuit_depth": circuit_metrics["circuit_depth"],
+            "measurement_keys": circuit_metrics["measurement_keys"],
+            "ideal_histogram": ideal_histogram_entries,
+            "noisy_histogram": noisy_histogram_entries,
+            "state_preview": state_preview,
+            "noise_enabled": noise_enabled,
+            "noise_level": noise_level,
+            "noise_note": NOISE_METADATA_NOTE if noise_enabled else None,
         },
         assessment_preview=assessment_preview,
     )
@@ -264,6 +330,7 @@ def serialize_circuit_run(run: CircuitRun) -> dict[str, Any]:
     """Map a persisted CircuitRun into the API response contract."""
 
     template = TEMPLATE_LIBRARY[run.template_key]
+    metadata = run.run_metadata or {}
     return {
         "id": run.id,
         "session_id": run.session_id,
@@ -276,8 +343,17 @@ def serialize_circuit_run(run: CircuitRun) -> dict[str, Any]:
         "cirq_code": run.cirq_code,
         "histogram": run.histogram,
         "measurements": run.measurements,
-        "metadata": run.run_metadata,
+        "metadata": metadata,
         "assessment_preview": run.assessment_preview,
+        "simulator_backend": metadata.get("simulator_backend", "cirq"),
+        "simulator_warning": metadata.get("simulator_warning"),
+        "num_qubits": metadata.get("num_qubits"),
+        "gate_count": metadata.get("gate_count"),
+        "circuit_depth": metadata.get("circuit_depth"),
+        "measurement_keys": metadata.get("measurement_keys", []),
+        "ideal_histogram": metadata.get("ideal_histogram", run.histogram),
+        "noisy_histogram": metadata.get("noisy_histogram"),
+        "state_preview": metadata.get("state_preview"),
         "label": template["label"],
         "concept": template["concept"],
         "badge": template["badge"],

@@ -20,6 +20,7 @@ depends_on: Sequence[str] | None = None
 def upgrade() -> None:
     """Add visitor tracking to page usage rows."""
 
+    op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)")
     op.add_column("page_usages", sa.Column("visitor_id", sa.String(length=64), nullable=True))
     op.create_index(
         op.f("ix_page_usages_visitor_id"),

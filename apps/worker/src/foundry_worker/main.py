@@ -61,6 +61,38 @@ SUPPORTED_PARAMETERS = {
 }
 
 
+def _safe_bool(value: object, default: bool = False) -> bool:
+    """Parse a loose JSON boolean from worker payloads."""
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower().strip() in {"1", "true", "yes", "on"}
+    return default
+
+
+def _safe_int(value: object, field_name: str) -> int | None:
+    """Parse an optional integer payload field."""
+
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid {field_name}: {value}") from exc
+
+
+def _safe_float(value: object, field_name: str, default: float = 0.0) -> float:
+    """Parse a float payload field."""
+
+    if value in (None, ""):
+        return default
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid {field_name}: {value}") from exc
+
+
 def _safe_uuid(value: object, field_name: str) -> uuid.UUID | None:
     """Parse an optional UUID payload field."""
 
@@ -163,6 +195,11 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
         use_case=use_case,
         session_id=session_id,
         parameter_overrides=parameter_overrides,
+        repetitions=_safe_int(payload.get("repetitions"), "repetitions"),
+        simulator_backend=str(payload.get("simulator_backend", "cirq")),
+        noise_enabled=_safe_bool(payload.get("noise_enabled"), default=False),
+        noise_level=_safe_float(payload.get("noise_level"), "noise_level", default=0.0),
+        include_state_preview=_safe_bool(payload.get("include_state_preview"), default=True),
     )
     architecture_record = await create_architecture_record(
         db,

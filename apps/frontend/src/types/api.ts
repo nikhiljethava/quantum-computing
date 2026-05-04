@@ -23,6 +23,7 @@ export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 export type ArtifactType =
   | "job_output"
   | "cirq_code"
+  | "colab_notebook"
   | "assessment_json"
   | "architecture_json"
   | "session_summary";
@@ -142,6 +143,32 @@ export interface CircuitRunCreate {
   prompt?: string;
   use_case_id?: string;
   session_id?: string;
+  repetitions?: number;
+  simulator_backend?: "cirq" | "qsim";
+  noise_enabled?: boolean;
+  noise_level?: number;
+  include_state_preview?: boolean;
+}
+
+export interface StateAmplitude {
+  basis_state: string;
+  real: number;
+  imag: number;
+  magnitude: number;
+  phase: number;
+  probability: number;
+}
+
+export interface BasisProbability {
+  basis_state: string;
+  probability: number;
+}
+
+export interface StatePreview {
+  available: boolean;
+  reason: string | null;
+  top_amplitudes: StateAmplitude[];
+  basis_probabilities: BasisProbability[];
 }
 
 export interface CircuitVisualDraftNode {
@@ -190,6 +217,15 @@ export interface CircuitRun {
   measurements: Record<string, unknown>;
   metadata: Record<string, unknown>;
   assessment_preview: AssessmentPreview;
+  simulator_backend: string;
+  simulator_warning: string | null;
+  num_qubits: number | null;
+  gate_count: number | null;
+  circuit_depth: number | null;
+  measurement_keys: string[];
+  ideal_histogram: HistogramEntry[] | null;
+  noisy_histogram: HistogramEntry[] | null;
+  state_preview: StatePreview | null;
   created_at: string;
 }
 

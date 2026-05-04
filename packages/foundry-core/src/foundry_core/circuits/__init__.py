@@ -16,6 +16,9 @@ import numpy as np
 class CircuitResult:
     """Typed result returned by every circuit factory."""
 
+    circuit: cirq.Circuit
+    """Executable Cirq circuit used for inspection and simulation helpers."""
+
     circuit_text: str
     """String diagram of the Cirq circuit."""
 
@@ -49,6 +52,7 @@ def coin_flip(repetitions: int = 100) -> CircuitResult:
     histogram = {format(k, "01b"): v for k, v in counts.items()}
 
     return CircuitResult(
+        circuit=circuit,
         circuit_text=str(circuit),
         measurements={"result": list(map(int, result.measurements["result"].flatten()))},
         histogram=histogram,
@@ -79,6 +83,7 @@ def bell_state(repetitions: int = 1000) -> CircuitResult:
     histogram = {format(k, "02b"): v for k, v in counts.items()}
 
     return CircuitResult(
+        circuit=circuit,
         circuit_text=str(circuit),
         measurements={"bell": list(map(int, result.measurements["bell"].flatten()))},
         histogram=histogram,
@@ -145,6 +150,7 @@ def grover_search(num_qubits: int = 2, marked_state: int = 3, repetitions: int =
     histogram = {format(k, f"0{n}b"): v for k, v in counts.items()}
 
     return CircuitResult(
+        circuit=circuit,
         circuit_text=str(circuit),
         measurements={"search": list(map(int, result.measurements["search"].flatten()))},
         histogram=histogram,
@@ -190,6 +196,7 @@ def toy_routing_optimization(num_cities: int = 4, repetitions: int = 500) -> Cir
     histogram = {format(k, f"0{n}b"): v for k, v in counts.items()}
 
     return CircuitResult(
+        circuit=circuit,
         circuit_text=str(circuit),
         measurements={"route": list(map(int, result.measurements["route"].flatten()))},
         histogram=histogram,
@@ -231,6 +238,7 @@ def toy_chemistry(repetitions: int = 500) -> CircuitResult:
     histogram = {format(k, "02b"): v for k, v in counts.items()}
 
     return CircuitResult(
+        circuit=circuit,
         circuit_text=str(circuit),
         measurements={"energy": list(map(int, result.measurements["energy"].flatten()))},
         histogram=histogram,

@@ -48,6 +48,7 @@ class JobType(str, enum.Enum):
 class ArtifactType(str, enum.Enum):
     job_output = "job_output"
     cirq_code = "cirq_code"
+    colab_notebook = "colab_notebook"
     assessment_json = "assessment_json"
     architecture_json = "architecture_json"
     session_summary = "session_summary"

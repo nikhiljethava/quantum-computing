@@ -32,7 +32,7 @@ def test_build_assessment_preview_is_deterministic() -> None:
     assert preview["next_action"]
 
 
-def test_architecture_mapper_keeps_hardware_optional() -> None:
+def test_architecture_mapper_keeps_hardware_approved_access_only() -> None:
     architecture = architecture_from_context(
         {
             "job_type": "routing",
@@ -47,3 +47,4 @@ def test_architecture_mapper_keeps_hardware_optional() -> None:
     assert "vertex_ai" in component_ids
     assert "quantum_computing_service" not in component_ids
     assert any("simulation" in note.lower() for note in architecture.notes)
+    assert any("restricted to approved groups" in note.lower() for note in architecture.notes)

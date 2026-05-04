@@ -122,8 +122,8 @@ print(result.histogram(key="result"))`,
     ],
     optionalNode: {
       id: "hardware",
-      label: "Google QCS (optional)",
-      caption: "Feature-gated later path",
+      label: "Approved-access hardware path",
+      caption: "Restricted to approved groups",
       tone: "warn",
     },
     exportItems: ["Cirq notebook", "Assessment JSON", "Architecture brief", "Decision memo"],
@@ -199,8 +199,8 @@ print(result.histogram(key="bell"))`,
     ],
     optionalNode: {
       id: "hardware",
-      label: "Approved hardware adapter",
-      caption: "Not enabled by default",
+      label: "Approved-access hardware path",
+      caption: "Restricted to approved groups",
       tone: "warn",
     },
     exportItems: ["Bell-state notebook", "Teaching notes", "Architecture JSON", "Session summary"],
@@ -349,7 +349,7 @@ circuit = cirq.Circuit(
       ],
       assumptions: [
         "The routing subproblem is narrow enough to isolate from the full workflow.",
-        "Stakeholders understand that simulation comes first and hardware remains optional.",
+        "Stakeholders understand that simulation comes first and hardware access is restricted to approved groups.",
       ],
       publicSignals: [
         "Scheduling and routing are common public-facing optimization narratives.",
@@ -367,7 +367,7 @@ circuit = cirq.Circuit(
     ],
     optionalNode: {
       id: "hardware",
-      label: "Google QCS (optional)",
+      label: "Approved-access hardware path",
       caption: "Only for approved access paths",
       tone: "warn",
     },
@@ -438,7 +438,7 @@ circuit = cirq.Circuit(
       nextAction: "Keep the placeholder visible and point deeper users to future OpenFermion-backed extensions.",
     },
     architectureSummary:
-      "Chemistry uses the same simulator-first backbone, with stronger emphasis on classical preprocessing and future OpenFermion hooks before any hardware-aware path is discussed.",
+      "Chemistry uses the same simulator-first backbone, with stronger emphasis on classical preprocessing and future OpenFermion hooks before any approved-access hardware path is discussed.",
     architectureNodes: [
       { id: "data", label: "Scientific data sources", caption: "Molecular inputs and metadata", tone: "primary" },
       { id: "prep", label: "Classical preprocessing", caption: "Hamiltonian prep and feature shaping", tone: "secondary" },
@@ -447,8 +447,8 @@ circuit = cirq.Circuit(
     ],
     optionalNode: {
       id: "hardware",
-      label: "Future hardware adapter",
-      caption: "Roadmap only",
+      label: "Learn hardware path",
+      caption: "Approved access only",
       tone: "warn",
     },
     exportItems: ["Chemistry notebook stub", "Assumption log", "Architecture JSON", "Session summary"],

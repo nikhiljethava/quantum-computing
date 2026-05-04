@@ -5,16 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  Activity,
   Bot,
   Clock3,
   Code2,
   FileDown,
   FolderOpen,
   GitBranch,
+  Gauge,
   Play,
   Plus,
   RotateCcw,
   Save,
+  Settings2,
   Sparkles,
   Trash2,
   Wand2,
@@ -54,6 +57,7 @@ import {
   CircuitVisualDraftNode,
   CircuitRun,
   GcpComponent,
+  HistogramEntry,
   Project,
   SavedSession,
   UseCase,
@@ -64,16 +68,33 @@ type FocusCard = "assessment" | "architecture" | null;
 type HistogramTone = StarterStory["histogram"][number]["tone"];
 type EditableCircuitNode = CircuitVisualNode & { id: string };
 type EditableInsertType = "gate" | "measure" | "control" | "label";
+type SimulatorBackend = "cirq" | "qsim";
+type LabControls = {
+  repetitions: number;
+  simulatorBackend: SimulatorBackend;
+  noiseEnabled: boolean;
+  noiseLevel: number;
+  includeStatePreview: boolean;
+};
 
 const HISTOGRAM_TONES: HistogramTone[] = ["primary", "accent", "secondary", "warn"];
 const DEFAULT_PROJECT_NAME = "Quantum Foundry demos";
 const NEW_PROJECT_VALUE = "__new_project__";
+const DEFAULT_LAB_CONTROLS: LabControls = {
+  repetitions: 1000,
+  simulatorBackend: "cirq",
+  noiseEnabled: false,
+  noiseLevel: 0.03,
+  includeStatePreview: true,
+};
+const REPETITION_OPTIONS = [100, 1000, 5000, 10000];
 const EXPORT_ITEMS: Array<{
   type: Exclude<ArtifactType, "job_output">;
   label: string;
   requiresArchitecture?: boolean;
 }> = [
   { type: "cirq_code", label: "Cirq code (.py)" },
+  { type: "colab_notebook", label: "Colab notebook (.ipynb)" },
   { type: "assessment_json", label: "Assessment JSON" },
   { type: "architecture_json", label: "Architecture map JSON", requiresArchitecture: true },
   { type: "session_summary", label: "Session summary (.md)", requiresArchitecture: true },
@@ -564,8 +585,8 @@ function deriveArchitectureNodes(components: GcpComponent[]) {
   const optionalNode = ids.has("quantum_computing_service")
     ? {
         id: "hardware",
-        label: "Google QCS (optional)",
-        caption: "Feature-gated later path",
+        label: "Approved-access hardware path",
+        caption: "Restricted to approved groups",
         tone: "warn" as const,
       }
     : undefined;
@@ -620,7 +641,7 @@ function mergeLiveStory(
     architectureSummary: architecture?.summary ?? fallback.architectureSummary,
     architectureNodes: liveArchitecture?.nodes.length ? liveArchitecture.nodes : fallback.architectureNodes,
     optionalNode: liveArchitecture?.optionalNode ?? fallback.optionalNode,
-    exportItems: ["Cirq code export", "Assessment JSON", "Architecture JSON", "Session summary"],
+    exportItems: ["Cirq code export", "Colab notebook", "Assessment JSON", "Architecture JSON", "Session summary"],
   };
 }
 
@@ -1618,13 +1639,280 @@ function CircuitEditorPanel({
   );
 }
 
+function formatProbability(value: number) {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
+function formatMetric(value: number | null | undefined) {
+  return typeof value === "number" ? value.toLocaleString() : "N/A";
+}
+
+function LabControlsPanel({
+  controls,
+  isBusy,
+  onChange,
+}: {
+  controls: LabControls;
+  isBusy: boolean;
+  onChange: (patch: Partial<LabControls>) => void;
+}) {
+  return (
+    <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Lab controls
+          </div>
+          <h2 className="mt-1 text-[1.1rem] font-semibold text-slate-900">
+            Configure the next simulator run
+          </h2>
+        </div>
+        <Settings2 className="h-5 w-5 text-[#2f5be3]" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Simulator
+          </span>
+          <select
+            value={controls.simulatorBackend}
+            onChange={(event) =>
+              onChange({ simulatorBackend: event.target.value as SimulatorBackend })
+            }
+            disabled={isBusy}
+            className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#2f5be3]"
+          >
+            <option value="cirq">Cirq simulator</option>
+            <option value="qsim">qsim optional</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Repetitions
+          </span>
+          <select
+            value={controls.repetitions}
+            onChange={(event) => onChange({ repetitions: Number(event.target.value) })}
+            disabled={isBusy}
+            className="w-full rounded-[16px] border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-[#2f5be3]"
+          >
+            {REPETITION_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value.toLocaleString()}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <label className="flex items-center justify-between gap-3 rounded-[18px] border border-[#e2e8f0] bg-[#f8fbff] px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-slate-800">Noise comparison</span>
+            <span className="block text-xs leading-5 text-slate-500">Educational depolarizing model</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={controls.noiseEnabled}
+            onChange={(event) => onChange({ noiseEnabled: event.target.checked })}
+            disabled={isBusy}
+            className="h-5 w-5 accent-[#2f5be3]"
+          />
+        </label>
+
+        <label className="flex items-center justify-between gap-3 rounded-[18px] border border-[#e2e8f0] bg-[#f8fbff] px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-slate-800">State preview</span>
+            <span className="block text-xs leading-5 text-slate-500">For small generated circuits</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={controls.includeStatePreview}
+            onChange={(event) => onChange({ includeStatePreview: event.target.checked })}
+            disabled={isBusy}
+            className="h-5 w-5 accent-[#2f5be3]"
+          />
+        </label>
+      </div>
+
+      <label className="mt-4 block">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Noise level
+          </span>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {controls.noiseLevel.toFixed(2)}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={0.25}
+          step={0.01}
+          value={controls.noiseLevel}
+          onChange={(event) => onChange({ noiseLevel: Number(event.target.value) })}
+          disabled={isBusy || !controls.noiseEnabled}
+          className="w-full accent-[#2f5be3]"
+        />
+      </label>
+
+      <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-600">
+        <div className="rounded-[18px] bg-[#f8fbff] p-4">
+          qsim is useful for larger state-vector simulations, but results are still classical simulation.
+        </div>
+        <div className="rounded-[18px] bg-[#fff7ed] p-4 text-[#9a3412]">
+          Noise mode is an educational approximation, not a calibrated Google hardware model.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistogramBars({
+  title,
+  histogram,
+}: {
+  title: string;
+  histogram: HistogramEntry[];
+}) {
+  return (
+    <div className="rounded-[20px] border border-[#e2e8f0] bg-white p-4">
+      <div className="mb-3 text-sm font-semibold text-slate-700">{title}</div>
+      <div className="grid min-h-[180px] grid-cols-2 gap-3 sm:grid-cols-4">
+        {histogram.slice(0, 4).map((item, index) => {
+          const tone = TONE_STYLES[HISTOGRAM_TONES[index % HISTOGRAM_TONES.length]];
+          return (
+            <div key={`${title}-${item.state}`} className="flex flex-col items-center justify-end">
+              <div className="flex h-[112px] w-full items-end justify-center rounded-[16px] bg-[#f8fafc] px-3">
+                <div
+                  className={`w-full max-w-[46px] rounded-t-[16px] bg-gradient-to-b ${tone.bar}`}
+                  style={{ height: `${Math.max(4, item.probability)}%` }}
+                />
+              </div>
+              <div className="mt-2 text-sm font-semibold text-slate-900">
+                {Math.round(item.probability)}%
+              </div>
+              <div className="text-xs font-medium text-slate-500">{item.state}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CircuitMetricsCard({ run }: { run: CircuitRun | null }) {
+  const metrics = [
+    ["Qubits", formatMetric(run?.num_qubits)],
+    ["Gates", formatMetric(run?.gate_count)],
+    ["Depth", formatMetric(run?.circuit_depth)],
+    ["Backend", run?.simulator_backend ?? "cirq"],
+  ];
+
+  return (
+    <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
+      <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <Gauge className="h-4 w-4 text-[#2f5be3]" />
+        Circuit metrics
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {metrics.map(([label, value]) => (
+          <div key={label} className="rounded-[16px] bg-[#f8fbff] p-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              {label}
+            </div>
+            <div className="mt-2 text-lg font-black text-slate-900">{value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-[16px] bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
+        Measurement keys: {run?.measurement_keys?.length ? run.measurement_keys.join(", ") : "None recorded"}
+      </div>
+      {run?.simulator_warning ? (
+        <div className="mt-3 rounded-[16px] border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm leading-6 text-[#9a3412]">
+          {run.simulator_warning}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function StatePreviewCard({ run }: { run: CircuitRun | null }) {
+  const preview = run?.state_preview ?? null;
+
+  return (
+    <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
+      <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <Activity className="h-4 w-4 text-[#2f5be3]" />
+        State preview
+      </div>
+      {preview?.available ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="text-xs uppercase tracking-[0.14em] text-slate-400">
+              <tr>
+                <th className="pb-3">Basis</th>
+                <th className="pb-3">Real</th>
+                <th className="pb-3">Imag</th>
+                <th className="pb-3">Magnitude</th>
+                <th className="pb-3">Phase</th>
+                <th className="pb-3">Probability</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-700">
+              {preview.top_amplitudes.map((item) => (
+                <tr key={item.basis_state} className="border-t border-[#e2e8f0]">
+                  <td className="py-3 font-semibold">{item.basis_state}</td>
+                  <td className="py-3">{item.real.toFixed(3)}</td>
+                  <td className="py-3">{item.imag.toFixed(3)}</td>
+                  <td className="py-3">{item.magnitude.toFixed(3)}</td>
+                  <td className="py-3">{item.phase.toFixed(3)}</td>
+                  <td className="py-3">{formatProbability(item.probability)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-[18px] bg-[#f8fafc] p-4 text-sm leading-6 text-slate-600">
+          {preview?.reason ?? "Run a small generated circuit to see the state preview."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoiseComparisonCard({ run }: { run: CircuitRun | null }) {
+  const noiseEnabled = run?.metadata?.noise_enabled === true;
+  if (!noiseEnabled || !run?.noisy_histogram?.length) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[24px] border border-[#e2e8f0] bg-[#fffdf7] p-4">
+      <div className="mb-4 text-sm font-semibold text-slate-700">Noise comparison</div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <HistogramBars title="Ideal simulation" histogram={run.ideal_histogram ?? run.histogram} />
+        <HistogramBars title="Educational noisy run" histogram={run.noisy_histogram} />
+      </div>
+      <div className="mt-4 rounded-[18px] bg-white p-4 text-sm leading-6 text-slate-600">
+        Noise mode is an educational approximation, not a calibrated Google hardware model.
+      </div>
+    </div>
+  );
+}
+
 function ResultsPanel({
   story,
+  run,
   activeTab,
   simulationState,
   setActiveTab,
 }: {
   story: StarterStory;
+  run: CircuitRun | null;
   activeTab: OutputTab;
   simulationState: "ready" | "running";
   setActiveTab: (tab: OutputTab) => void;
@@ -1666,52 +1954,58 @@ function ResultsPanel({
       </div>
 
       {activeTab === "results" ? (
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[24px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-700">Simulation result</div>
-              <div className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#2f5be3]">
-                {simulationState === "running" ? "Running on simulator" : "Last run ready"}
+        <div className="space-y-5">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[24px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-700">Simulation result</div>
+                <div className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#2f5be3]">
+                  {simulationState === "running" ? "Running on simulator" : "Last run ready"}
+                </div>
+              </div>
+              <div className="grid min-h-[250px] grid-cols-2 gap-4 md:grid-cols-4">
+                {story.histogram.map((item) => {
+                  const tone = TONE_STYLES[item.tone];
+                  return (
+                    <div
+                      key={item.state}
+                      className="flex flex-col items-center justify-end rounded-[20px] border border-[#e2e8f0] bg-white px-4 py-3"
+                    >
+                      <div className="flex h-[170px] w-full items-end justify-center">
+                        <div
+                          className={`w-full max-w-[64px] rounded-t-[20px] bg-gradient-to-b ${tone.bar} transition-all duration-700`}
+                          style={{
+                            height: simulationState === "running" ? "14%" : `${item.probability}%`,
+                            opacity: simulationState === "running" ? 0.35 : 1,
+                          }}
+                        />
+                      </div>
+                      <div className="mt-3 text-lg font-semibold text-slate-900">{item.probability}%</div>
+                      <div className="mt-1 text-sm font-medium text-slate-500">{item.state}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="grid min-h-[250px] grid-cols-2 gap-4 md:grid-cols-4">
-              {story.histogram.map((item) => {
-                const tone = TONE_STYLES[item.tone];
-                return (
-                  <div
-                    key={item.state}
-                    className="flex flex-col items-center justify-end rounded-[20px] border border-[#e2e8f0] bg-white px-4 py-3"
-                  >
-                    <div className="flex h-[170px] w-full items-end justify-center">
-                      <div
-                        className={`w-full max-w-[64px] rounded-t-[20px] bg-gradient-to-b ${tone.bar} transition-all duration-700`}
-                        style={{
-                          height: simulationState === "running" ? "14%" : `${item.probability}%`,
-                          opacity: simulationState === "running" ? 0.35 : 1,
-                        }}
-                      />
-                    </div>
-                    <div className="mt-3 text-lg font-semibold text-slate-900">{item.probability}%</div>
-                    <div className="mt-1 text-sm font-medium text-slate-500">{item.state}</div>
+
+            <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
+              <div className="mb-4 text-sm font-semibold text-slate-700">Why this output matters</div>
+              <div className="space-y-3 text-sm leading-7 text-slate-600">
+                <p>{story.explanation}</p>
+                <p>{story.useCaseHint}</p>
+                <div className="rounded-[18px] bg-[#f8fafc] p-4 text-slate-600">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Honest framing
                   </div>
-                );
-              })}
+                  QALS-lite is a readiness heuristic and the simulation path is a teaching and prototype aid. It does not imply benchmark superiority or guaranteed quantum advantage.
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
-            <div className="mb-4 text-sm font-semibold text-slate-700">Why this output matters</div>
-            <div className="space-y-3 text-sm leading-7 text-slate-600">
-              <p>{story.explanation}</p>
-              <p>{story.useCaseHint}</p>
-              <div className="rounded-[18px] bg-[#f8fafc] p-4 text-slate-600">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Honest framing
-                </div>
-                QALS-lite is a readiness heuristic and the simulation path is a teaching and prototype aid. It does not imply benchmark superiority or guaranteed quantum advantage.
-              </div>
-            </div>
-          </div>
+          <CircuitMetricsCard run={run} />
+          <StatePreviewCard run={run} />
+          <NoiseComparisonCard run={run} />
         </div>
       ) : null}
 
@@ -2014,6 +2308,7 @@ function BuildPageContent() {
   const [selectedKey, setSelectedKey] = useState<StarterKey>(initialKey);
   const [outputTab, setOutputTab] = useState<OutputTab>("results");
   const [simulationState, setSimulationState] = useState<"ready" | "running">("ready");
+  const [labControls, setLabControls] = useState<LabControls>(DEFAULT_LAB_CONTROLS);
   const [focusedCard, setFocusedCard] = useState<FocusCard>(null);
   const [workspaceRun, setWorkspaceRun] = useState<CircuitRun | null>(null);
   const [architecture, setArchitecture] = useState<ArchitectureMap | null>(null);
@@ -2040,6 +2335,7 @@ function BuildPageContent() {
   const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
   const [backgroundRunState, setBackgroundRunState] = useState<"idle" | "queued" | "hydrating">("idle");
   const requestIdRef = useRef(0);
+  const labControlsRef = useRef<LabControls>(DEFAULT_LAB_CONTROLS);
   const restoredSessionRef = useRef<string | null>(null);
   const restoredDraftRef = useRef<string | null>(null);
   const skippedInitialRestoredRunRef = useRef<string | null>(null);
@@ -2059,6 +2355,10 @@ function BuildPageContent() {
   const updateSessionMutation = useUpdateSession();
   const activeUseCaseId = searchParams.get("use_case_id") ?? sessionDetail?.selected_use_case_id ?? null;
   const { data: selectedUseCase } = useUseCase(activeUseCaseId);
+
+  useEffect(() => {
+    labControlsRef.current = labControls;
+  }, [labControls]);
 
   useEffect(() => {
     setSelectedKey(initialKey);
@@ -2200,6 +2500,11 @@ function BuildPageContent() {
     setSaveState("idle");
   }
 
+  function updateLabControls(patch: Partial<LabControls>) {
+    setLabControls((current) => ({ ...current, ...patch }));
+    setSaveState("idle");
+  }
+
   const hydrateBackgroundRun = useCallback(
     async (runId: string, jobResult: Record<string, unknown> | null) => {
       try {
@@ -2249,11 +2554,17 @@ function BuildPageContent() {
 
       try {
         const activeStory = getStarterStory(starterKey);
+        const controls = labControlsRef.current;
         const run = await runCircuit({
           template_key: starterKey,
           prompt: activeStory.prompt,
           use_case_id: activeUseCaseId ?? undefined,
           session_id: currentSessionId ?? undefined,
+          repetitions: controls.repetitions,
+          simulator_backend: controls.simulatorBackend,
+          noise_enabled: controls.noiseEnabled,
+          noise_level: controls.noiseLevel,
+          include_state_preview: controls.includeStatePreview,
         });
 
         if (requestIdRef.current !== activeRequestId) {
@@ -2459,6 +2770,7 @@ function BuildPageContent() {
 
   async function queueBackgroundRun() {
     const activeStory = getStarterStory(selectedKey);
+    const controls = labControlsRef.current;
     handledBackgroundJobRef.current = null;
     resetEditorFromGenerated();
     setBackgroundRunState("queued");
@@ -2474,6 +2786,11 @@ function BuildPageContent() {
           prompt: activeStory.prompt,
           session_id: currentSessionId ?? undefined,
           use_case_id: activeUseCaseId ?? undefined,
+          repetitions: controls.repetitions,
+          simulator_backend: controls.simulatorBackend,
+          noise_enabled: controls.noiseEnabled,
+          noise_level: controls.noiseLevel,
+          include_state_preview: controls.includeStatePreview,
         },
       });
       setBackgroundJobId(job.id);
@@ -2786,7 +3103,7 @@ function BuildPageContent() {
                 Simulation first
               </span>
               <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Hardware optional
+                Approved access only
               </span>
               {selectedUseCase ? (
                 <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
@@ -2917,68 +3234,76 @@ function BuildPageContent() {
 
           <div className="min-w-0 space-y-5 lg:col-start-2">
             <div className="grid gap-5 xl:grid-cols-[0.95fr_1.35fr] 2xl:grid-cols-1">
-              <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Quantum guide
+              <div className="space-y-5">
+                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        Quantum guide
+                      </div>
+                      <h2 className="mt-1 text-[1.2rem] font-semibold tracking-[-0.02em] text-slate-900">
+                        One guide, one workspace
+                      </h2>
                     </div>
-                    <h2 className="mt-1 text-[1.2rem] font-semibold tracking-[-0.02em] text-slate-900">
-                      One guide, one workspace
-                    </h2>
+                    <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]">
+                      {displayStory.badge}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]">
-                    {displayStory.badge}
-                  </span>
+
+                  <div className="space-y-3">
+                    <div className="rounded-[22px] bg-[#eef2ff] p-4 text-sm leading-7 text-[#2f5be3]">
+                      {displayStory.prompt}
+                    </div>
+                    <div className="rounded-[22px] border border-[#d8e2f3] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
+                      {displayStory.guideReply}
+                    </div>
+                    <div className="rounded-[22px] border border-[#e2e8f0] bg-white p-4 text-sm leading-7 text-slate-500">
+                      {displayStory.guideFollowUp}
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Starter prompts
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {STARTER_ORDER.map((key) => {
+                        const starter = getStarterStory(key);
+                        const isActive = key === selectedKey;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => selectStarter(key)}
+                            disabled={isLoadingWorkspace}
+                            className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                              isActive
+                                ? "bg-[#2f5be3] text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)]"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            {starter.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={cycleStarter}
+                    disabled={isLoadingWorkspace}
+                    className="mt-5 w-full rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.24)] transition hover:-translate-y-[1px]"
+                  >
+                    {isLoadingWorkspace ? "Updating workspace..." : "Generate next artifact"}
+                  </button>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="rounded-[22px] bg-[#eef2ff] p-4 text-sm leading-7 text-[#2f5be3]">
-                    {displayStory.prompt}
-                  </div>
-                  <div className="rounded-[22px] border border-[#d8e2f3] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
-                    {displayStory.guideReply}
-                  </div>
-                  <div className="rounded-[22px] border border-[#e2e8f0] bg-white p-4 text-sm leading-7 text-slate-500">
-                    {displayStory.guideFollowUp}
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Starter prompts
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {STARTER_ORDER.map((key) => {
-                      const starter = getStarterStory(key);
-                      const isActive = key === selectedKey;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => selectStarter(key)}
-                          disabled={isLoadingWorkspace}
-                          className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                            isActive
-                              ? "bg-[#2f5be3] text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)]"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }`}
-                        >
-                          {starter.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={cycleStarter}
-                  disabled={isLoadingWorkspace}
-                  className="mt-5 w-full rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.24)] transition hover:-translate-y-[1px]"
-                >
-                  {isLoadingWorkspace ? "Updating workspace..." : "Generate next artifact"}
-                </button>
+                <LabControlsPanel
+                  controls={labControls}
+                  isBusy={isLoadingWorkspace}
+                  onChange={updateLabControls}
+                />
               </div>
 
               <div className="min-w-0 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
@@ -3053,6 +3378,7 @@ function BuildPageContent() {
 
             <ResultsPanel
               story={editableDisplayStory}
+              run={workspaceRun}
               activeTab={outputTab}
               simulationState={simulationState}
               setActiveTab={setOutputTab}

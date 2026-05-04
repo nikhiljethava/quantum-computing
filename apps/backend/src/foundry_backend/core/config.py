@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     cloud_tasks_audience: str = ""
 
     # CORS — allow all origins in development; restrict in production
-    cors_origins_str: str = "http://localhost:3000,http://localhost:3001"
+    cors_origins_str: str = (
+        "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+    )
 
     environment: str = "development"
 

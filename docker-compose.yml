@@ -28,7 +28,7 @@ services:
       ARTIFACT_DIR: ${DOCKER_ARTIFACT_DIR:-/app/artifacts}
       GCS_BUCKET: ${GCS_BUCKET:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      CORS_ORIGINS_STR: ${CORS_ORIGINS_STR:-http://localhost:3000,http://localhost:3001}
+      CORS_ORIGINS_STR: ${CORS_ORIGINS_STR:-http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001}
     ports:
       - "8000:8000"
     volumes:
@@ -67,10 +67,10 @@ services:
       context: apps/frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://127.0.0.1:8000}
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://127.0.0.1:8000}
     ports:
       - "3000:3000"
     volumes:

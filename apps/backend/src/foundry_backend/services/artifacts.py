@@ -7,8 +7,19 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.core.config import settings
-from foundry_backend.models.models import ArchitectureRecord, Artifact, ArtifactType, CircuitRun, UseCase
+from foundry_backend.models.models import (
+    ArchitectureRecord,
+    Artifact,
+    ArtifactType,
+    CircuitRun,
+    UseCase,
+)
 from foundry_core.storage import get_storage_backend
+
+HARDWARE_ACCESS_GUARDRAIL = (
+    "Google quantum hardware access is restricted to approved groups. "
+    "Quantum Foundry is simulation-first unless approved access is configured."
+)
 
 
 def build_download_path(artifact_id: Any) -> str:
@@ -88,8 +99,108 @@ def _build_session_summary(
 ## Guardrails
 - Simulation-first output only.
 - QALS-lite is a heuristic readiness aid, not a quantum advantage claim.
-- Hardware access remains optional and configuration-gated.
+- {HARDWARE_ACCESS_GUARDRAIL}
 """
+
+
+def _build_colab_notebook(
+    circuit_run: CircuitRun,
+    architecture_record: ArchitectureRecord | None,
+    use_case: UseCase | None,
+) -> bytes:
+    metadata = circuit_run.run_metadata or {}
+    simulator_backend = metadata.get("simulator_backend", "cirq")
+    simulator_warning = metadata.get("simulator_warning")
+    noise_note = metadata.get("noise_note")
+    use_case_title = use_case.title if use_case else "No use case selected"
+    architecture_summary = (
+        architecture_record.summary
+        if architecture_record
+        else "No architecture record was attached to this export."
+    )
+    histogram_payload = {
+        "ideal_histogram": metadata.get("ideal_histogram", circuit_run.histogram),
+        "noisy_histogram": metadata.get("noisy_histogram"),
+        "state_preview": metadata.get("state_preview"),
+    }
+    simulator_notes = [
+        f"Simulator backend: {simulator_backend}",
+        (
+            "qsim is useful for larger state-vector simulations, but results are "
+            "still classical simulation."
+        ),
+        "Noise mode is an educational approximation, not a calibrated Google hardware model.",
+        HARDWARE_ACCESS_GUARDRAIL,
+    ]
+    if simulator_warning:
+        simulator_notes.append(f"Simulator warning: {simulator_warning}")
+    if noise_note:
+        simulator_notes.append(str(noise_note))
+
+    notebook = {
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "# GCP Quantum Foundry Cirq Lab\n",
+                    "\n",
+                    f"Template: `{circuit_run.template_key.value}`\n",
+                    f"Use case: {use_case_title}\n",
+                    "\n",
+                    "This notebook is generated from a simulation-first Cirq Lab run.\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [f"- {line}\n" for line in simulator_notes],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [line + "\n" for line in circuit_run.cirq_code.splitlines()],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "run_metadata = ",
+                    json.dumps(histogram_payload, indent=2, sort_keys=True),
+                    "\nrun_metadata\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "## Google Cloud architecture context\n",
+                    "\n",
+                    architecture_summary,
+                    "\n",
+                ],
+            },
+        ],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {
+                "name": "python",
+                "pygments_lexer": "ipython3",
+            },
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+
+    return _json_bytes(notebook)
 
 
 def _render_export(
@@ -105,6 +216,13 @@ def _render_export(
             f"{template_key}_circuit.py",
             "text/x-python",
             circuit_run.cirq_code.encode("utf-8"),
+        )
+
+    if artifact_type == ArtifactType.colab_notebook:
+        return (
+            f"{template_key}_colab_notebook.ipynb",
+            "application/x-ipynb+json",
+            _build_colab_notebook(circuit_run, architecture_record, use_case),
         )
 
     if artifact_type == ArtifactType.assessment_json:

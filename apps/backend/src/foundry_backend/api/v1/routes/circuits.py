@@ -68,6 +68,11 @@ async def run_circuit(
         prompt=body.prompt,
         use_case=use_case,
         session_id=body.session_id,
+        repetitions=body.repetitions,
+        simulator_backend=body.simulator_backend,
+        noise_enabled=body.noise_enabled,
+        noise_level=body.noise_level,
+        include_state_preview=body.include_state_preview,
     )
     return CircuitRunRead.model_validate(serialize_circuit_run(run))
 

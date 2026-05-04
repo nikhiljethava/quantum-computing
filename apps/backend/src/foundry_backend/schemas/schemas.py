@@ -6,7 +6,13 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from foundry_backend.models.models import ArtifactType, IndustryTag, JobStatus, JobType, ProjectStatus
+from foundry_backend.models.models import (
+    ArtifactType,
+    IndustryTag,
+    JobStatus,
+    JobType,
+    ProjectStatus,
+)
 
 
 class UseCaseRead(BaseModel):
@@ -196,6 +202,33 @@ class HistogramEntryRead(BaseModel):
     probability: float
 
 
+class StateAmplitudeRead(BaseModel):
+    """A compact state-vector amplitude preview entry."""
+
+    basis_state: str
+    real: float
+    imag: float
+    magnitude: float
+    phase: float
+    probability: float
+
+
+class BasisProbabilityRead(BaseModel):
+    """A compact basis probability preview entry."""
+
+    basis_state: str
+    probability: float
+
+
+class StatePreviewRead(BaseModel):
+    """State-vector preview returned for small educational circuits."""
+
+    available: bool
+    reason: str | None = None
+    top_amplitudes: list[StateAmplitudeRead] = Field(default_factory=list)
+    basis_probabilities: list[BasisProbabilityRead] = Field(default_factory=list)
+
+
 class AssessmentPreviewRead(BaseModel):
     """Heuristic preview surfaced directly inside the Hybrid Lab."""
 
@@ -225,6 +258,33 @@ class CircuitRunCreate(BaseModel):
     session_id: uuid.UUID | None = Field(
         default=None,
         description="Optional saved workspace session identifier.",
+    )
+    repetitions: int | None = Field(
+        default=None,
+        ge=1,
+        le=20000,
+        description="Optional simulator shot count override.",
+    )
+    simulator_backend: Literal["cirq", "qsim"] = Field(
+        default="cirq",
+        description=(
+            "Simulator backend preference. qsim falls back to Cirq if qsimcirq "
+            "is unavailable."
+        ),
+    )
+    noise_enabled: bool = Field(
+        default=False,
+        description="When true, return an educational noisy-histogram comparison.",
+    )
+    noise_level: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=0.25,
+        description="Depolarizing noise probability for educational comparison runs.",
+    )
+    include_state_preview: bool = Field(
+        default=True,
+        description="When true, return a state-vector preview for small circuits.",
     )
 
 
@@ -333,6 +393,15 @@ class CircuitRunRead(BaseModel):
     measurements: dict[str, Any]
     metadata: dict[str, Any]
     assessment_preview: AssessmentPreviewRead
+    simulator_backend: str = "cirq"
+    simulator_warning: str | None = None
+    num_qubits: int | None = None
+    gate_count: int | None = None
+    circuit_depth: int | None = None
+    measurement_keys: list[str] = Field(default_factory=list)
+    ideal_histogram: list[HistogramEntryRead] | None = None
+    noisy_histogram: list[HistogramEntryRead] | None = None
+    state_preview: StatePreviewRead | None = None
     created_at: datetime
 
 

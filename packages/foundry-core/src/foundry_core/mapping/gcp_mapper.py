@@ -12,6 +12,11 @@ TODO(gcp-deploy): replace static component definitions with live GCP resource me
 import dataclasses
 from typing import Any
 
+HARDWARE_ACCESS_NOTE = (
+    "Google quantum hardware access is restricted to approved groups. "
+    "Quantum Foundry is simulation-first unless approved access is configured."
+)
+
 
 # ---------------------------------------------------------------------------
 # Result types (defined here to avoid circular imports with backend)
@@ -75,13 +80,16 @@ _COMPONENTS: dict[str, GcpComponent] = {
         id="quantum_computing_service",
         name="Google Quantum Computing Service",
         service="Quantum Computing Service",
-        description="Access to Google's superconducting quantum processors (behind config flag).",
+        description=HARDWARE_ACCESS_NOTE,
     ),
     "circuit_runner": GcpComponent(
         id="circuit_runner",
         name="Circuit Runner (Worker)",
         service="Cloud Run Jobs",
-        description="Async worker container that executes Cirq simulations or dispatches to QCS.",
+        description=(
+            "Async worker container that executes Cirq simulations; approved-access "
+            "hardware paths require explicit configuration."
+        ),
     ),
     "frontend": GcpComponent(
         id="frontend",
@@ -109,7 +117,7 @@ BASE_CONNECTIONS: list[tuple[str, str]] = [
 BASE_NOTES: list[str] = [
     "TODO(gcp-deploy): Set STORAGE_BACKEND=gcs and GCS_BUCKET env var on Cloud Run.",
     "TODO(gcp-deploy): Set JOB_BACKEND=cloud_tasks and configure Cloud Tasks queue name.",
-    "TODO(gcp-deploy): Enable QCS API and set hardware config flags before real-device runs.",
+    HARDWARE_ACCESS_NOTE,
     "Simulation runs entirely on classical hardware (qsim or Cirq simulator) in this architecture.",
 ]
 
@@ -144,13 +152,11 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
         connections.append(("circuit_runner", "vertex_ai"))
         notes.append("Vertex AI added for classical co-processing and VQE optimization loops.")
 
-    # Add QCS for strong quantum fit (behind config flag)
+    # Add the approved-access hardware path only for strong-fit scenarios.
     if qals_score >= 0.75 or verdict == "Strong Quantum Fit":
         component_ids.add("quantum_computing_service")
         connections.append(("circuit_runner", "quantum_computing_service"))
-        notes.append(
-            "Google Quantum Computing Service (QCS) added — requires ENABLE_REAL_HARDWARE=true config flag."
-        )
+        notes.append(HARDWARE_ACCESS_NOTE)
 
     components = [_COMPONENTS[cid] for cid in component_ids if cid in _COMPONENTS]
 
@@ -162,11 +168,16 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
     else:
         title = "GCP Hybrid Architecture — General Quantum Foundry Deployment"
 
+    hardware_summary = (
+        HARDWARE_ACCESS_NOTE
+        if "quantum_computing_service" in component_ids
+        else "Google quantum hardware is not included in this configuration."
+    )
     summary = (
         f"A Cloud Run–hosted FastAPI backend offloads circuit simulations to an async "
         f"Cloud Run Job worker via Cloud Tasks. Artifacts are stored in Cloud Storage. "
         f"{'Vertex AI handles classical co-processing. ' if 'vertex_ai' in component_ids else ''}"
-        f"{'Real quantum hardware access via QCS is gated by a config flag.' if 'quantum_computing_service' in component_ids else 'Real hardware is not included in this configuration.'}"
+        f"{hardware_summary}"
     )
 
     return ArchitectureMap(
