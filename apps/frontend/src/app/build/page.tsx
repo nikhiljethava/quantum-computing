@@ -23,7 +23,10 @@ import {
   Wand2,
 } from "lucide-react";
 
+import { GuidePanel } from "@/components/GuidePanel";
+import { HardwareAccessNote } from "@/components/HardwareAccessNote";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
+import { LESSON_BY_SLUG } from "@/content/lessons";
 import {
   createArtifact,
   fetchArchitecture,
@@ -94,7 +97,7 @@ const EXPORT_ITEMS: Array<{
   requiresArchitecture?: boolean;
 }> = [
   { type: "cirq_code", label: "Cirq code (.py)" },
-  { type: "colab_notebook", label: "Colab notebook (.ipynb)" },
+  { type: "colab_notebook", label: "Google Colab notebook (.ipynb)" },
   { type: "assessment_json", label: "Assessment JSON" },
   { type: "architecture_json", label: "Architecture map JSON", requiresArchitecture: true },
   { type: "session_summary", label: "Session summary (.md)", requiresArchitecture: true },
@@ -2299,6 +2302,8 @@ function BuildPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeSessionId = searchParams.get("session_id");
+  const lessonSlug = searchParams.get("lesson");
+  const sourceLesson = lessonSlug ? LESSON_BY_SLUG.get(lessonSlug) ?? null : null;
   const initialKey = normalizeStarterKey(
     searchParams.get("starter") ?? searchParams.get("circuit"),
   );
@@ -3124,6 +3129,17 @@ function BuildPageContent() {
                 <span className="block pt-1 text-xs text-[#991b1b]">{workspaceError}</span>
               </div>
             ) : null}
+            {sourceLesson ? (
+              <div className="mt-4 rounded-[18px] border border-[#c6dafc] bg-[#e8f0fe] px-4 py-3 text-sm leading-7 text-[#174ea6]">
+                You came from: <strong>{sourceLesson.title}</strong>. Run the circuit, inspect the histogram, then return to the lesson.
+                <Link
+                  href={`/learn/${sourceLesson.path}/${sourceLesson.slug}`}
+                  className="ml-2 inline-flex font-bold underline"
+                >
+                  Back to lesson
+                </Link>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -3403,6 +3419,15 @@ function BuildPageContent() {
               onOpenSession={openSavedSession}
               onReset={resetWorkspace}
             />
+            <GuidePanel
+              pageContext="build"
+              lessonSlug={sourceLesson?.slug}
+              useCaseId={selectedUseCase?.id}
+              circuitRunId={workspaceRun?.id}
+              architectureId={architecture?.id ?? undefined}
+              starterQuestion="Explain what changed in this Cirq run and what I should inspect next."
+            />
+            <HardwareAccessNote />
             <div ref={assessmentRef}>
               <AssessmentCard story={editableDisplayStory} focused={focusedCard === "assessment"} />
             </div>

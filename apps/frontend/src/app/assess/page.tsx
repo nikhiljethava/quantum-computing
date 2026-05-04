@@ -264,6 +264,7 @@ function AssessPageContent() {
   );
   const story = getStarterStory(starter);
   const selectedUseCaseId = searchParams.get("use_case_id");
+  const selectedUseCaseSlug = searchParams.get("use_case_slug");
   const { data: useCaseList, isLoading, error } = useUseCases();
   const { mutateAsync, isPending } = useCreateAssessment();
   const [inputs, setInputs] = useState<AssessmentInputs | null>(null);
@@ -273,8 +274,12 @@ function AssessPageContent() {
   const selectedUseCase = useMemo(() => {
     const items = useCaseList?.items ?? [];
     if (!items.length) return null;
-    return items.find((item) => item.id === selectedUseCaseId) ?? items[0];
-  }, [selectedUseCaseId, useCaseList?.items]);
+    return (
+      items.find((item) => item.id === selectedUseCaseId) ??
+      items.find((item) => item.slug === selectedUseCaseSlug) ??
+      items[0]
+    );
+  }, [selectedUseCaseId, selectedUseCaseSlug, useCaseList?.items]);
 
   const runAssessment = useCallback(async (useCase: UseCase, nextInputs: AssessmentInputs) => {
     try {

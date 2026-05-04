@@ -11,6 +11,8 @@ import {
   AssessmentInputs,
   GeminiCircuitUpdateRequest,
   GeminiCircuitUpdateResponse,
+  GuideAskRequest,
+  GuideAskResponse,
   CircuitRun,
   CircuitRunCreate,
   CircuitTemplate,
@@ -98,6 +100,10 @@ export async function fetchUseCase(id: string): Promise<UseCase> {
   return apiFetch<UseCase>(`/api/v1/use-cases/${id}`);
 }
 
+export async function fetchUseCaseBySlug(slug: string): Promise<UseCase> {
+  return apiFetch<UseCase>(`/api/v1/use-cases/slug/${slug}`);
+}
+
 export async function fetchProjects(limit = 20): Promise<ProjectList> {
   return apiFetch<ProjectList>(`/api/v1/projects?limit=${limit}`);
 }
@@ -167,6 +173,13 @@ export async function geminiUpdateCircuit(
   body: GeminiCircuitUpdateRequest,
 ): Promise<GeminiCircuitUpdateResponse> {
   return apiFetch<GeminiCircuitUpdateResponse>("/api/v1/circuits/gemini-update", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function askGuide(body: GuideAskRequest): Promise<GuideAskResponse> {
+  return apiFetch<GuideAskResponse>("/api/v1/guide/ask", {
     method: "POST",
     body: JSON.stringify(body),
   });

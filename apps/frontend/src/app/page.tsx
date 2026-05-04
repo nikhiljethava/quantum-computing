@@ -148,6 +148,9 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/learn" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
+              <BookOpen size={16} /> Open Academy
+            </Link>
             <Link href="/explore" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
               Explore Use Cases <ArrowRight size={16} />
             </Link>

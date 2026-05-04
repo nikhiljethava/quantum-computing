@@ -50,6 +50,19 @@ async def list_use_cases(
     return UseCaseList(items=[UseCaseRead.model_validate(r) for r in rows], total=total)
 
 
+@router.get("/slug/{slug}", response_model=UseCaseRead)
+async def get_use_case_by_slug(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+) -> UseCaseRead:
+    """Return a public use case by stable slug."""
+
+    row = (await db.execute(select(UseCase).where(UseCase.slug == slug))).scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"UseCase slug {slug} not found.")
+    return UseCaseRead.model_validate(row)
+
+
 @router.get("/{use_case_id}", response_model=UseCaseRead)
 async def get_use_case(
     use_case_id: uuid.UUID,

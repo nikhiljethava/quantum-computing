@@ -28,6 +28,9 @@ class _RowsResult:
     def all(self) -> list[UseCase]:
         return self._rows
 
+    def scalar_one_or_none(self) -> UseCase | None:
+        return self._rows[0] if self._rows else None
+
 
 class _FakeAsyncSession:
     def __init__(self, rows: list[UseCase]):
@@ -35,10 +38,15 @@ class _FakeAsyncSession:
 
     async def execute(self, statement):
         sql = str(statement).lower()
+        params = statement.compile().params
         rows = self._rows
 
         if "use_cases.featured is true" in sql:
             rows = [row for row in rows if row.featured]
+
+        slug = params.get("slug_1")
+        if slug:
+            rows = [row for row in rows if row.slug == slug]
 
         if "count(" in sql:
             return _ScalarResult(len(rows))
@@ -56,8 +64,10 @@ class _FakeAsyncSession:
 
 
 def _make_use_case(title: str, *, featured: bool, featured_rank: int | None) -> UseCase:
+    slug = title.lower().replace(" & ", "-").replace(" ", "-")
     return UseCase(
         id=uuid.uuid4(),
+        slug=slug,
         title=title,
         industry=IndustryTag.finance,
         description=f"{title} description",
@@ -115,3 +125,26 @@ def test_use_cases_featured_only_filters_and_preserves_rank_order() -> None:
         "Vehicle Routing Optimization",
     ]
     assert all(item["featured"] is True for item in body["items"])
+
+
+def test_use_case_slug_route_returns_public_record() -> None:
+    rows = [
+        _make_use_case("Portfolio Optimization", featured=True, featured_rank=1),
+        _make_use_case("Vehicle Routing Optimization", featured=True, featured_rank=3),
+    ]
+
+    async def override_db():
+        yield _FakeAsyncSession(rows)
+
+    app.dependency_overrides[get_db] = override_db
+
+    try:
+        client = TestClient(app)
+        response = client.get("/api/v1/use-cases/slug/portfolio-optimization")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["slug"] == "portfolio-optimization"
+    assert body["title"] == "Portfolio Optimization"

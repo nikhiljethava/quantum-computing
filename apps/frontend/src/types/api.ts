@@ -43,6 +43,18 @@ export interface UseCaseBlueprint {
   sample_input: string;
   success_thresholds: string[];
   next_90_days: string[];
+  google_stack: string[];
+  maturity_label:
+    | "learn_now"
+    | "simulate_now"
+    | "pilot_carefully"
+    | "research_only"
+    | "future_fault_tolerant_required"
+    | "approved_hardware_access_only";
+  recommended_lessons: string[];
+  recommended_labs: string[];
+  google_cloud_architecture_notes: string[];
+  hardware_access_note: string;
 }
 
 export interface UseCaseEvidenceItem {
@@ -55,6 +67,7 @@ export interface UseCaseEvidenceItem {
 
 export interface UseCase {
   id: string;
+  slug: string | null;
   title: string;
   industry: IndustryTag;
   description: string;
@@ -359,4 +372,42 @@ export interface PageUsageSummary {
   unique_visitors: number;
   window_days: number;
   by_city: CityUsageSummary[];
+}
+
+export type GuidePageContext = "learn" | "build" | "explore" | "assess" | "map" | "general";
+export type GuideSourceType =
+  | "app_lesson"
+  | "app_use_case"
+  | "google_doc"
+  | "google_cloud_doc"
+  | "google_search";
+export type GuideActionType = "lesson" | "build" | "assess" | "map" | "use_case";
+
+export interface GuideAskRequest {
+  question: string;
+  page_context: GuidePageContext;
+  lesson_slug?: string | null;
+  use_case_id?: string | null;
+  circuit_run_id?: string | null;
+  architecture_id?: string | null;
+  allow_google_search_grounding?: boolean;
+}
+
+export interface GuideSource {
+  title: string;
+  url: string | null;
+  source_type: GuideSourceType;
+}
+
+export interface GuideNextAction {
+  label: string;
+  href: string;
+  action_type: GuideActionType;
+}
+
+export interface GuideAskResponse {
+  answer: string;
+  cited_sources: GuideSource[];
+  recommended_next_actions: GuideNextAction[];
+  safety_notes: string[];
 }

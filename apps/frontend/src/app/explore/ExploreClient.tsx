@@ -37,6 +37,17 @@ const HORIZON_LABELS: Record<string, string> = {
   "long-term": "Fault-tolerant later",
 };
 
+function getUseCaseHref(useCase: UseCase) {
+  const slug =
+    useCase.slug ??
+    useCase.title
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  return `/use-cases/${slug}`;
+}
+
 function formatPublishedDate(value: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.valueOf())) return value;
@@ -196,11 +207,14 @@ function FeaturedUseCaseCard({
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-        <button className="btn-ghost" onClick={() => onDetails(useCase)}>
-          <Info size={14} /> View Blueprint
-        </button>
-        <button className="btn-primary" onClick={() => onAssess(useCase)}>
+        <Link href={getUseCaseHref(useCase)} className="btn-primary">
+          View use-case page <ArrowRight size={14} />
+        </Link>
+        <button className="btn-ghost" onClick={() => onAssess(useCase)}>
           <SlidersHorizontal size={14} /> Assess Fit
+        </button>
+        <button className="btn-ghost" onClick={() => onDetails(useCase)}>
+          <Info size={14} /> Blueprint
         </button>
         <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
           Open Hybrid Lab <ArrowRight size={14} />
@@ -276,10 +290,15 @@ function CatalogUseCaseCard({
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+        {useCase.slug ? (
+          <Link href={getUseCaseHref(useCase)} className="btn-primary">
+            View use-case page <ArrowRight size={14} />
+          </Link>
+        ) : null}
         <button className="btn-ghost" onClick={() => onDetails(useCase)}>
           <Info size={14} /> View Details
         </button>
-        <button className="btn-primary" onClick={() => onAssess(useCase)}>
+        <button className="btn-ghost" onClick={() => onAssess(useCase)}>
           <SlidersHorizontal size={14} /> Assess Fit
         </button>
         <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
@@ -463,6 +482,9 @@ function UseCaseDetailModal({
         </ModalSection>
 
         <div style={{ display: "grid", gap: "0.75rem" }}>
+          <Link href={getUseCaseHref(useCase)} className="btn-primary" style={{ justifyContent: "center" }}>
+            View use-case page <ArrowRight size={14} />
+          </Link>
           <Link href={`/assess?starter=${starter}&use_case_id=${useCase.id}`} className="btn-primary" style={{ justifyContent: "center" }}>
             Open Assess View <ArrowRight size={14} />
           </Link>

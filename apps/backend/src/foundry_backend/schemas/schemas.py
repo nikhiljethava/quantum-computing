@@ -21,6 +21,7 @@ class UseCaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    slug: str | None = None
     title: str
     industry: IndustryTag
     description: str
@@ -523,3 +524,51 @@ class PageUsageSummary(BaseModel):
     unique_visitors: int
     window_days: int = 30
     by_city: list[CityUsageSummary]
+
+
+GuidePageContext = Literal["learn", "build", "explore", "assess", "map", "general"]
+GuideSourceType = Literal[
+    "app_lesson",
+    "app_use_case",
+    "google_doc",
+    "google_cloud_doc",
+    "google_search",
+]
+GuideActionType = Literal["lesson", "build", "assess", "map", "use_case"]
+
+
+class GuideAskRequest(BaseModel):
+    """Context-aware guide question."""
+
+    question: str = Field(min_length=3, max_length=1400)
+    page_context: GuidePageContext = "general"
+    lesson_slug: str | None = Field(default=None, max_length=120)
+    use_case_id: uuid.UUID | None = None
+    circuit_run_id: uuid.UUID | None = None
+    architecture_id: uuid.UUID | None = None
+    allow_google_search_grounding: bool = False
+
+
+class GuideSource(BaseModel):
+    """Source card returned by the guide."""
+
+    title: str
+    url: str | None = None
+    source_type: GuideSourceType
+
+
+class GuideNextAction(BaseModel):
+    """In-app next action recommended by the guide."""
+
+    label: str
+    href: str
+    action_type: GuideActionType
+
+
+class GuideAskResponse(BaseModel):
+    """Guide tutor response."""
+
+    answer: str
+    cited_sources: list[GuideSource] = Field(default_factory=list)
+    recommended_next_actions: list[GuideNextAction] = Field(default_factory=list)
+    safety_notes: list[str] = Field(default_factory=list)

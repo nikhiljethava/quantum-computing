@@ -9,6 +9,7 @@ import {
   createAssessment,
   createProject,
   createSession,
+  askGuide,
   fetchArchitecture,
   fetchCircuitRun,
   fetchCircuitTemplates,
@@ -18,6 +19,7 @@ import {
   fetchSession,
   fetchSessions,
   fetchUseCase,
+  fetchUseCaseBySlug,
   fetchUseCases,
   geminiUpdateCircuit,
   runCircuit,
@@ -30,6 +32,7 @@ import {
   AssessmentInputs,
   CircuitRunCreate,
   GeminiCircuitUpdateRequest,
+  GuideAskRequest,
   IndustryTag,
   Job,
   JobCreate,
@@ -63,6 +66,14 @@ export function useUseCase(id: string | null) {
     queryKey: ["use-case", id],
     queryFn: () => fetchUseCase(id!),
     enabled: !!id,
+  });
+}
+
+export function useUseCaseBySlug(slug: string | null) {
+  return useQuery({
+    queryKey: ["use-case-slug", slug],
+    queryFn: () => fetchUseCaseBySlug(slug!),
+    enabled: !!slug,
   });
 }
 
@@ -160,6 +171,12 @@ export function useCircuitRun(id: string | null) {
 export function useGeminiCircuitUpdate() {
   return useMutation({
     mutationFn: (body: GeminiCircuitUpdateRequest) => geminiUpdateCircuit(body),
+  });
+}
+
+export function useGuideAsk() {
+  return useMutation({
+    mutationFn: (body: GuideAskRequest) => askGuide(body),
   });
 }
 

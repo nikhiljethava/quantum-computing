@@ -86,6 +86,7 @@ class UseCase(Base):
     __tablename__ = "use_cases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str | None] = mapped_column(String(240), nullable=True, unique=True, index=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     industry: Mapped[IndustryTag] = mapped_column(Enum(IndustryTag), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)

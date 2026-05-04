@@ -19,6 +19,8 @@ import {
   getArtifactDownloadUrl,
   runCircuit,
 } from "@/lib/api";
+import { GuidePanel } from "@/components/GuidePanel";
+import { HardwareAccessNote } from "@/components/HardwareAccessNote";
 import { useSession, useUseCases } from "@/lib/hooks";
 import { STARTER_ORDER, StarterKey, getStarterStory, normalizeStarterKey } from "@/lib/studio-mocks";
 import { ArchitectureMap, CircuitRun, UseCase } from "@/types/api";
@@ -443,6 +445,16 @@ function MapPageContent() {
                 <p>Use the map to explain the hybrid split, not to imply that the workload is already production-validated.</p>
               </div>
             </div>
+
+            <HardwareAccessNote />
+
+            <GuidePanel
+              pageContext="map"
+              useCaseId={selectedUseCase?.id}
+              circuitRunId={currentRun?.id}
+              architectureId={architecture?.id ?? undefined}
+              starterQuestion="Explain this Google Cloud architecture in plain language."
+            />
 
             {pageError ? (
               <div className="rounded-[28px] border border-[#fecaca] bg-[#fff1f2] p-5 text-sm leading-7 text-[#b91c1c]">

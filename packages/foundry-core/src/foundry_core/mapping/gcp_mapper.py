@@ -171,7 +171,7 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
     hardware_summary = (
         HARDWARE_ACCESS_NOTE
         if "quantum_computing_service" in component_ids
-        else "Google quantum hardware is not included in this configuration."
+        else HARDWARE_ACCESS_NOTE
     )
     summary = (
         f"A Cloud Run–hosted FastAPI backend offloads circuit simulations to an async "

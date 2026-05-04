@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Learn", icon: Atom, step: "01" },
+  { href: "/learn", label: "Learn", icon: Atom, step: "01" },
   { href: "/explore", label: "Explore", icon: Globe, step: "02" },
   { href: "/assess", label: "Assess", icon: SlidersHorizontal, step: "03" },
   { href: "/build", label: "Build", icon: FlaskConical, step: "04" },

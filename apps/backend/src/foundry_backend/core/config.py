@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     cloud_tasks_service_account_email: str = ""
     cloud_tasks_audience: str = ""
 
+    # Guide tutor provider ("local" | "vertex")
+    guide_provider: str = "local"
+    vertex_ai_project: str = ""
+    vertex_ai_location: str = "us-central1"
+    vertex_rag_corpus_id: str = ""
+
     # CORS — allow all origins in development; restrict in production
     cors_origins_str: str = (
         "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"

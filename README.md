@@ -244,7 +244,7 @@ Recommended pattern:
 
 ## Product guardrails
 
-- **Simulation first**: no real Google quantum hardware is enabled by default
+- **Simulation first**: Google quantum hardware access is restricted to approved groups. Quantum Foundry is simulation-first unless approved access is configured.
 - **QALS-lite is a heuristic**: it is a readiness aid, not a claim of quantum advantage
 - **One guide, one workspace**: the visible experience should feel cohesive, not like a generic multi-agent chatbot
 - **MCP remains optional**: connectors and retrieval adapters should not become the core product dependency

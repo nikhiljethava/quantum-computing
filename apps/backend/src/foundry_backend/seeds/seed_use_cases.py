@@ -21,6 +21,74 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
 from foundry_backend.db.session import AsyncSessionLocal
 from foundry_backend.models.models import IndustryTag, UseCase
 
+HARDWARE_ACCESS_NOTE = (
+    "Google quantum hardware access is restricted to approved groups. "
+    "Quantum Foundry is simulation-first unless approved access is configured."
+)
+
+TITLE_SLUGS = {
+    "Portfolio Optimization": "portfolio-optimization",
+    "Credit Risk Simulation (Monte Carlo)": "credit-risk-simulation-monte-carlo",
+    "Molecular Docking & Drug Design": "molecular-docking-drug-design",
+    "Genomics Sequence Alignment": "genomics-sequence-alignment",
+    "Vehicle Routing Optimization": "vehicle-routing-optimization",
+    "Supply Chain Network Design": "supply-chain-network-design",
+    "Power Grid Scheduling": "power-grid-scheduling",
+    "Battery Material Discovery": "battery-material-discovery",
+    "Aerodynamic Simulation": "aerodynamic-simulation",
+    "Satellite Orbit Scheduling": "satellite-orbit-scheduling",
+    "Catalyst Design for Green Chemistry": "catalyst-design",
+}
+
+DEFAULT_GOOGLE_STACK = [
+    "Cirq",
+    "qsim",
+    "Cloud Run Jobs",
+    "Cloud Storage",
+    "BigQuery",
+    "Vertex AI Gemini",
+    "Google Colab",
+]
+
+FEATURED_BLUEPRINT_EXTRAS = {
+    "Portfolio Optimization": {
+        "google_stack": DEFAULT_GOOGLE_STACK,
+        "maturity_label": "simulate_now",
+        "recommended_lessons": ["qaoa-intuition", "measurement-histograms", "simulation-first-architecture"],
+        "recommended_labs": ["routing"],
+        "google_cloud_architecture_notes": [
+            "Use BigQuery or Cloud Storage for portfolio inputs and benchmark results.",
+            "Run Cirq/qsim simulations through Cloud Run Jobs for repeatable experiments.",
+            "Export Colab notebooks so quant teams can inspect assumptions and histograms.",
+        ],
+        "hardware_access_note": HARDWARE_ACCESS_NOTE,
+    },
+    "Molecular Docking & Drug Design": {
+        "google_stack": ["Cirq", "OpenFermion", "qsim", "Cloud Run Jobs", "Cloud Storage", "Vertex AI Gemini", "Google Colab"],
+        "maturity_label": "pilot_carefully",
+        "recommended_lessons": ["why-chemistry-is-hard", "hamiltonians", "small-molecule-story"],
+        "recommended_labs": ["chemistry"],
+        "google_cloud_architecture_notes": [
+            "Keep molecular inputs and generated Hamiltonians in Cloud Storage.",
+            "Use OpenFermion content for chemistry education and Cirq for toy circuit simulation.",
+            "Treat larger molecular systems as research-only until hardware and active-space assumptions are explicit.",
+        ],
+        "hardware_access_note": HARDWARE_ACCESS_NOTE,
+    },
+    "Vehicle Routing Optimization": {
+        "google_stack": DEFAULT_GOOGLE_STACK,
+        "maturity_label": "simulate_now",
+        "recommended_lessons": ["qaoa-intuition", "grover-search", "cloud-run-jobs"],
+        "recommended_labs": ["routing"],
+        "google_cloud_architecture_notes": [
+            "Use BigQuery for route history and Cloud Storage for bounded benchmark instances.",
+            "Run simulator sweeps through Cloud Run Jobs or Cloud Tasks-backed workers.",
+            "Post-process candidate routes in the backend before exporting planner-facing artifacts.",
+        ],
+        "hardware_access_note": HARDWARE_ACCESS_NOTE,
+    },
+}
+
 SEED_DATA: list[dict] = [
     {
         "title": "Portfolio Optimization",
@@ -364,12 +432,18 @@ async def seed() -> None:
 
         for payload in SEED_DATA:
             row = existing.get(payload["title"])
+            blueprint = {
+                **payload.get("blueprint", {}),
+                **FEATURED_BLUEPRINT_EXTRAS.get(payload["title"], {}),
+            }
             normalized_payload = {
+                "slug": TITLE_SLUGS[payload["title"]],
                 "featured": False,
                 "featured_rank": None,
                 "blueprint": {},
                 "evidence_items": [],
                 **payload,
+                "blueprint": blueprint,
             }
 
             if row is None:

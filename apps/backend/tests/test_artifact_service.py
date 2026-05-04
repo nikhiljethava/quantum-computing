@@ -94,8 +94,11 @@ def test_render_colab_notebook_export() -> None:
     assert filename.endswith("_colab_notebook.ipynb")
     assert content_type == "application/x-ipynb+json"
     assert notebook["nbformat"] == 4
-    assert "GCP Quantum Foundry Cirq Lab" in joined_source
+    assert len(notebook["cells"]) == 8
+    assert "Google Quantum Foundry: Cirq Lab Notebook" in joined_source
     assert "print('hello quantum')" in joined_source
+    assert "matplotlib.pyplot" in joined_source
+    assert "plt.bar" in joined_source
     assert HARDWARE_ACCESS_GUARDRAIL in joined_source
 
 

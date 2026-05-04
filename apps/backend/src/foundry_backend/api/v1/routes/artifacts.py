@@ -24,7 +24,7 @@ router = APIRouter()
     summary="Generate an export artifact",
     description=(
         "Create a downloadable export for the Build workspace, including Cirq code, "
-        "assessment JSON, architecture JSON, or a markdown session summary."
+        "a Google Colab notebook, assessment JSON, architecture JSON, or a markdown session summary."
     ),
 )
 async def create_artifact(
