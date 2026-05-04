@@ -609,6 +609,12 @@ function JobsPageContent() {
     selectedJob?.status === "PENDING" || selectedJob?.status === "RUNNING"
       ? buildQuery({ status: filter, jobId: selectedJob.id })
       : null;
+  const resolvedCityUsage =
+    usageSummary?.by_city.filter((item) => item.city.trim().toLowerCase() !== "unknown") ?? [];
+  const unavailableLocationVisits =
+    usageSummary?.by_city
+      .filter((item) => item.city.trim().toLowerCase() === "unknown")
+      .reduce((total, item) => total + item.count, 0) ?? 0;
 
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
@@ -719,7 +725,7 @@ function JobsPageContent() {
             </div>
             <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Top cities
+                {resolvedCityUsage.length ? "Top cities" : "Location status"}
               </div>
               <div className="mt-2 space-y-2">
                 {usageState === "loading" ? (
@@ -728,13 +734,20 @@ function JobsPageContent() {
                   <div className="text-sm text-amber-700">
                     Usage analytics are not available right now. Check that the backend usage route and migration are deployed.
                   </div>
-                ) : usageSummary?.by_city.length ? (
-                  usageSummary.by_city.map((item) => (
+                ) : resolvedCityUsage.length ? (
+                  resolvedCityUsage.map((item) => (
                     <div key={item.city} className="flex justify-between text-sm">
                       <span className="font-semibold text-slate-700">{item.city}</span>
                       <span className="text-slate-500">{item.count} visits</span>
                     </div>
                   ))
+                ) : unavailableLocationVisits > 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white/75 p-3 text-sm leading-6 text-slate-600">
+                    Location unavailable for {unavailableLocationVisits} visit
+                    {unavailableLocationVisits === 1 ? "" : "s"}. Direct Cloud Run traffic does not
+                    include trusted city headers by default. Add a trusted proxy, CDN, or load
+                    balancer geo header to populate city names.
+                  </div>
                 ) : (
                   <div className="text-sm text-slate-500">No tracked locations yet.</div>
                 )}
