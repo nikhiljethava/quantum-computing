@@ -54,7 +54,10 @@ export function GuidePanel({
   }
 
   return (
-    <section className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_44px_rgba(148,163,184,0.18)]">
+    <section
+      id="ask-guide"
+      className="scroll-mt-28 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_44px_rgba(148,163,184,0.18)]"
+    >
       <div className="mb-4 flex items-start gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#e8f0fe] text-[#1967d2]">
           <Bot className="h-5 w-5" />

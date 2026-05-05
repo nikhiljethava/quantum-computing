@@ -25,8 +25,18 @@ const NAV_ITEMS = [
   { href: "/jobs", label: "Jobs", icon: ListTodo, step: "08" },
 ];
 
+function hasContextualGuide(pathname: string): boolean {
+  return (
+    pathname === "/build" ||
+    pathname === "/map" ||
+    pathname.startsWith("/use-cases/") ||
+    /^\/learn\/[^/]+\/[^/]+$/.test(pathname)
+  );
+}
+
 export function NavigationBar() {
   const pathname = usePathname();
+  const askGuideHref = hasContextualGuide(pathname) ? "#ask-guide" : "/build#ask-guide";
 
   return (
     <header
@@ -120,9 +130,10 @@ export function NavigationBar() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <Link
-            href="/build#qals-lite"
+            href={askGuideHref}
             className="btn-primary"
             style={{ padding: "0.55rem 1rem", fontSize: "0.82rem" }}
+            aria-label="Jump to the Quantum Foundry guide"
           >
             <Bot size={14} />
             Ask the guide
