@@ -1766,7 +1766,7 @@ function LabControlsPanel({
           qsim is useful for larger state-vector simulations, but results are still classical simulation.
         </div>
         <div className="rounded-[18px] bg-[#fff7ed] p-4 text-[#9a3412]">
-          Noise mode is an educational approximation, not a calibrated Google hardware model.
+          Noise mode is an educational approximation, not a calibrated hardware model.
         </div>
       </div>
     </div>
@@ -1901,7 +1901,7 @@ function NoiseComparisonCard({ run }: { run: CircuitRun | null }) {
         <HistogramBars title="Educational noisy run" histogram={run.noisy_histogram} />
       </div>
       <div className="mt-4 rounded-[18px] bg-white p-4 text-sm leading-6 text-slate-600">
-        Noise mode is an educational approximation, not a calibrated Google hardware model.
+        Noise mode is an educational approximation, not a calibrated hardware model.
       </div>
     </div>
   );

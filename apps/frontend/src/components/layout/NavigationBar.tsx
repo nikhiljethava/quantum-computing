@@ -138,23 +138,6 @@ export function NavigationBar() {
             <Bot size={14} />
             Ask the guide
           </Link>
-          <div
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "9999px",
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-primary)",
-              fontWeight: 700,
-              fontSize: "0.82rem",
-            }}
-          >
-            N
-          </div>
         </div>
       </nav>
     </header>

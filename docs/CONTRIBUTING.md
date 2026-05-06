@@ -2,6 +2,8 @@
 
 Quantum Foundry is an independent personal project and is not an official Google product.
 
+Quantum Foundry is licensed under Apache-2.0. See the root [LICENSE](../LICENSE) file.
+
 ## Setup
 
 Follow [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md).
@@ -19,6 +21,7 @@ Use short descriptive branches. The Codex workflow may use `codex/` prefixes.
 - Do not commit secrets.
 - Do not add non-Google quantum SDKs as a primary path.
 - Do not add quantum advantage claims without strong evidence and qualification.
+- Keep LICENSE and NOTICE accurate for changed files or new third-party dependencies.
 
 ## Style
 

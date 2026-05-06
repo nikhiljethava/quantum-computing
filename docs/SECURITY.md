@@ -2,6 +2,8 @@
 
 Quantum Foundry is an independent personal project and is not an official Google product.
 
+Quantum Foundry is licensed under Apache-2.0. See the root [LICENSE](../LICENSE) file.
+
 ## Posture
 
 This is a personal educational project and is not independently security-reviewed.

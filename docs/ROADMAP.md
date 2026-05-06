@@ -27,5 +27,5 @@ Quantum Foundry is an independent personal project and is not an official Google
 - Claim official Google affiliation.
 - Claim Google endorsement.
 - Claim quantum advantage without evidence.
-- Expose public Google hardware execution.
+- Expose public quantum hardware execution.
 - Add non-Google SDKs as primary exports.

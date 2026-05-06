@@ -2,6 +2,8 @@
 
 Quantum Foundry is an independent personal project and is not an official Google product.
 
+Quantum Foundry is licensed under Apache-2.0. See the root [LICENSE](../LICENSE) file.
+
 ## Vision
 
 Quantum Foundry helps people learn quantum computing, run small Cirq-based simulations, explore plausible industry use cases, and map simulator-first hybrid workflows to Google Cloud architecture patterns.

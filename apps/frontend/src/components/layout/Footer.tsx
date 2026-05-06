@@ -6,8 +6,8 @@ export function Footer() {
       <div className="mx-auto grid max-w-[1460px] gap-4 px-4 py-6 text-sm leading-6 text-slate-400 md:px-6 lg:grid-cols-[1fr_auto] lg:items-center">
         <p>
           Quantum Foundry is an independent personal project and is not an official Google product.
-          Google, Google Cloud, GCP, Vertex AI, Gemini, Cirq, qsim, OpenFermion, and related names
-          are trademarks or products of their respective owners. References are descriptive.
+          References to Google Cloud, Cirq, qsim, OpenFermion, Vertex AI, Gemini, and related
+          technologies are descriptive.
         </p>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-3">
           <Link className="font-semibold text-slate-200 hover:text-white" href="/about">

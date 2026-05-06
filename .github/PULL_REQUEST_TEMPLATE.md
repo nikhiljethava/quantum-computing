@@ -10,4 +10,4 @@ Quantum Foundry is an independent personal project and is not an official Google
 - [ ] No secrets committed.
 - [ ] No non-Google quantum SDK added as a primary path.
 - [ ] No quantum advantage claim added without source and qualification.
-
+- [ ] License and NOTICE remain accurate for changed files or new third-party dependencies.

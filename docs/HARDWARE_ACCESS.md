@@ -22,7 +22,7 @@ Use:
 
 Avoid:
 
-- “Run on Google hardware”
+- Public hardware-run CTAs
 - “Production QPU”
 - “Public QPU access”
 - Unqualified benchmark or advantage claims

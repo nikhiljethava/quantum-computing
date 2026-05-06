@@ -80,11 +80,11 @@ Production data routes depend on Cloud SQL and migrations. A healthy `/health` e
 
 Review visible copy and generated artifacts for these product-safety rules.
 
-- Product name is `Quantum Foundry`, not `GCP Quantum Foundry`.
+- Product name is `Quantum Foundry`, not a name starting with GCP or Google.
 - Independent personal project disclaimer is visible on public pages.
 - Google Cloud, Cirq, qsim, OpenFermion, Vertex AI, and Gemini references are descriptive.
 - Hardware wording uses: "Google quantum hardware access is restricted to approved groups. Quantum Foundry is simulation-first unless approved access is configured."
-- No public "Run on Google hardware" CTA appears.
+- No public hardware-run CTA appears.
 - No page claims quantum advantage.
 
 ## Commands

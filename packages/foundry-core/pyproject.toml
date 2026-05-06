@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "foundry-core"
 version = "0.1.0"
 description = "Shared quantum library for Quantum Foundry, an independent personal project: circuit generation, explainers, assessment heuristics, architecture mapping, and storage/job abstractions."
+license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 dependencies = [
     "cirq-core>=1.3.0",

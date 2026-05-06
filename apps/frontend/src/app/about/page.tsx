@@ -5,9 +5,14 @@ import { ArrowRight } from "lucide-react";
 import { HardwareAccessNote } from "@/components/HardwareAccessNote";
 
 export const metadata: Metadata = {
-  title: "About Quantum Foundry",
+  title: "About",
   description:
-    "About Quantum Foundry, an independent personal project by Nikhil Jethava for learning and prototyping with Cirq-based simulations.",
+    "Quantum Foundry is an independent personal project for learning quantum concepts, simulating Cirq-based circuits, exploring use cases, and mapping hybrid workflows to Google Cloud architecture patterns.",
+  openGraph: {
+    title: "About | Quantum Foundry",
+    description:
+      "Quantum Foundry is an independent personal project for learning quantum concepts, simulating Cirq-based circuits, exploring use cases, and mapping hybrid workflows to Google Cloud architecture patterns.",
+  },
   alternates: {
     canonical: "/about",
   },

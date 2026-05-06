@@ -1,6 +1,7 @@
 # Quantum Foundry
 
-> **Independent personal project — not an official Google product.**<br>
+> **Independent personal project — not an official Google product.**
+>
 > This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
 
 Quantum Foundry is a personal learning and prototyping app for exploring quantum computing concepts, simulating Cirq-based circuits, assessing possible industry use cases, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
@@ -238,7 +239,7 @@ Won't do:
 - Claim official Google affiliation
 - Claim Google endorsement
 - Claim quantum advantage without strong evidence and qualification
-- Expose public Google hardware execution
+- Expose public quantum hardware execution
 - Add non-Google quantum SDKs as primary exports
 
 See [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -249,4 +250,6 @@ Google, Google Cloud, GCP, Vertex AI, Gemini, Cirq, qsim, OpenFermion, and relat
 
 ## License
 
-License: TODO. Choose a license before encouraging reuse or redistribution.
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text and [NOTICE](./NOTICE) for attribution and trademark context.
+
+SPDX identifier: `Apache-2.0`

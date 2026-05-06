@@ -2,6 +2,8 @@
 
 Quantum Foundry is an independent personal project and is not an official Google product.
 
+Quantum Foundry is licensed under Apache-2.0. See the root [LICENSE](../LICENSE) file.
+
 ## Required Statement
 
 Independent personal project. Not an official Google product. This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
@@ -12,13 +14,11 @@ Preferred public name: **Quantum Foundry**.
 
 Avoid:
 
-- GCP Quantum Foundry
-- Google Quantum Foundry
-- Google-native
-- Google-built
-- powered by Google
-- official Google or official GCP
-- endorsed by Google or sponsored by Google
+- Product names starting with GCP or Google
+- Claims that the project was built by Google
+- Claims that Google powers the project
+- Claims that this is a Google or GCP product
+- Claims of endorsement, sponsorship, or maintenance by Google
 
 Preferred descriptive phrasing:
 
