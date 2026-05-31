@@ -2,770 +2,505 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  CheckCircle2,
-  ClipboardList,
-  FileBadge2,
+  ClipboardCheck,
+  Download,
+  FileText,
   FlaskConical,
   Loader2,
-  RefreshCw,
-  Sparkles,
-  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import { useCreateAssessment, useUseCases } from "@/lib/hooks";
+import { getArtifactDownloadUrl } from "@/lib/api";
 import {
-  STARTER_ORDER,
-  StarterKey,
-  getStarterStory,
-  normalizeStarterKey,
-} from "@/lib/studio-mocks";
+  useCreateAssessment,
+  useCreateExperimentBundle,
+  useExportAssessmentMemo,
+  useUseCases,
+} from "@/lib/hooks";
 import {
   Assessment,
   AssessmentInputs,
-  AssessmentRecommendation,
+  ProblemClass,
+  TrustLabel,
   UseCase,
 } from "@/types/api";
 
-const QUESTIONS: Array<{
-  key: keyof AssessmentInputs;
-  label: string;
-  hint: string;
-  options: Array<{
-    value: AssessmentInputs[keyof AssessmentInputs];
-    label: string;
-  }>;
-}> = [
-  {
-    key: "problem_size",
-    label: "Problem size",
-    hint: "How large is the search space, data shape, or decision surface?",
-    options: [
-      { value: "small", label: "Small" },
-      { value: "medium", label: "Medium" },
-      { value: "large", label: "Large" },
-      { value: "very_large", label: "Very large" },
-    ],
-  },
-  {
-    key: "data_structure",
-    label: "Data structure",
-    hint: "Can the workload be expressed with graphs, matrices, or Hamiltonian-like structure?",
-    options: [
-      { value: "unstructured", label: "Unstructured" },
-      { value: "structured", label: "Structured" },
-      { value: "quantum_native", label: "Quantum native" },
-    ],
-  },
-  {
-    key: "classical_hardness",
-    label: "Classical hardness",
-    hint: "How quickly do classical baselines hit cost, time, or scaling walls?",
-    options: [
-      { value: "easy", label: "Easy" },
-      { value: "medium", label: "Medium" },
-      { value: "hard", label: "Hard" },
-      { value: "intractable", label: "Intractable" },
-    ],
-  },
-  {
-    key: "timeline",
-    label: "Time horizon",
-    hint: "When does this need to matter to the buyer or delivery team?",
-    options: [
-      { value: "now", label: "Now" },
-      { value: "1-2 years", label: "1-2 years" },
-      { value: "2-3 years", label: "2-3 years" },
-      { value: "5+ years", label: "5+ years" },
-    ],
-  },
+const PROBLEM_CLASSES: Array<{ value: ProblemClass; label: string; hint: string }> = [
+  { value: "QUANTUM_SIMULATION", label: "Battery / materials simulation", hint: "Chemistry, materials, batteries, catalysts, molecular simulation" },
+  { value: "OPTIMIZATION", label: "Logistics / optimization", hint: "Routing, scheduling, portfolio, supply chain, resource allocation" },
+  { value: "CRYPTO_SECURITY", label: "Crypto / PQC readiness", hint: "RSA, ECC, DH, ECDSA, long-lived secrets, regulated data" },
+  { value: "SEARCH", label: "Search", hint: "Grover-like search with explicit oracle and data-loading caveats" },
+  { value: "LINEAR_SYSTEMS", label: "Linear systems", hint: "HHL-shaped ideas, CFD, matrices, input/output constraints" },
+  { value: "QUANTUM_ML", label: "Quantum ML", hint: "Kernel or model experiments benchmarked against classical ML" },
+  { value: "UNKNOWN", label: "Unknown", hint: "Use this when the problem shape still needs triage" },
 ];
 
-function buildDefaultInputs(starter: StarterKey, useCase: UseCase): AssessmentInputs {
-  const problemSize =
-    useCase.complexity_score >= 4.5
-      ? "very_large"
-      : useCase.complexity_score >= 3.5
-        ? "large"
-        : useCase.complexity_score >= 2.5
-          ? "medium"
-          : "small";
+const INDUSTRIES = ["energy", "materials", "logistics", "finance", "pharma", "aerospace", "security", "other"];
 
-  const dataStructure =
-    starter === "chemistry" || useCase.industry === "materials" || useCase.industry === "pharma"
-      ? "quantum_native"
-      : "structured";
+const TRUST_LABEL_TEXT: Record<TrustLabel, string> = {
+  TUTORIAL: "Tutorial",
+  TOY_SIMULATION: "Toy simulation",
+  BENCHMARK_CANDIDATE: "Benchmark candidate",
+  RESEARCH_CANDIDATE: "Research candidate",
+  HARDWARE_GATED: "Hardware-gated",
+  FTQC_LATER: "FTQC-later",
+  ACTION_NOW: "Action-now",
+};
 
-  const classicalHardness =
-    useCase.complexity_score >= 4.5
-      ? "intractable"
-      : useCase.complexity_score >= 3.5
-        ? "hard"
-        : "medium";
+function inferProblemClass(useCase: UseCase | null): ProblemClass {
+  const text = `${useCase?.title ?? ""} ${useCase?.industry ?? ""} ${useCase?.description ?? ""}`.toLowerCase();
+  if (text.includes("battery") || text.includes("material") || text.includes("molecular") || text.includes("catalyst") || text.includes("drug")) {
+    return "QUANTUM_SIMULATION";
+  }
+  if (text.includes("routing") || text.includes("scheduling") || text.includes("portfolio") || text.includes("supply chain")) {
+    return "OPTIMIZATION";
+  }
+  return "UNKNOWN";
+}
 
-  const timeline =
-    useCase.horizon === "near-term"
-      ? "1-2 years"
-      : useCase.horizon === "mid-term"
-        ? "2-3 years"
-        : "5+ years";
-
+function defaultInputs(useCase: UseCase | null): AssessmentInputs {
+  const problemClass = inferProblemClass(useCase);
+  const baseline =
+    problemClass === "QUANTUM_SIMULATION"
+      ? "DFT / classical HPC workflow"
+      : problemClass === "OPTIMIZATION"
+        ? "OR-Tools or MILP solver"
+        : "";
   return {
-    problem_size: problemSize,
-    data_structure: dataStructure,
-    classical_hardness: classicalHardness,
-    timeline,
+    industry: useCase?.industry ?? "energy",
+    objective: useCase?.blueprint.business_kpi ?? "",
+    problemClass,
+    problemDescription: useCase?.description ?? "",
+    businessValue: useCase?.blueprint.business_kpi ?? "",
+    dataType: problemClass === "QUANTUM_SIMULATION" ? "molecular/material fragment" : "structured benchmark instance",
+    problemSize: useCase?.blueprint.sample_input ?? "",
+    constraints: "",
+    accuracyNeeds: "",
+    latencyTolerance: useCase?.horizon === "near-term" ? "simulator-now planning cycle" : "hardware-gated research horizon",
+    currentClassicalBaseline: baseline,
+    baselineMetrics: "",
+    currentSolverOrWorkflow: baseline,
+    knownAlgorithmsConsidered: problemClass === "OPTIMIZATION" ? "QAOA toy benchmark" : "VQE / molecule-fragment starter",
+    evidenceLinks: [],
+    userFilesOrNotes: "",
+    securityCryptoInventory: {},
   };
 }
 
-const RECOMMENDATION_META: Record<
-  AssessmentRecommendation,
-  {
-    label: string;
-    eyebrow: string;
-    summary: string;
-    badgeClassName: string;
-    panelClassName: string;
-  }
-> = {
-  classical_now: {
-    label: "Classical now",
-    eyebrow: "Best immediate path",
-    summary: "Keep the workload in a strong classical lane for now and revisit quantum only if the constraints materially change.",
-    badgeClassName: "bg-slate-900/10 text-slate-800",
-    panelClassName: "border-slate-200 bg-[linear-gradient(135deg,#ffffff,#f8fafc)]",
-  },
-  hybrid_pilot_now: {
-    label: "Hybrid pilot now",
-    eyebrow: "Primary recommendation",
-    summary: "This is strong enough for a simulator-first hybrid pilot with a real KPI, a bounded scope, and evidence behind it.",
-    badgeClassName: "bg-[#dcfce7] text-[#166534]",
-    panelClassName: "border-[#b7e4c7] bg-[linear-gradient(135deg,#f3fff7,#ecfdf5)]",
-  },
-  watchlist: {
-    label: "Watchlist",
-    eyebrow: "Promising, not ready",
-    summary: "The case is directionally credible, but the evidence or pilot design still needs to sharpen before committing.",
-    badgeClassName: "bg-[#fef3c7] text-[#92400e]",
-    panelClassName: "border-[#f7d58d] bg-[linear-gradient(135deg,#fffdf5,#fff7db)]",
-  },
-  research_only: {
-    label: "Research only",
-    eyebrow: "Longer-horizon fit",
-    summary: "Treat this as a research track for now. The idea may matter later, but it is not a near-term business pilot yet.",
-    badgeClassName: "bg-[#ede9fe] text-[#6d28d9]",
-    panelClassName: "border-[#d9ccff] bg-[linear-gradient(135deg,#faf7ff,#f5f3ff)]",
-  },
-};
-
-function deriveFallbackRecommendation(useCase: UseCase | null): AssessmentRecommendation {
-  if (!useCase) return "watchlist";
-  if (useCase.horizon === "near-term") return "watchlist";
-  if (useCase.horizon === "long-term") return "research_only";
-  return "watchlist";
+function starterForAssessment(assessment: Assessment | null) {
+  if (!assessment) return "routing";
+  if (assessment.problem_class === "QUANTUM_SIMULATION") return "chemistry";
+  if (assessment.problem_class === "OPTIMIZATION") return "routing";
+  if (assessment.problem_class === "SEARCH") return "grover";
+  return "coin_flip";
 }
 
-function buildFallbackWhyPromising(useCase: UseCase | null): string[] {
-  if (!useCase) {
-    return ["Pick a seeded use case to generate a recommendation and supporting rationale."];
-  }
-
-  const reasons = [
-    `${useCase.title} is already framed as a concrete ${useCase.industry} workflow instead of a vague quantum concept.`,
-  ];
-
-  if (useCase.blueprint.hybrid_pattern) {
-    reasons.push("The use-case blueprint already describes how a hybrid workflow could fit beside the classical stack.");
-  }
-
-  if (useCase.evidence_items.length >= 2) {
-    reasons.push(`There are ${useCase.evidence_items.length} evidence items attached to the use case today.`);
-  }
-
-  return reasons;
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  textarea = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  textarea?: boolean;
+}) {
+  const className = "mt-2 w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]";
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold uppercase text-slate-400">{label}</span>
+      {textarea ? (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          rows={3}
+          className={className}
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className={className}
+        />
+      )}
+    </label>
+  );
 }
 
-function buildFallbackWhyNotNow(useCase: UseCase | null): string[] {
-  if (!useCase) {
-    return ["The assessment needs a selected use case before it can call out the tradeoffs clearly."];
-  }
-
-  const reasons = [
-    "The recommendation is still based on deterministic heuristics, not a benchmark claim.",
-  ];
-
-  if (useCase.horizon === "long-term") {
-    reasons.push("This use case is explicitly long-term, which keeps it out of an immediate pilot lane.");
-  }
-
-  if (!useCase.blueprint.next_90_days?.length) {
-    reasons.push("A concrete 90-day benchmark plan has not been filled in yet.");
-  }
-
-  return reasons;
+function TrustLabels({ labels }: { labels: TrustLabel[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {labels.map((label) => (
+        <span
+          key={label}
+          className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]"
+        >
+          {TRUST_LABEL_TEXT[label] ?? label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
-function buildFallbackBlockers(useCase: UseCase | null): string[] {
-  if (!useCase) {
-    return ["Select a use case to see blockers and next actions."];
-  }
-
-  const blockers = [];
-
-  if (useCase.horizon === "long-term") {
-    blockers.push("The use case sits on a longer hardware and algorithm timeline.");
-  }
-
-  if (useCase.evidence_items.length < 2) {
-    blockers.push("The evidence base is still thin for a stronger recommendation.");
-  }
-
-  if (!useCase.blueprint.hybrid_pattern) {
-    blockers.push("The hybrid workflow is not scoped tightly enough yet.");
-  }
-
-  return blockers.length ? blockers : ["The main blocker is turning the blueprint into a disciplined benchmark plan."];
-}
-
-function buildFallbackNext90Days(useCase: UseCase | null): string[] {
-  if (useCase?.blueprint.next_90_days?.length) {
-    return useCase.blueprint.next_90_days;
-  }
-
-  return [
-    "Define one narrow workflow and KPI before expanding the scope.",
-    "Benchmark the classical baseline against a simulator-first experiment on the same data.",
-    "Revisit the recommendation once the benchmark evidence is documented.",
-  ];
-}
-
-function formatPublishedDate(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf())) return value;
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatPercent(score: number) {
-  return Math.round(score * 100);
+function EvidenceList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+      <div className="text-xs font-semibold uppercase text-slate-400">{title}</div>
+      <div className="mt-3 space-y-2">
+        {items.length ? (
+          items.map((item) => (
+            <div key={item} className="text-sm leading-6 text-slate-700">
+              {item}
+            </div>
+          ))
+        ) : (
+          <div className="text-sm leading-6 text-slate-500">{empty}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function AssessPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const starter = normalizeStarterKey(
-    searchParams.get("starter") ?? searchParams.get("circuit"),
-  );
-  const story = getStarterStory(starter);
   const selectedUseCaseId = searchParams.get("use_case_id");
-  const selectedUseCaseSlug = searchParams.get("use_case_slug");
-  const { data: useCaseList, isLoading, error } = useUseCases();
-  const { mutateAsync, isPending } = useCreateAssessment();
-  const [inputs, setInputs] = useState<AssessmentInputs | null>(null);
-  const [result, setResult] = useState<Assessment | null>(null);
-  const [pageError, setPageError] = useState<string | null>(null);
-
+  const { data: useCaseList, isLoading } = useUseCases({ limit: 12 });
   const selectedUseCase = useMemo(() => {
     const items = useCaseList?.items ?? [];
-    if (!items.length) return null;
-    return (
-      items.find((item) => item.id === selectedUseCaseId) ??
-      items.find((item) => item.slug === selectedUseCaseSlug) ??
-      items[0]
-    );
-  }, [selectedUseCaseId, selectedUseCaseSlug, useCaseList?.items]);
+    return items.find((item) => item.id === selectedUseCaseId) ?? items[0] ?? null;
+  }, [selectedUseCaseId, useCaseList?.items]);
 
-  const runAssessment = useCallback(async (useCase: UseCase, nextInputs: AssessmentInputs) => {
-    try {
-      setPageError(null);
-      const assessment = await mutateAsync({
-        use_case_id: useCase.id,
-        user_inputs: nextInputs,
-      });
-      setResult(assessment);
-    } catch (err) {
-      setPageError(
-        err instanceof Error ? err.message : "The readiness assessment could not be completed.",
-      );
-    }
-  }, [mutateAsync]);
+  const [inputs, setInputs] = useState<AssessmentInputs>(() => defaultInputs(null));
+  const [activeUseCaseId, setActiveUseCaseId] = useState<string | null>(null);
+  const [result, setResult] = useState<Assessment | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [bundleId, setBundleId] = useState<string | null>(null);
+  const createAssessment = useCreateAssessment();
+  const createBundle = useCreateExperimentBundle();
+  const exportMemo = useExportAssessmentMemo();
 
   useEffect(() => {
-    if (!selectedUseCase) return;
-    const defaults = buildDefaultInputs(starter, selectedUseCase);
-    setInputs(defaults);
-    setResult(null);
+    if (!selectedUseCase || selectedUseCase.id === activeUseCaseId || result) return;
+    setActiveUseCaseId(selectedUseCase.id);
+    setInputs(defaultInputs(selectedUseCase));
+  }, [activeUseCaseId, result, selectedUseCase]);
+
+  function updateInput<K extends keyof AssessmentInputs>(key: K, value: AssessmentInputs[K]) {
+    setInputs((current) => ({ ...current, [key]: value }));
     setPageError(null);
-    void runAssessment(selectedUseCase, defaults);
-  }, [runAssessment, selectedUseCase, starter]);
+  }
 
-  function syncQuery(nextStarter: StarterKey, nextUseCaseId: string | null) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("starter", nextStarter);
-    params.delete("circuit");
-    if (nextUseCaseId) {
-      params.set("use_case_id", nextUseCaseId);
-    } else {
-      params.delete("use_case_id");
+  function updateCryptoInventory(key: string, value: string) {
+    setInputs((current) => ({
+      ...current,
+      securityCryptoInventory: {
+        ...(current.securityCryptoInventory ?? {}),
+        [key]: value,
+      },
+    }));
+  }
+
+  function selectUseCase(useCase: UseCase) {
+    setActiveUseCaseId(useCase.id);
+    setInputs(defaultInputs(useCase));
+    setResult(null);
+    setBundleId(null);
+    router.replace(`/assess?use_case_id=${useCase.id}`, { scroll: false });
+  }
+
+  async function runAssessment() {
+    if (!selectedUseCase) return;
+    try {
+      setPageError(null);
+      setBundleId(null);
+      const assessment = await createAssessment.mutateAsync({
+        use_case_id: selectedUseCase.id,
+        user_inputs: inputs,
+      });
+      setResult(assessment);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "The readiness assessment failed.");
     }
-    router.replace(`/assess?${params.toString()}`, { scroll: false });
   }
 
-  function selectStarter(nextStarter: StarterKey) {
-    syncQuery(nextStarter, selectedUseCase?.id ?? null);
+  async function createExperimentBundle() {
+    if (!result) return;
+    try {
+      setPageError(null);
+      const bundle = await createBundle.mutateAsync({
+        assessmentId: result.id,
+        body: { queue_simulation: true },
+      });
+      setBundleId(bundle.id);
+      router.push(`/build?assessment_id=${result.id}&bundle_id=${bundle.id}&starter=${starterForAssessment(result)}`);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "The experiment bundle could not be created.");
+    }
   }
 
-  function selectUseCase(useCaseId: string) {
-    syncQuery(starter, useCaseId);
+  async function downloadMemo() {
+    if (!result) return;
+    try {
+      setPageError(null);
+      const memo = await exportMemo.mutateAsync(result.id);
+      const link = document.createElement("a");
+      link.href = getArtifactDownloadUrl(memo.artifact.id);
+      link.download = memo.artifact.filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "The opportunity memo could not be exported.");
+    }
   }
 
-  function updateInput(key: keyof AssessmentInputs, value: AssessmentInputs[keyof AssessmentInputs]) {
-    setInputs((current) => {
-      if (!current) return current;
-      return { ...current, [key]: value } as AssessmentInputs;
-    });
-  }
-
-  async function rerunAssessment() {
-    if (!selectedUseCase || !inputs) return;
-    await runAssessment(selectedUseCase, inputs);
-  }
-
-  const recommendation = result?.recommendation ?? deriveFallbackRecommendation(selectedUseCase);
-  const recommendationMeta = RECOMMENDATION_META[recommendation];
-  const whyPromising = result?.why_promising?.length
-    ? result.why_promising
-    : buildFallbackWhyPromising(selectedUseCase);
-  const whyNotNow = result?.why_not_now?.length
-    ? result.why_not_now
-    : buildFallbackWhyNotNow(selectedUseCase);
-  const topBlockers = result?.top_blockers?.length
-    ? result.top_blockers
-    : buildFallbackBlockers(selectedUseCase);
-  const next90Days = result?.next_90_days?.length
-    ? result.next_90_days
-    : buildFallbackNext90Days(selectedUseCase);
-  const evidenceItems = selectedUseCase?.evidence_items ?? [];
-  const buildHref = selectedUseCase
-    ? `/build?starter=${story.key}&use_case_id=${selectedUseCase.id}`
-    : `/build?starter=${story.key}`;
-  const exploreHref = selectedUseCase
-    ? `/explore?use_case_id=${selectedUseCase.id}`
-    : "/explore";
+  const isCrypto = inputs.problemClass === "CRYPTO_SECURITY";
+  const canCreateBundle = result?.build_eligibility === "ELIGIBLE";
 
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-4 shadow-[0_35px_90px_rgba(15,23,42,0.18)] md:p-6">
         <div className="mb-6 border-b border-[#dbe5f1] pb-5">
           <div className="mb-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
-              Idea evaluator
+            <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
+              Readiness assessment
             </span>
-            <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#157052]">
-              Decision recommendation
+            <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase text-[#157052]">
+              Evidence-backed verdict
             </span>
-            <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Deterministic heuristic
+            <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-semibold uppercase text-[#c2410c]">
+              Classical baseline required
             </span>
           </div>
-          <h1 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-[-0.05em] text-slate-900">
-            Decide the next move for a quantum use case
+          <h1 className="text-[clamp(2rem,4vw,3rem)] font-black text-slate-900">
+            Assess a quantum opportunity before you build
           </h1>
-          <p className="mt-3 max-w-[760px] text-[1.02rem] leading-8 text-slate-600">
-            Use a real seeded industry case, tune the assumptions openly, and let
-            the product recommend the next move: classical now, hybrid pilot now,
-            watchlist, or research only.
+          <p className="mt-3 max-w-[820px] text-[1.02rem] leading-8 text-slate-600">
+            QALS 2.0 produces a verdict, confidence, time horizon, trust labels, evidence, missing evidence,
+            assumptions, caveats, and the next decision. The score is intentionally secondary.
           </p>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_320px]">
+        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_340px]">
           <WorkspaceRail
             active="idea-evaluator"
-            tip="Use the evaluator after Learn or Explore so the score lands in context instead of acting like a black-box answer."
+            tip="Assess is the spine: Learn explains the inputs, Explore helps choose the problem shape, Build waits for the verdict."
           />
 
           <div className="space-y-5">
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-              <div className="mb-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Prototype lane
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase text-slate-400">Problem shape</div>
+                  <h2 className="mt-1 text-[1.15rem] font-semibold text-slate-900">Choose the opportunity lane</h2>
+                </div>
+                <ShieldCheck className="h-5 w-5 text-[#2f5be3]" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {STARTER_ORDER.map((item) => {
-                  const selected = item === starter;
-                  const lane = getStarterStory(item);
+              <div className="grid gap-3 md:grid-cols-2">
+                {PROBLEM_CLASSES.map((item) => {
+                  const selected = inputs.problemClass === item.value;
                   return (
                     <button
-                      key={item}
+                      key={item.value}
                       type="button"
-                      onClick={() => selectStarter(item)}
-                      className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                      onClick={() => updateInput("problemClass", item.value)}
+                      className={`rounded-[22px] border px-4 py-4 text-left transition ${
                         selected
-                          ? "bg-[#2f5be3] text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)]"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          ? "border-[#2f5be3] bg-[#eef2ff]"
+                          : "border-[#e2e8f0] bg-[#f8fafc] hover:border-[#c7d7f4]"
                       }`}
                     >
-                      {lane.label}
+                      <div className="text-sm font-semibold text-slate-900">{item.label}</div>
+                      <div className="mt-2 text-xs leading-5 text-slate-500">{item.hint}</div>
                     </button>
                   );
                 })}
               </div>
-
-              <div className="mt-5 rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4 text-sm leading-7 text-slate-600">
-                {story.guideReply}
-              </div>
             </div>
 
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Industry context
-                  </div>
-                  <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
-                    Choose the use case being qualified
-                  </h2>
-                </div>
-                {selectedUseCase ? (
-                  <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold capitalize text-[#2f5be3]">
-                    {selectedUseCase.industry}
-                  </span>
-                ) : null}
-              </div>
-
-              {isLoading ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="skeleton h-[96px]" />
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="rounded-[20px] border border-[#fecaca] bg-[#fff1f2] p-4 text-sm leading-6 text-[#b91c1c]">
-                  {error instanceof Error ? error.message : "The use-case catalog could not be loaded."}
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(useCaseList?.items ?? []).slice(0, 8).map((useCase) => {
-                    const selected = useCase.id === selectedUseCase?.id;
-                    return (
-                      <button
-                        key={useCase.id}
-                        type="button"
-                        onClick={() => selectUseCase(useCase.id)}
-                        className={`rounded-[22px] border px-4 py-4 text-left transition ${
-                          selected
-                            ? "border-[#2f5be3] bg-[#eef2ff] shadow-[0_14px_30px_rgba(47,91,227,0.12)]"
-                            : "border-[#e2e8f0] bg-[#f8fafc] hover:border-[#c7d7f4] hover:bg-white"
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-slate-900">{useCase.title}</div>
-                        <div className="mt-2 text-xs leading-6 text-slate-500">{useCase.description}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Decision inputs
-                  </div>
-                  <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-slate-900">
-                    Adjust the assumptions in plain language
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void rerunAssessment()}
-                  disabled={!selectedUseCase || !inputs || isPending}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  {isPending ? "Generating..." : "Generate recommendation"}
-                </button>
-              </div>
-
+              <div className="mb-4 text-xs font-semibold uppercase text-slate-400">Guided intake</div>
               <div className="grid gap-4 md:grid-cols-2">
-                {QUESTIONS.map((question) => (
-                  <div key={question.key} className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      {question.label}
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{question.hint}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {question.options.map((option) => {
-                        const selected = inputs?.[question.key] === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateInput(question.key, option.value)}
-                            className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                              selected
-                                ? "bg-[#2f5be3] text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)]"
-                                : "bg-white text-slate-600 hover:bg-slate-100"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase text-slate-400">Industry</span>
+                  <select
+                    value={inputs.industry ?? ""}
+                    onChange={(event) => updateInput("industry", event.target.value)}
+                    className="mt-2 w-full rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f5be3]"
+                  >
+                    {INDUSTRIES.map((industry) => (
+                      <option key={industry} value={industry}>
+                        {industry}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <InputField label="Objective" value={inputs.objective ?? ""} onChange={(value) => updateInput("objective", value)} placeholder="What decision should this support?" />
+                <InputField label="Business value" value={inputs.businessValue ?? ""} onChange={(value) => updateInput("businessValue", value)} placeholder="What matters to the business owner?" />
+                <InputField label="Data shape / problem size" value={inputs.problemSize ?? ""} onChange={(value) => updateInput("problemSize", value)} placeholder="Stops, molecules, variables, rows, constraints..." />
+                <InputField label="Current classical baseline" value={inputs.currentClassicalBaseline ?? ""} onChange={(value) => updateInput("currentClassicalBaseline", value)} placeholder="OR-Tools, MILP, DFT, HPC, current internal solver..." />
+                <InputField label="Baseline metrics" value={inputs.baselineMetrics ?? ""} onChange={(value) => updateInput("baselineMetrics", value)} placeholder="Runtime, quality gap, accuracy, cost, throughput..." />
+                <InputField label="Constraints" value={inputs.constraints ?? ""} onChange={(value) => updateInput("constraints", value)} placeholder="Capacity, time windows, active-space limits, compliance..." />
+                <InputField label="Accuracy / latency needs" value={`${inputs.accuracyNeeds ?? ""}${inputs.latencyTolerance ? `; ${inputs.latencyTolerance}` : ""}`} onChange={(value) => updateInput("accuracyNeeds", value)} placeholder="Accuracy tolerance and decision window" />
+                <InputField label="Problem description" value={inputs.problemDescription ?? ""} onChange={(value) => updateInput("problemDescription", value)} textarea />
+                <InputField label="Evidence links or notes" value={inputs.userFilesOrNotes ?? ""} onChange={(value) => updateInput("userFilesOrNotes", value)} textarea placeholder="Papers, internal notes, dataset names, assumptions..." />
               </div>
+
+              {isCrypto ? (
+                <div className="mt-5 rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ShieldCheck className="h-4 w-4 text-[#157052]" />
+                    Crypto/security intake
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <InputField label="RSA / ECC / DH / ECDSA usage" value={String(inputs.securityCryptoInventory?.algorithms ?? "")} onChange={(value) => updateCryptoInventory("algorithms", value)} />
+                    <InputField label="Certificate lifetime" value={String(inputs.securityCryptoInventory?.certificate_lifetime ?? "")} onChange={(value) => updateCryptoInventory("certificate_lifetime", value)} />
+                    <InputField label="Data retention sensitivity" value={String(inputs.securityCryptoInventory?.retention_sensitivity ?? "")} onChange={(value) => updateCryptoInventory("retention_sensitivity", value)} />
+                    <InputField label="Systems needing inventory" value={String(inputs.securityCryptoInventory?.systems ?? "")} onChange={(value) => updateCryptoInventory("systems", value)} />
+                    <InputField label="Migration owner / status" value={String(inputs.securityCryptoInventory?.migration_owner_status ?? "")} onChange={(value) => updateCryptoInventory("migration_owner_status", value)} />
+                  </div>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => void runAssessment()}
+                disabled={!selectedUseCase || createAssessment.isPending}
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {createAssessment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
+                {createAssessment.isPending ? "Running assessment..." : "Generate evidence-backed verdict"}
+              </button>
             </div>
 
-            <div className="space-y-5">
-              <div className={`rounded-[28px] border p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)] ${recommendationMeta.panelClassName}`}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
+            {result ? (
+              <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
+                <div className="flex flex-wrap items-start justify-between gap-5">
                   <div className="max-w-[760px]">
-                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      {recommendationMeta.eyebrow}
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <h2 className="text-[clamp(1.9rem,3vw,2.8rem)] font-black tracking-[-0.05em] text-slate-900">
-                        {recommendationMeta.label}
-                      </h2>
-                      <span className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${recommendationMeta.badgeClassName}`}>
-                        {selectedUseCase?.horizon ?? "assessment"}
+                    <div className="text-xs font-semibold uppercase text-slate-400">Verdict</div>
+                    <h2 className="mt-2 text-[clamp(2rem,4vw,3.2rem)] font-black text-slate-900">
+                      {result.verdict.replaceAll("_", " ")}
+                    </h2>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <span className="rounded-full bg-[#dcfce7] px-3 py-2 text-xs font-semibold uppercase text-[#157052]">
+                        Confidence: {result.confidence}
+                      </span>
+                      <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold uppercase text-[#2f5be3]">
+                        Time horizon: {result.time_horizon.replaceAll("_", " ")}
                       </span>
                     </div>
-                    <p className="mt-3 max-w-[680px] text-sm leading-7 text-slate-600">
-                      {recommendationMeta.summary}
+                    <p className="mt-5 text-base leading-8 text-slate-700">
+                      {result.plain_english_recommendation}
                     </p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          Starter lane
-                        </div>
-                        <div className="mt-2 text-sm font-semibold text-slate-800">{story.label}</div>
-                      </div>
-                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          Evidence items
-                        </div>
-                        <div className="mt-2 text-sm font-semibold text-slate-800">{evidenceItems.length}</div>
-                      </div>
-                      <div className="rounded-[22px] border border-white/70 bg-white/80 p-4">
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          Pilot scope
-                        </div>
-                        <div className="mt-2 text-sm font-semibold text-slate-800">
-                          {selectedUseCase?.blueprint.pilot_scope_weeks
-                            ? `${selectedUseCase.blueprint.pilot_scope_weeks} weeks`
-                            : "Scope pending"}
-                        </div>
-                      </div>
+                    <div className="mt-5">
+                      <TrustLabels labels={result.trust_labels} />
                     </div>
                   </div>
+                  <div className="min-w-[180px] rounded-[24px] border border-[#e2e8f0] bg-[#f8fbff] p-5 text-center">
+                    <div className="text-xs font-semibold uppercase text-slate-400">Readiness score</div>
+                    <div className="mt-2 text-5xl font-black text-[#2f5be3]">{result.readiness_score}</div>
+                    <div className="mt-2 text-xs leading-5 text-slate-500">Secondary to verdict and evidence</div>
+                  </div>
+                </div>
 
-                  <div className="min-w-[220px] rounded-[24px] border border-white/80 bg-white/85 p-5">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      CTA
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      <Link
-                        href={buildHref}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px]"
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  <EvidenceList title="Classical baseline" items={[result.classical_baseline_summary]} empty="Classical baseline required." />
+                  <EvidenceList title="Quantum candidate" items={[result.quantum_candidate_summary]} empty="No candidate recommended." />
+                  <EvidenceList title="Evidence used" items={result.evidence_used} empty="No evidence attached yet." />
+                  <EvidenceList title="Missing evidence" items={result.missing_evidence} empty="No missing evidence recorded." />
+                  <EvidenceList title="Assumptions" items={result.assumptions} empty="No assumptions recorded." />
+                  <EvidenceList title="Caveats" items={result.caveats} empty="No caveats recorded." />
+                </div>
+
+                <div className="mt-5 rounded-[22px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
+                  <div className="text-xs font-semibold uppercase text-slate-400">Next best action</div>
+                  <p className="mt-2 text-sm leading-7 text-slate-700">{result.next_best_action}</p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {canCreateBundle ? (
+                      <button
+                        type="button"
+                        onClick={() => void createExperimentBundle()}
+                        disabled={createBundle.isPending}
+                        className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.25)] transition hover:-translate-y-[1px]"
                       >
-                        Go to Build
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        href={exploreHref}
-                        className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        Back to Explore
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-5 xl:grid-cols-2">
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <CheckCircle2 className="h-4 w-4 text-[#158c61]" />
-                    Why this could work
-                  </div>
-                  <div className="space-y-3">
-                    {whyPromising.map((item) => (
-                      <div key={item} className="rounded-[18px] border border-[#dcfce7] bg-[#f3fff7] p-4 text-sm leading-6 text-slate-700">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <ShieldAlert className="h-4 w-4 text-[#c2410c]" />
-                    What blocks it today
-                  </div>
-                  <div className="space-y-3">
-                    {topBlockers.map((item) => (
-                      <div key={item} className="rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] p-4 text-sm leading-6 text-slate-700">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {whyNotNow.map((item) => (
-                      <div key={item} className="text-sm leading-6 text-slate-500">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <ClipboardList className="h-4 w-4 text-[#2f5be3]" />
-                    Best next 90 days
-                  </div>
-                  <div className="space-y-3">
-                    {next90Days.map((item) => (
-                      <div key={item} className="rounded-[18px] border border-[#dbeafe] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-700">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <FileBadge2 className="h-4 w-4 text-[#2f5be3]" />
-                    Evidence
-                  </div>
-                  <div className="space-y-3">
-                    {evidenceItems.length ? evidenceItems.map((item) => (
-                      <div key={`${item.title}-${item.published_at}`} className="rounded-[20px] border border-[#e2e8f0] bg-[#fbfdff] p-4">
-                        <div className="text-sm font-semibold text-slate-900">{item.title}</div>
-                        <div className="mt-2 text-sm leading-6 text-slate-600">{item.claim}</div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate-400">
-                          <span>{item.publisher}</span>
-                          <span>•</span>
-                          <span>{formatPublishedDate(item.published_at)}</span>
-                        </div>
-                        <a
-                          href={item.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex items-center text-sm font-semibold text-[#2f5be3] transition hover:text-[#1d4ed8]"
-                        >
-                          Open source
-                        </a>
-                      </div>
-                    )) : (
-                      <div className="rounded-[20px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] p-4 text-sm leading-6 text-slate-500">
-                        No structured evidence items are attached to this use case yet.
-                      </div>
+                        {createBundle.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+                        Create experiment bundle
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#c2410c]">
+                        Build eligibility: {result.build_eligibility.replaceAll("_", " ")}
+                      </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => void downloadMemo()}
+                      disabled={exportMemo.isPending}
+                      className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
+                    >
+                      {exportMemo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      Export opportunity memo
+                    </button>
                   </div>
+                  {bundleId ? (
+                    <Link
+                      href={`/build?assessment_id=${result.id}&bundle_id=${bundleId}&starter=${starterForAssessment(result)}`}
+                      className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#2f5be3]"
+                    >
+                      Open bundle in Build
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ) : null}
                 </div>
               </div>
-
-              <details className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700">
-                  QALS-lite details
-                </summary>
-                <div className="mt-4 grid gap-4 md:grid-cols-[220px_1fr]">
-                  <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      qals_score
-                    </div>
-                    <div className="mt-2 text-[2.6rem] font-black tracking-[-0.05em] text-[#2f5be3]">
-                      {result ? formatPercent(result.qals_score) : story.assessment.score}
-                    </div>
-                    <div className="text-sm font-semibold text-slate-500">
-                      {result?.verdict ?? story.assessment.verdict}
-                    </div>
-                  </div>
-                  <div className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
-                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <FlaskConical className="h-4 w-4 text-[#2f5be3]" />
-                      Score breakdown
-                    </div>
-                    <div className="space-y-3">
-                      {(result ? Object.entries(result.score_breakdown) : []).map(([label, value]) => (
-                        <div key={label}>
-                          <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                            <span className="font-semibold uppercase tracking-[0.14em]">
-                              {label.replaceAll("_", " ")}
-                            </span>
-                            <span>{Math.round(value * 100)}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-slate-200">
-                            <div
-                              className="h-2 rounded-full bg-gradient-to-r from-[#2f5be3] via-[#5f3ef0] to-[#1cc98b]"
-                              style={{ width: `${Math.max(10, value * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      {!result ? (
-                        <div className="text-sm leading-6 text-slate-500">
-                          Run the assessment to populate the weighted QALS-lite breakdown.
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </details>
-            </div>
+            ) : null}
           </div>
 
           <div className="space-y-5">
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Decision notes
+              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <FileText className="h-4 w-4 text-[#2f5be3]" />
+                Explore examples
               </div>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                The recommendation is deterministic and simulation-first. It is meant to guide the next product move, not to imply benchmarked quantum advantage.
-              </p>
-              <div className="mt-4 rounded-[20px] border border-[#e2e8f0] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
-                Keep the selected use case attached when you move into Build so the circuit, architecture map, and exported narrative stay in one thread.
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Selected use case
-              </div>
-              {selectedUseCase ? (
-                <>
-                  <div className="mt-3 text-lg font-semibold tracking-[-0.02em] text-slate-900">
-                    {selectedUseCase.title}
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">
-                    {selectedUseCase.quantum_approach}
-                  </p>
-                </>
+              {isLoading ? (
+                <div className="skeleton h-[240px]" />
               ) : (
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Pick a seeded use case to see the live decision rationale.
-                </p>
+                <div className="space-y-3">
+                  {(useCaseList?.items ?? []).slice(0, 6).map((useCase) => (
+                    <button
+                      key={useCase.id}
+                      type="button"
+                      onClick={() => selectUseCase(useCase)}
+                      className={`w-full rounded-[18px] border px-4 py-3 text-left transition ${
+                        useCase.id === selectedUseCase?.id
+                          ? "border-[#2f5be3] bg-[#eef2ff]"
+                          : "border-[#e2e8f0] bg-[#f8fafc] hover:border-[#c7d7f4]"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-slate-900">{useCase.title}</div>
+                      <div className="mt-1 text-xs capitalize text-slate-500">{useCase.industry}</div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
             <div className="rounded-[28px] border border-[#d8e2f3] bg-[#f8fbff] p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Sparkles className="h-4 w-4 text-[#2f5be3]" />
-                Guardrails
-              </div>
-              <div className="space-y-3 text-sm leading-6 text-slate-600">
-                <p>Keep simulation-first language visible throughout the scorecard.</p>
-                <p>Use the score to explain tradeoffs, not to imply a benchmark win.</p>
-                <p>Let the product say “not yet” when the assumptions are weak.</p>
+              <div className="text-xs font-semibold uppercase text-slate-400">Guardrails</div>
+              <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
+                <p>No serious quantum build artifact is generated without a hypothesis, classical baseline, time horizon, evidence or assumptions, and trust label.</p>
+                <p>Logistics recommendations are benchmark-first, and production advantage unproven is always explicit.</p>
+                <p>Crypto/security defaults to PQC migration-now, not QKD or quantum hardware.</p>
               </div>
             </div>
 
@@ -781,25 +516,11 @@ function AssessPageContent() {
   );
 }
 
-function AssessPageFallback() {
+function AssessFallback() {
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
-      <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-6 shadow-[0_35px_90px_rgba(15,23,42,0.18)]">
-        <div className="mb-6 h-8 w-56 rounded-full bg-slate-200" />
-        <div className="mb-4 h-14 max-w-[480px] rounded-[24px] bg-slate-200" />
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_320px]">
-          <div className="skeleton h-[560px]" />
-          <div className="space-y-5">
-            <div className="skeleton h-[180px]" />
-            <div className="skeleton h-[240px]" />
-            <div className="skeleton h-[520px]" />
-          </div>
-          <div className="space-y-5">
-            <div className="skeleton h-[220px]" />
-            <div className="skeleton h-[220px]" />
-            <div className="skeleton h-[180px]" />
-          </div>
-        </div>
+      <section className="rounded-[34px] border border-white/70 bg-white p-6 shadow-[0_35px_90px_rgba(15,23,42,0.18)]">
+        <div className="skeleton h-[680px]" />
       </section>
     </div>
   );
@@ -807,7 +528,7 @@ function AssessPageFallback() {
 
 export default function AssessPage() {
   return (
-    <Suspense fallback={<AssessPageFallback />}>
+    <Suspense fallback={<AssessFallback />}>
       <AssessPageContent />
     </Suspense>
   );

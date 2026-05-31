@@ -130,18 +130,32 @@ class SessionList(BaseModel):
 
 
 class AssessmentCreate(BaseModel):
-    """Request body for a persisted QALS-lite assessment."""
+    """Request body for a persisted QALS 2.0 readiness assessment."""
 
     use_case_id: uuid.UUID
     user_inputs: dict[str, Any] = Field(
         ...,
-        description="Keyed answers to the QALS-lite questionnaire.",
-        examples=[{"data_size": "large", "classical_hardness": "high", "timeline": "2-3 years"}],
+        description="Keyed answers to the guided readiness assessment intake.",
+        examples=[
+            {
+                "industry": "energy",
+                "objective": "Screen battery cathode material fragments",
+                "problemClass": "QUANTUM_SIMULATION",
+                "currentClassicalBaseline": "DFT / classical HPC workflow",
+                "baselineMetrics": "48 hour batch cycle for a narrowed candidate set",
+            }
+        ],
     )
 
 
+class AssessmentUpdate(BaseModel):
+    """Patch body for rerunning a persisted assessment with revised inputs."""
+
+    user_inputs: dict[str, Any] = Field(default_factory=dict)
+
+
 class AssessmentRead(BaseModel):
-    """Read model for a persisted QALS-lite assessment."""
+    """Read model for a persisted QALS 2.0 assessment."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -152,10 +166,58 @@ class AssessmentRead(BaseModel):
     verdict: str
     score_breakdown: dict[str, Any]
     recommendation: Literal["classical_now", "hybrid_pilot_now", "watchlist", "research_only"]
+    readiness_score: int = 0
+    confidence: str = "LOW"
+    time_horizon: str = "NOW_CLASSICAL"
+    trust_labels: list[str] = Field(default_factory=list)
+    problem_class: str = "UNKNOWN"
+    plain_english_recommendation: str = ""
+    classical_baseline_summary: str = ""
+    quantum_candidate_summary: str = ""
+    evidence_used: list[str] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    next_best_action: str = ""
+    build_eligibility: str = "LIMITED"
+    recommended_experiment_type: str = ""
+    hardware_assumptions: list[str] = Field(default_factory=list)
+    exportable_memo: str = ""
     why_promising: list[str] = Field(default_factory=list)
     why_not_now: list[str] = Field(default_factory=list)
     top_blockers: list[str] = Field(default_factory=list)
     next_90_days: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
+class ExperimentBundleCreate(BaseModel):
+    """Request body for creating an experiment bundle from an assessment."""
+
+    queue_simulation: bool = Field(
+        default=True,
+        description="Create a job-like simulation record when the assessment recommends a toy experiment.",
+    )
+
+
+class ExperimentBundleRead(BaseModel):
+    """Read model for a serious Build artifact anchored to an assessment."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    assessment_id: uuid.UUID
+    simulation_job_id: uuid.UUID | None = None
+    title: str
+    hypothesis: str
+    classical_baseline: str
+    quantum_candidate: str
+    toy_implementation: dict[str, Any]
+    result_trust_metrics: dict[str, Any]
+    limitations: list[str] = Field(default_factory=list)
+    next_evidence_required: list[str] = Field(default_factory=list)
+    gcp_map: dict[str, Any]
+    export_artifacts: list[dict[str, Any]] = Field(default_factory=list)
+    trust_labels: list[str] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -169,6 +231,15 @@ class JobCreate(BaseModel):
     )
 
 
+class SimulationJobCreate(BaseModel):
+    """Request body for a job-like simulation request tied to an assessment or bundle."""
+
+    assessment_id: uuid.UUID | None = None
+    experiment_bundle_id: uuid.UUID | None = None
+    job_type: JobType
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
 class JobRead(BaseModel):
     """Read model for queued or completed jobs."""
 
@@ -179,8 +250,11 @@ class JobRead(BaseModel):
     status: JobStatus
     payload: dict[str, Any]
     result: dict[str, Any] | None = None
+    logs: list[str] = Field(default_factory=list)
+    result_artifact_id: uuid.UUID | None = None
     error_message: str | None = None
     created_at: datetime
+    updated_at: datetime | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
 
@@ -237,6 +311,7 @@ class AssessmentPreviewRead(BaseModel):
     verdict: str
     horizon: str
     confidence: str
+    trust_labels: list[str] = Field(default_factory=list)
     explanation: list[str]
     assumptions: list[str]
     public_signals: list[str]
@@ -398,7 +473,15 @@ class CircuitRunRead(BaseModel):
     simulator_warning: str | None = None
     num_qubits: int | None = None
     gate_count: int | None = None
+    one_qubit_gate_count: int | None = None
+    two_qubit_gate_count: int | None = None
     circuit_depth: int | None = None
+    shots: int | None = None
+    ideal_vs_noisy: str | None = None
+    assumed_noise_model: str | None = None
+    hardware_readiness_label: str | None = None
+    trust_labels: list[str] = Field(default_factory=list)
+    result_caveats: list[str] = Field(default_factory=list)
     measurement_keys: list[str] = Field(default_factory=list)
     ideal_histogram: list[HistogramEntryRead] | None = None
     noisy_histogram: list[HistogramEntryRead] | None = None
@@ -475,12 +558,20 @@ class ArtifactRead(BaseModel):
     job_id: uuid.UUID | None = None
     circuit_run_id: uuid.UUID | None = None
     architecture_record_id: uuid.UUID | None = None
+    assessment_id: uuid.UUID | None = None
     filename: str
     content_type: str
     storage_uri: str
     size_bytes: int
     download_path: str
     created_at: datetime
+
+
+class MemoExportRead(BaseModel):
+    """Read model returned when an assessment memo export is prepared."""
+
+    job: JobRead
+    artifact: ArtifactRead
 
 
 class SessionDetailRead(SessionRead):

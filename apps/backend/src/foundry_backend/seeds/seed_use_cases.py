@@ -35,6 +35,7 @@ TITLE_SLUGS = {
     "Supply Chain Network Design": "supply-chain-network-design",
     "Power Grid Scheduling": "power-grid-scheduling",
     "Battery Material Discovery": "battery-material-discovery",
+    "Post-Quantum Cryptography Readiness": "post-quantum-cryptography-readiness",
     "Aerodynamic Simulation": "aerodynamic-simulation",
     "Satellite Orbit Scheduling": "satellite-orbit-scheduling",
     "Catalyst Design for Green Chemistry": "catalyst-design",
@@ -51,6 +52,30 @@ DEFAULT_GOOGLE_STACK = [
 ]
 
 FEATURED_BLUEPRINT_EXTRAS = {
+    "Battery Material Discovery": {
+        "google_stack": ["Cirq", "OpenFermion", "qsim", "Cloud Run Jobs", "Cloud Storage", "BigQuery", "Google Colab"],
+        "maturity_label": "pilot_carefully",
+        "recommended_lessons": ["why-chemistry-is-hard", "hamiltonians", "small-molecule-story"],
+        "recommended_labs": ["chemistry"],
+        "google_cloud_architecture_notes": [
+            "Use Cloud Storage for molecular inputs, fragment definitions, and simulation artifacts.",
+            "Keep the DFT / classical HPC workflow attached as the declared classical baseline.",
+            "Use a molecule-fragment starter before claiming any future-hardware upside.",
+        ],
+        "hardware_access_note": HARDWARE_ACCESS_NOTE,
+    },
+    "Post-Quantum Cryptography Readiness": {
+        "google_stack": ["Cloud Run", "Cloud SQL", "Cloud Storage", "BigQuery"],
+        "maturity_label": "simulate_now",
+        "recommended_lessons": ["simulation-first-architecture"],
+        "recommended_labs": [],
+        "google_cloud_architecture_notes": [
+            "Use Cloud SQL for crypto asset inventory state and migration ownership.",
+            "Use Cloud Storage for exported readiness memos and evidence files.",
+            "No quantum hardware path is needed for the default PQC migration-now workflow.",
+        ],
+        "hardware_access_note": "PQC migration is a classical security modernization workflow; QKD and quantum hardware are not default recommendations.",
+    },
     "Portfolio Optimization": {
         "google_stack": DEFAULT_GOOGLE_STACK,
         "maturity_label": "simulate_now",
@@ -104,8 +129,8 @@ SEED_DATA: list[dict] = [
         ),
         "complexity_score": 3.5,
         "horizon": "near-term",
-        "featured": True,
-        "featured_rank": 1,
+        "featured": False,
+        "featured_rank": None,
         "blueprint": {
             "persona": "Head of portfolio engineering at a multi-asset investment team",
             "business_kpi": "Improve risk-adjusted return while staying inside issuer, sector, and turnover limits",
@@ -186,8 +211,8 @@ SEED_DATA: list[dict] = [
         ),
         "complexity_score": 4.5,
         "horizon": "mid-term",
-        "featured": True,
-        "featured_rank": 2,
+        "featured": False,
+        "featured_rank": None,
         "blueprint": {
             "persona": "Director of computational chemistry supporting lead optimization",
             "business_kpi": "Reduce false positives in candidate ranking and shorten the cycle between docking review and wet-lab follow-up",
@@ -269,7 +294,7 @@ SEED_DATA: list[dict] = [
         "complexity_score": 3.5,
         "horizon": "near-term",
         "featured": True,
-        "featured_rank": 3,
+        "featured_rank": 2,
         "blueprint": {
             "persona": "Operations research lead for last-mile delivery or field service routing",
             "business_kpi": "Reduce route cost and late deliveries while preserving planner trust in the dispatch workflow",
@@ -365,8 +390,87 @@ SEED_DATA: list[dict] = [
         ),
         "complexity_score": 5.0,
         "horizon": "long-term",
-        "featured": False,
-        "featured_rank": None,
+        "featured": True,
+        "featured_rank": 1,
+        "blueprint": {
+            "persona": "Materials R&D lead for battery chemistry",
+            "business_kpi": "Prioritize cathode or electrolyte candidates before expensive lab validation",
+            "classical_baseline": "DFT / classical HPC workflow",
+            "hybrid_pattern": (
+                "Classical materials screen -> molecule-fragment quantum simulation starter -> "
+                "classical validation against DFT and lab evidence."
+            ),
+            "pilot_scope_weeks": 10,
+            "sample_input": "A narrowed active-space fragment for a transition metal oxide candidate.",
+            "success_thresholds": [
+                "Reproduce a tiny fragment benchmark with transparent assumptions",
+                "Compare simulator output against DFT / HPC baseline metrics",
+                "Document future-hardware upside without implying near-term production advantage",
+            ],
+            "next_90_days": [
+                "Choose one fragment-level battery materials question with a known DFT baseline",
+                "Build the molecule-fragment starter and record simulator trust metrics",
+                "Write a go/no-go memo on whether a research partnership is justified",
+            ],
+        },
+        "evidence_items": [
+            {
+                "title": "Quantum simulation for materials remains a research-now path",
+                "publisher": "Curated seed note",
+                "published_at": "2026-05-28",
+                "claim": (
+                    "Battery and materials workloads are credible simulator-first research candidates, "
+                    "with future-hardware upside gated by active-space choices and hardware maturity."
+                ),
+                "source_url": "https://quantumai.google/cirq",
+            }
+        ],
+    },
+    {
+        "title": "Post-Quantum Cryptography Readiness",
+        "industry": IndustryTag.other,
+        "description": (
+            "Inventory RSA, ECC, Diffie-Hellman, ECDSA, long-lived secrets, regulated data, "
+            "certificate lifetimes, and systems exposed to harvest-now-decrypt-later risk."
+        ),
+        "quantum_approach": (
+            "Default action is PQC migration planning, crypto inventory, ownership, and memo export. "
+            "Do not recommend quantum hardware or QKD as the default enterprise answer."
+        ),
+        "complexity_score": 2.0,
+        "horizon": "near-term",
+        "featured": True,
+        "featured_rank": 3,
+        "blueprint": {
+            "persona": "Security architecture or cryptography migration owner",
+            "business_kpi": "Reduce exposure to long-lived public-key cryptography risk",
+            "classical_baseline": "RSA/ECC inventory status and certificate lifecycle are unknown",
+            "hybrid_pattern": "Crypto inventory -> PQC migration readiness memo -> phased remediation roadmap",
+            "pilot_scope_weeks": 6,
+            "sample_input": "Certificate inventory, TLS endpoints, code-signing systems, regulated data retention requirements",
+            "success_thresholds": [
+                "Identify systems using RSA, ECC, Diffie-Hellman, or ECDSA",
+                "Classify long-lived secrets and regulated data exposure",
+                "Assign migration owners and next decision checkpoints",
+            ],
+            "next_90_days": [
+                "Run a crypto asset and certificate inventory",
+                "Prioritize systems by data retention sensitivity and certificate lifetime",
+                "Export a PQC migration-now readiness memo for security leadership",
+            ],
+        },
+        "evidence_items": [
+            {
+                "title": "NIST post-quantum cryptography standards",
+                "publisher": "NIST",
+                "published_at": "2024-08-13",
+                "claim": (
+                    "NIST finalized initial post-quantum cryptography standards, making inventory "
+                    "and migration planning an action-now enterprise workflow."
+                ),
+                "source_url": "https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards",
+            }
+        ],
     },
     {
         "title": "Aerodynamic Simulation",

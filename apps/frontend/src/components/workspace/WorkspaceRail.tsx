@@ -17,8 +17,8 @@ const ITEMS: Array<{ key: WorkspaceSection; label: string; href: string }> = [
   { key: "primer", label: "Primer", href: "/" },
   { key: "use-cases", label: "Use cases", href: "/explore" },
   { key: "industry-atlas", label: "Industry atlas", href: "/explore#atlas" },
-  { key: "idea-evaluator", label: "Idea evaluator", href: "/assess" },
-  { key: "hybrid-lab", label: "Hybrid lab", href: "/build" },
+  { key: "idea-evaluator", label: "Readiness assessment", href: "/assess" },
+  { key: "hybrid-lab", label: "Experiment bundle", href: "/build" },
   { key: "exports", label: "Map & exports", href: "/map" },
   { key: "projects", label: "Projects", href: "/projects" },
   { key: "saved-sessions", label: "Saved sessions", href: "/sessions" },
@@ -37,7 +37,7 @@ export function WorkspaceRail({
       <div className="mb-5">
         <div className="text-lg font-semibold tracking-[-0.02em]">Workspace</div>
         <p className="mt-1 text-sm text-slate-400">
-          One guided launchpad for learning, qualification, and prototype design.
+          One guided launchpad for learning, opportunity triage, and experiment bundles.
         </p>
       </div>
 

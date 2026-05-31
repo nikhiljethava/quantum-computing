@@ -7,12 +7,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createArtifact,
   createAssessment,
+  createExperimentBundle,
   createProject,
   createSession,
   askGuide,
+  exportAssessmentMemo,
   fetchArchitecture,
+  fetchAssessment,
   fetchCircuitRun,
   fetchCircuitTemplates,
+  fetchExperimentBundle,
   fetchJob,
   fetchJobs,
   fetchProjects,
@@ -23,6 +27,7 @@ import {
   fetchUseCases,
   geminiUpdateCircuit,
   runCircuit,
+  submitSimulationJob,
   submitJob,
   updateSession,
 } from "@/lib/api";
@@ -31,6 +36,7 @@ import {
   ArchitectureRequest,
   AssessmentInputs,
   CircuitRunCreate,
+  ExperimentBundleCreate,
   GeminiCircuitUpdateRequest,
   GuideAskRequest,
   IndustryTag,
@@ -40,6 +46,7 @@ import {
   ProjectCreate,
   SessionCreate,
   SessionUpdate,
+  SimulationJobCreate,
 } from "@/types/api";
 
 export function useUseCases(
@@ -142,6 +149,40 @@ export function useCreateAssessment() {
   });
 }
 
+export function useAssessment(id: string | null) {
+  return useQuery({
+    queryKey: ["assessment", id],
+    queryFn: () => fetchAssessment(id!),
+    enabled: !!id,
+  });
+}
+
+export function useCreateExperimentBundle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assessmentId, body }: { assessmentId: string; body?: ExperimentBundleCreate }) =>
+      createExperimentBundle(assessmentId, body),
+    onSuccess: (bundle) => {
+      qc.setQueryData(["experiment-bundle", bundle.id], bundle);
+      qc.invalidateQueries({ queryKey: ["assessment", bundle.assessment_id] });
+    },
+  });
+}
+
+export function useExperimentBundle(id: string | null) {
+  return useQuery({
+    queryKey: ["experiment-bundle", id],
+    queryFn: () => fetchExperimentBundle(id!),
+    enabled: !!id,
+  });
+}
+
+export function useExportAssessmentMemo() {
+  return useMutation({
+    mutationFn: (assessmentId: string) => exportAssessmentMemo(assessmentId),
+  });
+}
+
 export function useCircuitTemplates() {
   return useQuery({
     queryKey: ["circuit-templates"],
@@ -184,6 +225,14 @@ export function useSubmitJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: JobCreate) => submitJob(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+}
+
+export function useSubmitSimulationJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SimulationJobCreate) => submitSimulationJob(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 }

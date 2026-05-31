@@ -57,6 +57,11 @@ class _FakeAsyncSession:
     def add(self, obj: object) -> None:
         self.added.append(obj)
 
+    async def flush(self) -> None:
+        for obj in self.added:
+            if getattr(obj, "id", None) is None:
+                obj.id = uuid.uuid4()
+
     async def commit(self) -> None:
         self.commit_calls += 1
 
@@ -137,6 +142,9 @@ async def test_poll_once_completes_job_and_persists_job_output_artifact(monkeypa
     assert artifact.job_id == job.id
     assert artifact.artifact_type == ArtifactType.job_output
     assert artifact.size_bytes == 42
+    assert job.result_artifact_id == artifact.id
+    assert job.result["artifact_id"] == str(artifact.id)
+    assert job.result["download_path"] == f"/api/v1/artifacts/{artifact.id}/download"
 
 
 @pytest.mark.asyncio

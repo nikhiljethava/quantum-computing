@@ -15,6 +15,7 @@ import {
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   createArtifact,
+  exportAssessmentMemo,
   fetchArchitecture,
   getArtifactDownloadUrl,
   runCircuit,
@@ -47,6 +48,8 @@ function MapPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeSessionId = searchParams.get("session_id");
+  const assessmentId = searchParams.get("assessment_id");
+  const bundleId = searchParams.get("bundle_id");
   const starter = normalizeStarterKey(
     searchParams.get("starter") ?? searchParams.get("circuit"),
   );
@@ -59,6 +62,7 @@ function MapPageContent() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingMemo, setIsExportingMemo] = useState(false);
   const requestIdRef = useRef(0);
 
   const selectedUseCase = useMemo(() => {
@@ -94,6 +98,7 @@ function MapPageContent() {
       const nextArchitecture = await fetchArchitecture({
         circuit_run_id: circuitRun.id,
         use_case_id: useCase.id,
+        assessment_id: assessmentId ?? undefined,
       });
 
       if (requestIdRef.current !== requestId) return;
@@ -109,7 +114,7 @@ function MapPageContent() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [assessmentId]);
 
   useEffect(() => {
     if (activeSessionId && !sessionDetail) return;
@@ -136,6 +141,7 @@ function MapPageContent() {
             const nextArchitecture = await fetchArchitecture({
               circuit_run_id: sessionDetail.latest_circuit_run!.id,
               use_case_id: savedUseCaseId ?? undefined,
+              assessment_id: assessmentId ?? undefined,
             });
             setArchitecture(nextArchitecture);
             setPageError(null);
@@ -153,7 +159,7 @@ function MapPageContent() {
 
     if (!selectedUseCase) return;
     void loadLiveArchitecture(starter, selectedUseCase, activeSessionId);
-  }, [activeSessionId, loadLiveArchitecture, selectedUseCase, sessionDetail, starter]);
+  }, [activeSessionId, assessmentId, loadLiveArchitecture, selectedUseCase, sessionDetail, starter]);
 
   function syncQuery(nextStarter: StarterKey, nextUseCaseId: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -208,6 +214,32 @@ function MapPageContent() {
     }
   }
 
+  async function downloadOpportunityMemo() {
+    if (!assessmentId) {
+      setPageError("Run or open an assessment before exporting a Quantum Opportunity Memo.");
+      return;
+    }
+
+    try {
+      setIsExportingMemo(true);
+      setPageError(null);
+      const memo = await exportAssessmentMemo(assessmentId);
+      const link = document.createElement("a");
+      link.href = getArtifactDownloadUrl(memo.artifact.id);
+      link.download = memo.artifact.filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      setPageError(
+        err instanceof Error ? err.message : "The opportunity memo export could not be prepared.",
+      );
+    } finally {
+      setIsExportingMemo(false);
+    }
+  }
+
   const buildHref =
     selectedUseCase
       ? `/build?starter=${starter}&use_case_id=${selectedUseCase.id}${activeSessionId ? `&session_id=${activeSessionId}` : ""}`
@@ -229,12 +261,22 @@ function MapPageContent() {
             </span>
           </div>
           <h1 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-[-0.05em] text-slate-900">
-            Map the prototype to Google Cloud
+            Map the decision, experiment, and GCP architecture
           </h1>
           <p className="mt-3 max-w-[760px] text-[1.02rem] leading-8 text-slate-600">
-            Turn the current starter lane into a real architecture record with a
-            classical prep step, a narrow quantum kernel, post-processing, and an export path you can download.
+            Generate a hybrid architecture with data, classical preprocessing,
+            quantum kernel or simulation worker, classical post-processing, storage, memo export, time horizon, and assumptions.
           </p>
+          {assessmentId ? (
+            <div className="mt-4 inline-flex rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold uppercase text-[#2f5be3]">
+              Assessment attached: {assessmentId}
+            </div>
+          ) : null}
+          {bundleId ? (
+            <div className="ml-2 mt-4 inline-flex rounded-full bg-[#dcfce7] px-3 py-2 text-xs font-semibold uppercase text-[#157052]">
+              Bundle attached: {bundleId}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_320px]">
@@ -392,27 +434,36 @@ function MapPageContent() {
           <div className="space-y-5">
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
               <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Export bundle
+                Quantum Opportunity Memo
               </div>
               <div className="mt-4 space-y-3">
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Architecture map JSON
+                  Executive verdict and problem shape
                 </div>
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Session summary markdown
+                  Classical baseline and quantum candidate
                 </div>
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Cirq notebook and assessment bundle
+                  Evidence, caveats, Experiment Bundle, GCP architecture, time horizon, next decision
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => void downloadArchitectureJson()}
-                disabled={!currentRun || !architecture?.id || isExporting}
+                onClick={() => void downloadOpportunityMemo()}
+                disabled={!assessmentId || isExportingMemo}
                 className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
+                {isExportingMemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isExportingMemo ? "Packaging memo..." : "Export opportunity memo"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void downloadArchitectureJson()}
+                disabled={!currentRun || !architecture?.id || isExporting}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3] disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {isExporting ? "Packaging export..." : "Download architecture JSON"}
+                {isExporting ? "Packaging architecture..." : "Download architecture JSON"}
               </button>
             </div>
 

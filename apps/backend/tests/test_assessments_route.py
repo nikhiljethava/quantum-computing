@@ -77,10 +77,12 @@ def test_create_assessment_returns_recommendation_fields() -> None:
             json={
                 "use_case_id": str(use_case.id),
                 "user_inputs": {
-                    "problem_size": "large",
-                    "data_structure": "structured",
-                    "classical_hardness": "hard",
-                    "timeline": "1-2 years",
+                    "problemClass": "OPTIMIZATION",
+                    "problemDescription": "Vehicle routing under time and capacity constraints.",
+                    "problemSize": "40-80 stops",
+                    "currentClassicalBaseline": "OR-Tools routing solver",
+                    "baselineMetrics": "12 minute solve time on the benchmark region",
+                    "constraints": "Capacity, time windows, and shift limits.",
                 },
             },
         )
@@ -91,6 +93,17 @@ def test_create_assessment_returns_recommendation_fields() -> None:
     body = response.json()
     assert body["qals_score"] >= 0.55
     assert body["recommendation"] == "hybrid_pilot_now"
+    assert body["verdict"] == "SIMULATOR_PROTOTYPE_NOW"
+    assert body["confidence"] == "MEDIUM"
+    assert body["time_horizon"] == "SIMULATOR_NOW"
+    assert body["trust_labels"]
+    assert body["classical_baseline_summary"]
+    assert body["quantum_candidate_summary"]
+    assert body["evidence_used"]
+    assert body["missing_evidence"] is not None
+    assert body["assumptions"]
+    assert body["caveats"]
+    assert body["next_best_action"]
     assert body["why_promising"]
     assert body["why_not_now"]
     assert body["top_blockers"]

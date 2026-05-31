@@ -33,8 +33,11 @@ async def create_artifact(
 ) -> ArtifactRead:
     """Generate and persist an export artifact."""
 
-    if body.artifact_type == ArtifactType.job_output:
-        raise HTTPException(status_code=400, detail="job_output artifacts are created by the worker.")
+    if body.artifact_type in {ArtifactType.job_output, ArtifactType.opportunity_memo}:
+        raise HTTPException(
+            status_code=400,
+            detail="job_output and opportunity_memo artifacts are created by jobs or assessment memo export.",
+        )
 
     if not body.circuit_run_id:
         raise HTTPException(status_code=400, detail="circuit_run_id is required for export generation.")
@@ -86,6 +89,7 @@ async def create_artifact(
 async def list_artifacts(
     circuit_run_id: uuid.UUID | None = None,
     job_id: uuid.UUID | None = None,
+    assessment_id: uuid.UUID | None = None,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
 ) -> list[ArtifactRead]:
@@ -96,6 +100,8 @@ async def list_artifacts(
         stmt = stmt.where(Artifact.circuit_run_id == circuit_run_id)
     if job_id:
         stmt = stmt.where(Artifact.job_id == job_id)
+    if assessment_id:
+        stmt = stmt.where(Artifact.assessment_id == assessment_id)
 
     rows = (await db.execute(stmt)).scalars().all()
     return [ArtifactRead.model_validate(serialize_artifact(row)) for row in rows]

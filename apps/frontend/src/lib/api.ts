@@ -9,6 +9,10 @@ import {
   ArchitectureRequest,
   Assessment,
   AssessmentInputs,
+  ExperimentBundle,
+  ExperimentBundleCreate,
+  MemoExport,
+  SimulationJobCreate,
   GeminiCircuitUpdateRequest,
   GeminiCircuitUpdateResponse,
   GuideAskRequest,
@@ -154,6 +158,40 @@ export async function createAssessment(
   });
 }
 
+export async function fetchAssessment(id: string): Promise<Assessment> {
+  return apiFetch<Assessment>(`/api/v1/assessments/${id}`);
+}
+
+export async function updateAssessment(
+  id: string,
+  user_inputs: Partial<AssessmentInputs>,
+): Promise<Assessment> {
+  return apiFetch<Assessment>(`/api/v1/assessments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ user_inputs }),
+  });
+}
+
+export async function createExperimentBundle(
+  assessmentId: string,
+  body: ExperimentBundleCreate = {},
+): Promise<ExperimentBundle> {
+  return apiFetch<ExperimentBundle>(`/api/v1/assessments/${assessmentId}/experiment-bundles`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchExperimentBundle(id: string): Promise<ExperimentBundle> {
+  return apiFetch<ExperimentBundle>(`/api/v1/experiment-bundles/${id}`);
+}
+
+export async function exportAssessmentMemo(assessmentId: string): Promise<MemoExport> {
+  return apiFetch<MemoExport>(`/api/v1/assessments/${assessmentId}/export-memo`, {
+    method: "POST",
+  });
+}
+
 export async function fetchCircuitTemplates(): Promise<CircuitTemplate[]> {
   return apiFetch<CircuitTemplate[]>("/api/v1/circuits/templates");
 }
@@ -187,6 +225,13 @@ export async function askGuide(body: GuideAskRequest): Promise<GuideAskResponse>
 
 export async function submitJob(body: JobCreate): Promise<Job> {
   return apiFetch<Job>("/api/v1/jobs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function submitSimulationJob(body: SimulationJobCreate): Promise<Job> {
+  return apiFetch<Job>("/api/v1/jobs/simulate", {
     method: "POST",
     body: JSON.stringify(body),
   });

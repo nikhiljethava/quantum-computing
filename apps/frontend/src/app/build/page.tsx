@@ -37,6 +37,8 @@ import {
 import {
   useCreateProject,
   useCreateSession,
+  useAssessment,
+  useExperimentBundle,
   useGeminiCircuitUpdate,
   useJob,
   useProjects,
@@ -1808,22 +1810,26 @@ function HistogramBars({
 
 function CircuitMetricsCard({ run }: { run: CircuitRun | null }) {
   const metrics = [
+    ["Backend", run?.simulator_backend ?? "simulator"],
     ["Qubits", formatMetric(run?.num_qubits)],
-    ["Gates", formatMetric(run?.gate_count)],
     ["Depth", formatMetric(run?.circuit_depth)],
-    ["Backend", run?.simulator_backend ?? "cirq"],
+    ["1Q gates", formatMetric(run?.one_qubit_gate_count)],
+    ["2Q gates", formatMetric(run?.two_qubit_gate_count)],
+    ["Shots", formatMetric(run?.shots)],
+    ["Ideal/noisy", run?.ideal_vs_noisy ?? "ideal"],
+    ["Hardware label", run?.hardware_readiness_label ?? "hardware access-controlled"],
   ];
 
   return (
     <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
       <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
         <Gauge className="h-4 w-4 text-[#2f5be3]" />
-        Circuit metrics
+        Result Trust panel
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         {metrics.map(([label, value]) => (
           <div key={label} className="rounded-[16px] bg-[#f8fbff] p-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            <div className="text-xs font-semibold uppercase text-slate-400">
               {label}
             </div>
             <div className="mt-2 text-lg font-black text-slate-900">{value}</div>
@@ -1832,6 +1838,27 @@ function CircuitMetricsCard({ run }: { run: CircuitRun | null }) {
       </div>
       <div className="mt-3 rounded-[16px] bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
         Measurement keys: {run?.measurement_keys?.length ? run.measurement_keys.join(", ") : "None recorded"}
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-[16px] bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
+          Assumed noise model: {run?.assumed_noise_model ?? "None; ideal simulator path unless noise mode is enabled."}
+        </div>
+        <div className="rounded-[16px] bg-[#eef2ff] p-3 text-sm leading-6 text-[#2f5be3]">
+          Trust labels: {run?.trust_labels?.length ? run.trust_labels.join(", ").replaceAll("_", " ") : "Tutorial, toy simulation"}
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {(run?.result_caveats?.length
+          ? run.result_caveats
+          : [
+              "This is a simulation trust panel, not hardware characterization.",
+              "Real hardware results may differ because topology, calibration, and noise are not represented by default.",
+            ]
+        ).map((caveat) => (
+          <div key={caveat} className="rounded-[16px] border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm leading-6 text-[#9a3412]">
+            {caveat}
+          </div>
+        ))}
       </div>
       {run?.simulator_warning ? (
         <div className="mt-3 rounded-[16px] border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm leading-6 text-[#9a3412]">
@@ -2023,9 +2050,9 @@ function ResultsPanel({
             <div className="text-sm font-semibold text-slate-700">Recommended next action</div>
             <p className="mt-3 text-sm leading-7 text-slate-600">{story.assessment.nextAction}</p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {[story.concept, story.assessment.horizon, story.assessment.confidence].map((chip) => (
+              {[story.concept, story.assessment.horizon, story.assessment.confidence].map((chip, index) => (
                 <span
-                  key={chip}
+                  key={`${chip}-${index}`}
                   className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600"
                 >
                   {chip}
@@ -2098,9 +2125,9 @@ function AssessmentCard({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {[story.assessment.horizon, story.assessment.confidence, formatScoreLabel(score)].map((chip) => (
+        {[story.assessment.horizon, story.assessment.confidence, formatScoreLabel(score)].map((chip, index) => (
           <span
-            key={chip}
+            key={`${chip}-${index}`}
             className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]"
           >
             {chip}
@@ -2303,7 +2330,17 @@ function BuildPageContent() {
   const searchParams = useSearchParams();
   const activeSessionId = searchParams.get("session_id");
   const lessonSlug = searchParams.get("lesson");
+  const assessmentId = searchParams.get("assessment_id");
+  const bundleId = searchParams.get("bundle_id");
   const sourceLesson = lessonSlug ? LESSON_BY_SLUG.get(lessonSlug) ?? null : null;
+  const hasBuildContext = Boolean(
+    activeSessionId ||
+      lessonSlug ||
+      assessmentId ||
+      bundleId ||
+      searchParams.get("starter") ||
+      searchParams.get("circuit"),
+  );
   const initialKey = normalizeStarterKey(
     searchParams.get("starter") ?? searchParams.get("circuit"),
   );
@@ -2349,6 +2386,8 @@ function BuildPageContent() {
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
   const { data: sessionDetail } = useSession(activeSessionId);
+  const { data: sourceAssessment } = useAssessment(assessmentId);
+  const { data: experimentBundle } = useExperimentBundle(bundleId);
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
   const geminiUpdateMutation = useGeminiCircuitUpdate();
@@ -2700,6 +2739,9 @@ function BuildPageContent() {
   }, [exportJob, exportJobId]);
 
   useEffect(() => {
+    if (!hasBuildContext) {
+      return;
+    }
     if (activeSessionId && !sessionDetail) {
       return;
     }
@@ -2712,7 +2754,7 @@ function BuildPageContent() {
       return;
     }
     void loadWorkspace(selectedKey);
-  }, [activeSessionId, loadWorkspace, selectedKey, sessionDetail]);
+  }, [activeSessionId, hasBuildContext, loadWorkspace, selectedKey, sessionDetail]);
 
   function syncQuery(
     nextKey: StarterKey,
@@ -3095,6 +3137,60 @@ function BuildPageContent() {
     setSaveState("idle");
   }
 
+  if (!hasBuildContext) {
+    return (
+      <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
+        <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-4 shadow-[0_35px_90px_rgba(15,23,42,0.18)] md:p-6">
+          <div className="mb-6 border-b border-[#dbe5f1] pb-5">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
+                Experiment Bundle
+              </span>
+              <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-semibold uppercase text-[#c2410c]">
+                Start with assessment
+              </span>
+            </div>
+            <h1 className="text-[clamp(2rem,4vw,3rem)] font-black text-slate-900">
+              Start with an assessment or open a tutorial
+            </h1>
+            <p className="mt-3 max-w-[760px] text-[1.02rem] leading-8 text-slate-600">
+              Serious experiment bundles require an assessment hypothesis, declared classical baseline,
+              time horizon, evidence or assumptions, and visible trust labels.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <WorkspaceRail
+              active="hybrid-lab"
+              tip="Build waits for an evidence-backed verdict. Tutorial circuits stay labeled tutorial-only."
+            />
+            <div className="grid gap-5 md:grid-cols-2">
+              <Link
+                href="/assess"
+                className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)] transition hover:border-[#2f5be3]"
+              >
+                <div className="mb-3 text-xs font-semibold uppercase text-slate-400">Primary</div>
+                <h2 className="text-xl font-bold text-slate-900">Assess a quantum opportunity</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Create an evidence-backed verdict before generating an Experiment Bundle.
+                </p>
+              </Link>
+              <Link
+                href="/build?starter=coin_flip"
+                className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)] transition hover:border-[#2f5be3]"
+              >
+                <div className="mb-3 text-xs font-semibold uppercase text-slate-400">Tutorial-only</div>
+                <h2 className="text-xl font-bold text-slate-900">Open a tutorial circuit</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Tutorial circuits are labeled TUTORIAL and cannot be exported as business recommendations.
+                </p>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-4 shadow-[0_35px_90px_rgba(15,23,42,0.18)] md:p-6">
@@ -3102,7 +3198,7 @@ function BuildPageContent() {
           <div className="max-w-[760px]">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
-                Hybrid lab
+                Experiment Bundle
               </span>
               <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#157052]">
                 Simulation first
@@ -3117,12 +3213,29 @@ function BuildPageContent() {
               ) : null}
             </div>
             <h1 className="text-[clamp(2.15rem,4vw,3.35rem)] font-black tracking-[-0.05em] text-slate-900">
-              Build a toy prototype, then map it to Google Cloud
+              Build an Experiment Bundle, not an isolated circuit
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
-              One workspace for guided circuit generation, plain-English explanation,
-              simulation output, QALS-lite readiness, and a simulator-first Google Cloud architecture story.
+              The bundle keeps the hypothesis, classical baseline, quantum candidate,
+              toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports in one place.
             </p>
+            {sourceAssessment ? (
+              <div className="mt-4 rounded-[18px] border border-[#c6dafc] bg-[#e8f0fe] px-4 py-3 text-sm leading-7 text-[#174ea6]">
+                Assessment attached: <strong>{sourceAssessment.verdict.replaceAll("_", " ")}</strong> · {sourceAssessment.confidence} confidence · {sourceAssessment.time_horizon.replaceAll("_", " ")}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {sourceAssessment.trust_labels.map((label) => (
+                    <span key={label} className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
+                      {label.replaceAll("_", " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {experimentBundle ? (
+              <div className="mt-4 rounded-[18px] border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-sm leading-7 text-[#166534]">
+                Experiment Bundle loaded: <strong>{experimentBundle.title}</strong>. Classical baseline: {experimentBundle.classical_baseline}
+              </div>
+            ) : null}
             {workspaceError ? (
               <div className="mt-4 rounded-[18px] border border-[#fecaca] bg-[#fff1f2] px-4 py-3 text-sm text-[#b91c1c]">
                 Live backend request failed. The workspace is still showing the storyboard shell.
@@ -3157,7 +3270,12 @@ function BuildPageContent() {
               {isLoadingWorkspace ? "Refreshing workspace" : "Ask inside workspace"}
             </button>
             <Link
-              href={`/map?starter=${displayStory.key}`}
+              href={`/map?${new URLSearchParams({
+                starter: displayStory.key,
+                ...(assessmentId ? { assessment_id: assessmentId } : {}),
+                ...(bundleId ? { bundle_id: bundleId } : {}),
+                ...(activeUseCaseId ? { use_case_id: activeUseCaseId } : {}),
+              }).toString()}`}
               className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px]"
             >
               Open architecture view
@@ -3324,10 +3442,10 @@ function BuildPageContent() {
 
               <div className="min-w-0 rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Prompt-to-circuit
-                    </div>
+                    <div>
+                      <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Bundle toy implementation
+                      </div>
                     <h2 className="mt-1 text-[1.2rem] font-semibold tracking-[-0.02em] text-slate-900">
                       {displayStory.label}
                     </h2>

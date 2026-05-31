@@ -16,7 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from foundry_backend.models.models import ArtifactType, JobType
-from foundry_backend.services.artifacts import create_export_artifact, serialize_artifact
+from foundry_backend.services.artifacts import (
+    create_assessment_memo_artifact,
+    create_export_artifact,
+    serialize_artifact,
+)
 from foundry_core.storage import get_storage_backend
 from foundry_backend.services.hybrid_lab import create_architecture_record, create_circuit_run
 
@@ -156,6 +160,36 @@ async def _execute_export_job(db: AsyncSession, *, job_id: str, payload: dict) -
     }
 
 
+async def _execute_opportunity_memo_job(db: AsyncSession, *, job_id: str, payload: dict) -> dict:
+    """Generate a Quantum Opportunity Memo artifact from a persisted assessment."""
+
+    from foundry_backend.models.models import Assessment  # type: ignore[import]
+
+    assessment_id = _safe_uuid(payload.get("assessment_id"), "assessment_id")
+    if assessment_id is None:
+        raise ValueError("assessment_id is required for opportunity_memo_export jobs.")
+
+    assessment = await db.get(Assessment, assessment_id)
+    if assessment is None:
+        raise ValueError(f"Assessment {assessment_id} not found.")
+
+    artifact = await create_assessment_memo_artifact(
+        db,
+        assessment=assessment,
+        job_id=uuid.UUID(job_id),
+    )
+    serialized = serialize_artifact(artifact)
+    return {
+        "artifact_id": str(serialized["id"]),
+        "artifact_type": serialized["artifact_type"].value,
+        "filename": serialized["filename"],
+        "download_path": serialized["download_path"],
+        "content_type": serialized["content_type"],
+        "size_bytes": serialized["size_bytes"],
+        "created_at": serialized["created_at"].isoformat(),
+    }
+
+
 async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, payload: dict) -> dict:
     """Run the async simulation job and return JSON-safe result metadata."""
 
@@ -250,6 +284,8 @@ async def _execute_job(db: AsyncSession, *, job_id: str, job_type: str, payload:
 
     if job_type == JobType.session_summary_export.value:
         return await _execute_export_job(db, job_id=job_id, payload=payload)
+    if job_type == JobType.opportunity_memo_export.value:
+        return await _execute_opportunity_memo_job(db, job_id=job_id, payload=payload)
 
     return await _execute_circuit_job(db, job_id=job_id, job_type=job_type, payload=payload)
 
@@ -266,6 +302,7 @@ async def process_job_record(db: AsyncSession, job) -> None:
     job.status = JobStatus.running
     job.started_at = datetime.now(tz=timezone.utc)
     job.error_message = None
+    job.logs = [*(job.logs or []), "Worker started job."]
     await db.commit()
 
     try:
@@ -281,11 +318,23 @@ async def process_job_record(db: AsyncSession, job) -> None:
                 size_bytes=int(result.get("job_output_size", 0)),
             )
             db.add(artifact)
+            await db.flush()
+            job.result_artifact_id = artifact.id
+            result = {
+                **result,
+                "artifact_id": str(artifact.id),
+                "download_path": f"/api/v1/artifacts/{artifact.id}/download",
+            }
+            job.result = result
+        if result.get("artifact_id"):
+            job.result_artifact_id = uuid.UUID(str(result["artifact_id"]))
         job.status = JobStatus.completed
+        job.logs = [*(job.logs or []), "Worker completed job successfully."]
         logger.info("Job %s completed (%s)", job.id, job.job_type.value)
     except Exception as exc:
         job.status = JobStatus.failed
         job.error_message = str(exc)
+        job.logs = [*(job.logs or []), f"Worker failed: {exc}"]
         logger.exception("Job %s failed: %s", job.id, exc)
     finally:
         job.completed_at = datetime.now(tz=timezone.utc)

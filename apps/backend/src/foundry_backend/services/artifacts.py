@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from foundry_backend.core.config import settings
 from foundry_backend.models.models import (
     ArchitectureRecord,
+    Assessment,
     Artifact,
     ArtifactType,
     CircuitRun,
@@ -199,6 +200,46 @@ async def create_export_artifact(
     return artifact
 
 
+async def create_assessment_memo_artifact(
+    db: AsyncSession,
+    *,
+    assessment: Assessment,
+    job_id: uuid.UUID | None = None,
+) -> Artifact:
+    """Generate the primary Quantum Opportunity Memo export for an assessment."""
+
+    memo = assessment.exportable_memo or assessment.qals_output.get("exportable_memo", "")
+    if not memo:
+        raise ValueError("Assessment does not have an exportable memo.")
+
+    storage = get_storage_backend(
+        backend=settings.storage_backend,
+        artifact_dir=settings.artifact_dir,
+        gcs_bucket=settings.gcs_bucket,
+    )
+    filename = f"quantum_opportunity_memo_{assessment.id}.md"
+    content = memo.encode("utf-8")
+    storage_uri = await storage.save(
+        content=content,
+        filename=filename,
+        content_type="text/markdown",
+    )
+
+    artifact = Artifact(
+        job_id=job_id,
+        assessment_id=assessment.id,
+        artifact_type=ArtifactType.opportunity_memo,
+        filename=filename,
+        content_type="text/markdown",
+        storage_uri=storage_uri,
+        size_bytes=len(content),
+    )
+    db.add(artifact)
+    await db.commit()
+    await db.refresh(artifact)
+    return artifact
+
+
 def serialize_artifact(artifact: Artifact) -> dict[str, Any]:
     """Map an Artifact row into the API response contract."""
 
@@ -208,6 +249,7 @@ def serialize_artifact(artifact: Artifact) -> dict[str, Any]:
         "job_id": artifact.job_id,
         "circuit_run_id": artifact.circuit_run_id,
         "architecture_record_id": artifact.architecture_record_id,
+        "assessment_id": artifact.assessment_id,
         "filename": artifact.filename,
         "content_type": artifact.content_type,
         "storage_uri": artifact.storage_uri,

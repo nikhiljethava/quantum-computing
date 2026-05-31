@@ -18,7 +18,8 @@ export type JobType =
   | "grover"
   | "routing"
   | "chemistry"
-  | "session_summary_export";
+  | "session_summary_export"
+  | "opportunity_memo_export";
 export type JobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 export type ArtifactType =
   | "job_output"
@@ -26,13 +27,47 @@ export type ArtifactType =
   | "colab_notebook"
   | "assessment_json"
   | "architecture_json"
-  | "session_summary";
+  | "session_summary"
+  | "opportunity_memo";
 export type ProjectStatus = "draft" | "active" | "archived";
 export type AssessmentRecommendation =
   | "classical_now"
   | "hybrid_pilot_now"
   | "watchlist"
   | "research_only";
+export type ProblemClass =
+  | "QUANTUM_SIMULATION"
+  | "OPTIMIZATION"
+  | "SEARCH"
+  | "LINEAR_SYSTEMS"
+  | "CRYPTO_SECURITY"
+  | "QUANTUM_ML"
+  | "COMMUNICATION"
+  | "UNKNOWN";
+export type Verdict =
+  | "CLASSICAL_FIRST"
+  | "EDUCATION_ONLY"
+  | "BENCHMARK_FIRST"
+  | "SIMULATOR_PROTOTYPE_NOW"
+  | "RESEARCH_PARTNERSHIP"
+  | "FUTURE_FTQC"
+  | "PQC_MIGRATION_NOW";
+export type Confidence = "LOW" | "MEDIUM" | "HIGH";
+export type TimeHorizon =
+  | "NOW_CLASSICAL"
+  | "SIMULATOR_NOW"
+  | "NISQ_EXPLORATION"
+  | "HARDWARE_GATED"
+  | "FTQC_LATER";
+export type TrustLabel =
+  | "TUTORIAL"
+  | "TOY_SIMULATION"
+  | "BENCHMARK_CANDIDATE"
+  | "RESEARCH_CANDIDATE"
+  | "HARDWARE_GATED"
+  | "FTQC_LATER"
+  | "ACTION_NOW";
+export type BuildEligibility = "ELIGIBLE" | "LIMITED" | "BLOCKED" | "TUTORIAL_ONLY";
 
 export interface UseCaseBlueprint {
   persona: string;
@@ -87,10 +122,27 @@ export interface UseCaseList {
 }
 
 export interface AssessmentInputs {
-  problem_size: "small" | "medium" | "large" | "very_large";
-  data_structure: "unstructured" | "structured" | "quantum_native";
-  classical_hardness: "easy" | "medium" | "hard" | "intractable";
-  timeline: "now" | "1-2 years" | "2-3 years" | "5+ years";
+  industry?: string;
+  objective?: string;
+  problemClass?: ProblemClass;
+  problemDescription?: string;
+  businessValue?: string;
+  dataType?: string;
+  problemSize?: string;
+  constraints?: string;
+  accuracyNeeds?: string;
+  latencyTolerance?: string;
+  currentClassicalBaseline?: string;
+  baselineMetrics?: string;
+  currentSolverOrWorkflow?: string;
+  knownAlgorithmsConsidered?: string;
+  evidenceLinks?: string[];
+  userFilesOrNotes?: string;
+  securityCryptoInventory?: Record<string, unknown>;
+  problem_size?: "small" | "medium" | "large" | "very_large";
+  data_structure?: "unstructured" | "structured" | "quantum_native";
+  classical_hardness?: "easy" | "medium" | "hard" | "intractable";
+  timeline?: "now" | "1-2 years" | "2-3 years" | "5+ years";
 }
 
 export interface Assessment {
@@ -101,11 +153,84 @@ export interface Assessment {
   verdict: string;
   score_breakdown: Record<string, number>;
   recommendation: AssessmentRecommendation;
+  readiness_score: number;
+  confidence: Confidence;
+  time_horizon: TimeHorizon;
+  trust_labels: TrustLabel[];
+  problem_class: ProblemClass;
+  plain_english_recommendation: string;
+  classical_baseline_summary: string;
+  quantum_candidate_summary: string;
+  evidence_used: string[];
+  missing_evidence: string[];
+  assumptions: string[];
+  caveats: string[];
+  next_best_action: string;
+  build_eligibility: BuildEligibility;
+  recommended_experiment_type: string;
+  hardware_assumptions: string[];
+  exportable_memo: string;
   why_promising: string[];
   why_not_now: string[];
   top_blockers: string[];
   next_90_days: string[];
   created_at: string;
+}
+
+export interface ExperimentBundleCreate {
+  queue_simulation?: boolean;
+}
+
+export interface ResultTrustMetrics {
+  backend: "simulator" | "stub" | "hardware" | string;
+  number_of_qubits: number | null;
+  circuit_depth: number | null;
+  one_qubit_gate_count: number | null;
+  two_qubit_gate_count: number | null;
+  shots: number | null;
+  histogram: HistogramEntry[];
+  ideal_vs_noisy: string | null;
+  assumed_noise_model: string | null;
+  hardware_readiness_label: string;
+  caveats: string[];
+}
+
+export interface ExperimentBundle {
+  id: string;
+  assessment_id: string;
+  simulation_job_id: string | null;
+  title: string;
+  hypothesis: string;
+  classical_baseline: string;
+  quantum_candidate: string;
+  toy_implementation: Record<string, unknown>;
+  result_trust_metrics: ResultTrustMetrics;
+  limitations: string[];
+  next_evidence_required: string[];
+  gcp_map: {
+    title: string;
+    summary: string;
+    components: GcpComponent[];
+    connections: string[][];
+    notes: string[];
+    time_horizon?: string;
+    assumptions?: string[];
+  };
+  export_artifacts: Array<Record<string, unknown>>;
+  trust_labels: TrustLabel[];
+  created_at: string;
+}
+
+export interface MemoExport {
+  job: Job;
+  artifact: Artifact;
+}
+
+export interface SimulationJobCreate {
+  assessment_id?: string;
+  experiment_bundle_id?: string;
+  job_type: JobType;
+  payload?: Record<string, unknown>;
 }
 
 export interface JobCreate {
@@ -119,8 +244,11 @@ export interface Job {
   status: JobStatus;
   payload: Record<string, unknown>;
   result: Record<string, unknown> | null;
+  logs: string[];
+  result_artifact_id: string | null;
   error_message: string | null;
   created_at: string;
+  updated_at: string | null;
   started_at: string | null;
   completed_at: string | null;
 }
@@ -144,6 +272,7 @@ export interface AssessmentPreview {
   verdict: string;
   horizon: string;
   confidence: string;
+  trust_labels: TrustLabel[];
   explanation: string[];
   assumptions: string[];
   public_signals: string[];
@@ -234,7 +363,15 @@ export interface CircuitRun {
   simulator_warning: string | null;
   num_qubits: number | null;
   gate_count: number | null;
+  one_qubit_gate_count: number | null;
+  two_qubit_gate_count: number | null;
   circuit_depth: number | null;
+  shots: number | null;
+  ideal_vs_noisy: string | null;
+  assumed_noise_model: string | null;
+  hardware_readiness_label: string | null;
+  trust_labels: TrustLabel[];
+  result_caveats: string[];
   measurement_keys: string[];
   ideal_histogram: HistogramEntry[] | null;
   noisy_histogram: HistogramEntry[] | null;
@@ -281,6 +418,7 @@ export interface Artifact {
   job_id: string | null;
   circuit_run_id: string | null;
   architecture_record_id: string | null;
+  assessment_id: string | null;
   filename: string;
   content_type: string;
   storage_uri: string;

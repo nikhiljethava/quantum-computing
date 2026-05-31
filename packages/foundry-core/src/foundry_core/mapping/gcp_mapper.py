@@ -50,13 +50,19 @@ _COMPONENTS: dict[str, GcpComponent] = {
         id="cloud_run",
         name="Cloud Run",
         service="Cloud Run",
-        description="Serverless container host for the FastAPI backend.",
+        description="Serverless container host for the app and FastAPI assessment API.",
+    ),
+    "bigquery": GcpComponent(
+        id="bigquery",
+        name="BigQuery",
+        service="BigQuery",
+        description="Warehouse for structured benchmark data and baseline metrics.",
     ),
     "cloud_sql": GcpComponent(
         id="cloud_sql",
         name="Cloud SQL (PostgreSQL)",
         service="Cloud SQL",
-        description="Managed PostgreSQL instance for persistent state.",
+        description="Managed PostgreSQL instance for assessments, bundles, jobs, and state.",
     ),
     "cloud_tasks": GcpComponent(
         id="cloud_tasks",
@@ -68,7 +74,25 @@ _COMPONENTS: dict[str, GcpComponent] = {
         id="cloud_storage",
         name="Cloud Storage",
         service="Cloud Storage",
-        description="Object store for simulation artifacts and circuit exports.",
+        description="Object store for evidence files, simulation artifacts, and memo exports.",
+    ),
+    "classical_preprocessing": GcpComponent(
+        id="classical_preprocessing",
+        name="Classical Preprocessing",
+        service="Cloud Run",
+        description="Validates inputs, attaches the declared classical baseline, and prepares the benchmark instance.",
+    ),
+    "classical_postprocessing": GcpComponent(
+        id="classical_postprocessing",
+        name="Classical Post-Processing",
+        service="Cloud Run",
+        description="Compares simulator output with the baseline and packages caveats, evidence, and next actions.",
+    ),
+    "artifact_export": GcpComponent(
+        id="artifact_export",
+        name="Opportunity Memo Export",
+        service="Cloud Storage",
+        description="Stores the Quantum Opportunity Memo and experiment bundle artifacts.",
     ),
     "vertex_ai": GcpComponent(
         id="vertex_ai",
@@ -82,13 +106,18 @@ _COMPONENTS: dict[str, GcpComponent] = {
         service="Quantum Computing Service",
         description=HARDWARE_ACCESS_NOTE,
     ),
+    "hardware_gate": GcpComponent(
+        id="hardware_gate",
+        name="Optional Hardware Gate",
+        service="Access Control",
+        description="Hardware access-controlled branch; not part of the default simulator-first workflow.",
+    ),
     "circuit_runner": GcpComponent(
         id="circuit_runner",
-        name="Circuit Runner (Worker)",
+        name="Quantum Kernel / Simulation Worker",
         service="Cloud Run Jobs",
         description=(
-            "Async worker container that executes Cirq simulations; approved-access "
-            "hardware paths require explicit configuration."
+            "Python worker that executes Cirq/OpenFermion/qsim simulation or a clearly labeled stub."
         ),
     ),
     "frontend": GcpComponent(
@@ -109,9 +138,14 @@ BASE_CONNECTIONS: list[tuple[str, str]] = [
     ("frontend", "api_gateway"),
     ("api_gateway", "cloud_run"),
     ("cloud_run", "cloud_sql"),
+    ("cloud_storage", "classical_preprocessing"),
+    ("bigquery", "classical_preprocessing"),
+    ("classical_preprocessing", "cloud_tasks"),
     ("cloud_run", "cloud_tasks"),
     ("cloud_tasks", "circuit_runner"),
-    ("circuit_runner", "cloud_storage"),
+    ("circuit_runner", "classical_postprocessing"),
+    ("classical_postprocessing", "artifact_export"),
+    ("hardware_gate", "quantum_computing_service"),
 ]
 
 BASE_NOTES: list[str] = [
@@ -119,6 +153,7 @@ BASE_NOTES: list[str] = [
     "TODO(gcp-deploy): Set JOB_BACKEND=cloud_tasks and configure Cloud Tasks queue name.",
     HARDWARE_ACCESS_NOTE,
     "Simulation runs entirely on classical hardware (qsim or Cirq simulator) in this architecture.",
+    "The map keeps the classical/quantum split visible: data, preprocessing, simulation worker, post-processing, storage, and export/memo.",
 ]
 
 
@@ -140,8 +175,9 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
 
     # Always include the core services
     component_ids = {
-        "frontend", "api_gateway", "cloud_run", "cloud_sql",
-        "cloud_tasks", "circuit_runner", "cloud_storage",
+        "frontend", "api_gateway", "cloud_run", "cloud_sql", "bigquery",
+        "cloud_tasks", "circuit_runner", "cloud_storage", "classical_preprocessing",
+        "classical_postprocessing", "artifact_export", "hardware_gate",
     }
     connections = list(BASE_CONNECTIONS)
     notes = list(BASE_NOTES)
@@ -152,7 +188,8 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
         connections.append(("circuit_runner", "vertex_ai"))
         notes.append("Vertex AI added for classical co-processing and VQE optimization loops.")
 
-    # Add the approved-access hardware path only for strong-fit scenarios.
+    # Add the approved-access hardware service only for strong-fit scenarios.
+    # The access-control gate itself is always shown so users see the optional branch.
     if qals_score >= 0.75 or verdict == "Strong Quantum Fit":
         component_ids.add("quantum_computing_service")
         connections.append(("circuit_runner", "quantum_computing_service"))
@@ -175,7 +212,9 @@ def build_architecture_map(context: dict[str, Any]) -> ArchitectureMap:
     )
     summary = (
         f"A Cloud Run–hosted FastAPI backend offloads circuit simulations to an async "
-        f"Cloud Run Job worker via Cloud Tasks. Artifacts are stored in Cloud Storage. "
+        f"Cloud Run Job worker via Cloud Tasks. Data lands in Cloud Storage or BigQuery, "
+        f"classical preprocessing prepares the benchmark, the worker runs the quantum kernel "
+        f"or simulation stub, and classical post-processing exports the memo. "
         f"{'Vertex AI handles classical co-processing. ' if 'vertex_ai' in component_ids else ''}"
         f"{hardware_summary}"
     )

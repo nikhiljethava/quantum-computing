@@ -6,6 +6,8 @@ Quantum Foundry is an independent personal project and is not an official Google
 
 Use this plan before pushing a production-facing change or promoting a Cloud Run revision. It covers the main product loop: Learn -> Explore -> Assess -> Build -> Map -> Export -> Jobs.
 
+For the detailed enterprise readiness workflow cases, use [QALS 2.0 End-to-End Test Cases](./QALS_2_E2E_TEST_CASES.md). That matrix covers the new assessment-first guardrails, Experiment Bundle flow, Result Trust panel, hybrid map, and Quantum Opportunity Memo export.
+
 ### 1. Static And Unit Checks
 
 Run the local test suite first so implementation regressions are caught before browser or deployment work.

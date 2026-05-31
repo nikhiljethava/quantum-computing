@@ -4,7 +4,7 @@
 >
 > This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
 
-Quantum Foundry is a personal learning and prototyping app for exploring quantum computing concepts, simulating Cirq-based circuits, assessing possible industry use cases, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
+Quantum Foundry is a personal learning and prototyping app for triaging enterprise quantum opportunities, attaching every serious build artifact to a readiness assessment, simulating Cirq-based toy experiments, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
 
 Recommended GitHub repository description:
 
@@ -16,8 +16,8 @@ Quantum Foundry is an educational product scaffold that helps users:
 
 - Learn quantum concepts with visual explanations.
 - Explore industry use cases with business context and evidence.
-- Assess readiness with transparent heuristics.
-- Build and simulate Cirq-based circuit templates.
+- Assess readiness with QALS 2.0, a transparent rule/evidence engine.
+- Build Experiment Bundles only after assessment, while keeping tutorial circuits labeled tutorial-only.
 - Compare ideal and educational-noise simulation results.
 - Map hybrid workflows to Google Cloud architecture patterns.
 - Export educational artifacts such as Cirq code, JSON summaries, and Colab notebooks.
@@ -41,10 +41,10 @@ The intended journey is:
 
 1. **Learn** quantum concepts through structured lessons.
 2. **Explore** featured industry use cases before starting a blank workload form.
-3. **Assess** a use case with QALS-lite, a deterministic readiness heuristic.
-4. **Build** Cirq-based toy circuits and inspect simulation results.
-5. **Map** the workflow to Google Cloud architecture patterns.
-6. **Save and export** sessions, code, architecture JSON, and notebooks.
+3. **Assess** a use case with QALS 2.0, a deterministic readiness assessment.
+4. **Build** an Experiment Bundle with hypothesis, classical baseline, quantum candidate, toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports.
+5. **Map** the decision, experiment, and Google Cloud architecture patterns.
+6. **Save and export** sessions, code, architecture JSON, notebooks, and Quantum Opportunity Memos.
 
 ## Core Surfaces
 
@@ -108,6 +108,10 @@ infra              deployment skeletons
 Local development uses Docker Compose for PostgreSQL and service orchestration. Product records live in PostgreSQL. Exported artifacts use a storage abstraction so local storage can be swapped for Cloud Storage in deployment. Jobs use an abstraction so local worker processing can move toward Cloud Tasks and Cloud Run Jobs.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+For the QALS 2.0 rule engine, verdict meanings, trust labels, async job model,
+simulator-first guardrail, and extension guidance, see
+[docs/QALS_2_WORKBENCH.md](docs/QALS_2_WORKBENCH.md).
 
 ## Simulation and Hardware-Access Guardrails
 

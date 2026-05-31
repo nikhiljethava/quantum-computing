@@ -105,12 +105,20 @@ export function NavigationBar() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
           {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
             const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
+            const isAssess = href === "/assess";
             return (
               <Link
                 key={href}
                 href={href}
                 className={`nav-link${isActive ? " active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  borderColor: isAssess ? "rgba(45,212,191,0.45)" : undefined,
+                  background: isAssess ? "rgba(45,212,191,0.1)" : undefined,
+                  color: isAssess ? "#dffcf5" : undefined,
+                }}
               >
                 <Icon size={14} strokeWidth={2.5} />
                 <span

@@ -5,24 +5,24 @@ import { ArrowRight } from "lucide-react";
 import JobsClient from "./JobsClient";
 
 const description =
-  "Quantum Foundry is an independent personal project for learning quantum concepts, simulating Cirq-based circuits, exploring use cases, and mapping hybrid workflows to Google Cloud architecture patterns.";
+  "Quantum Foundry tracks assessment-backed experiment bundles, simulator-first jobs, opportunity memo exports, and hybrid Google Cloud architecture artifacts.";
 
 const jobCards = [
   {
-    title: "Simulation jobs",
-    copy: "Track simulation work that is delegated to a worker or job runner.",
-    cta: "Run a circuit",
+    title: "Experiment bundle jobs",
+    copy: "Track assessment-attached simulator-first bundle work with hypothesis, baseline, evidence, and trust labels.",
+    cta: "Assess opportunity",
+    href: "/assess",
+  },
+  {
+    title: "Simulation trust jobs",
+    copy: "Track toy simulation and benchmark candidate runs with backend, qubits, depth, shots, and caveats.",
+    cta: "Open Build",
     href: "/build",
   },
   {
-    title: "Artifact jobs",
-    copy: "Track exports such as Cirq code, assessment JSON, architecture JSON, and Colab notebooks.",
-    cta: "Open Cirq Lab",
-    href: "/build",
-  },
-  {
-    title: "Architecture jobs",
-    copy: "Track mapping or worker-generated architecture artifacts.",
+    title: "Opportunity memo jobs",
+    copy: "Track Quantum Opportunity Memo exports that preserve verdict, classical baseline, caveats, and next decision.",
     cta: "Map architecture",
     href: "/map",
   },
@@ -53,12 +53,11 @@ export default function JobsPage() {
               Jobs
             </h1>
             <p className="mt-4 text-xl font-semibold leading-8 text-slate-700">
-              Track longer-running simulation, export, and artifact workflows.
+              Track assessment-backed experiment, memo, and architecture workflows.
             </p>
             <p className="mt-4 text-sm leading-8 text-slate-600">
-              Jobs are intended for operations that may run outside the immediate page interaction,
-              such as artifact generation, longer simulations, worker-driven tasks, and export
-              workflows.
+              Jobs represent simulator-first runs and exports that keep the assessment hypothesis,
+              classical baseline, evidence, assumptions, time horizon, and visible trust labels attached.
             </p>
           </div>
 

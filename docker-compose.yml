@@ -55,6 +55,7 @@ services:
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-2}
     volumes:
       - ./apps/worker:/app
+      - ./apps/backend:/backend
       - ./packages/foundry-core:/foundry-core
       - artifact_store:/app/artifacts
     depends_on:

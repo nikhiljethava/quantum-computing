@@ -43,6 +43,11 @@ class JobType(str, enum.Enum):
     routing = "routing"
     chemistry = "chemistry"
     session_summary_export = "session_summary_export"
+    opportunity_memo_export = "opportunity_memo_export"
+
+
+def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
+    return [member.value for member in enum_cls]
 
 
 class ArtifactType(str, enum.Enum):
@@ -52,6 +57,7 @@ class ArtifactType(str, enum.Enum):
     assessment_json = "assessment_json"
     architecture_json = "architecture_json"
     session_summary = "session_summary"
+    opportunity_memo = "opportunity_memo"
 
 
 class Project(Base):
@@ -141,8 +147,8 @@ class Session(Base):
 
 class Assessment(Base):
     """
-    Records a user's QALS-lite self-assessment for a given use case.
-    QALS = Quantum Applicability and Likelihood Score (local heuristic only).
+    Records a user's QALS readiness assessment for a given use case.
+    QALS = Quantum Applicability and Likelihood Score (local rule/evidence engine only).
     """
 
     __tablename__ = "assessments"
@@ -155,14 +161,59 @@ class Assessment(Base):
     qals_score: Mapped[float] = mapped_column(Float, nullable=False)
     verdict: Mapped[str] = mapped_column(String(50), nullable=False)
     score_breakdown: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    problem_class: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    readiness_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confidence: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    time_horizon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    trust_labels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    qals_output: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    build_eligibility: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    exportable_memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     use_case: Mapped["UseCase"] = relationship("UseCase", back_populates="assessments")
+    experiment_bundles: Mapped[list["ExperimentBundle"]] = relationship(
+        "ExperimentBundle", back_populates="assessment", cascade="all, delete-orphan"
+    )
     architecture_records: Mapped[list["ArchitectureRecord"]] = relationship(
         "ArchitectureRecord", back_populates="assessment"
     )
+
+
+class ExperimentBundle(Base):
+    """
+    A serious Build artifact anchored to an assessment hypothesis, classical baseline,
+    time horizon, evidence, and trust labels.
+    """
+
+    __tablename__ = "experiment_bundles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False, index=True
+    )
+    simulation_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    hypothesis: Mapped[str] = mapped_column(Text, nullable=False)
+    classical_baseline: Mapped[str] = mapped_column(Text, nullable=False)
+    quantum_candidate: Mapped[str] = mapped_column(Text, nullable=False)
+    toy_implementation: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    result_trust_metrics: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    limitations: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    next_evidence_required: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    gcp_map: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    export_artifacts: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    trust_labels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    assessment: Mapped["Assessment"] = relationship("Assessment", back_populates="experiment_bundles")
+    simulation_job: Mapped["Job | None"] = relationship("Job")
 
 
 class Job(Base):
@@ -177,13 +228,21 @@ class Job(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_type: Mapped[JobType] = mapped_column(Enum(JobType), nullable=False, index=True)
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus), nullable=False, default=JobStatus.pending, index=True
+        Enum(JobStatus, values_callable=_enum_values),
+        nullable=False,
+        default=JobStatus.pending,
+        index=True,
     )
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    logs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    result_artifact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -281,6 +340,9 @@ class Artifact(Base):
     architecture_record_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("architecture_records.id"), nullable=True, index=True
     )
+    assessment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=True, index=True
+    )
     artifact_type: Mapped[ArtifactType] = mapped_column(
         Enum(ArtifactType), nullable=False, default=ArtifactType.job_output, index=True
     )
@@ -297,6 +359,7 @@ class Artifact(Base):
     architecture_record: Mapped["ArchitectureRecord | None"] = relationship(
         "ArchitectureRecord", back_populates="artifacts"
     )
+    assessment: Mapped["Assessment | None"] = relationship("Assessment")
 
 
 class PageUsage(Base):

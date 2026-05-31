@@ -183,6 +183,16 @@ def _preview_confidence(score: float) -> str:
     return "Lower confidence"
 
 
+def _trust_labels_for_template(template_key: JobType) -> list[str]:
+    if template_key in {JobType.coin_flip, JobType.bell_state, JobType.grover}:
+        return ["TUTORIAL", "TOY_SIMULATION"]
+    if template_key == JobType.routing:
+        return ["TOY_SIMULATION", "BENCHMARK_CANDIDATE"]
+    if template_key == JobType.chemistry:
+        return ["TOY_SIMULATION", "RESEARCH_CANDIDATE", "HARDWARE_GATED"]
+    return ["TUTORIAL"]
+
+
 def build_assessment_preview(template_key: JobType, use_case: UseCase | None) -> dict[str, Any]:
     """Generate a deterministic assessment preview for the Hybrid Lab."""
 
@@ -204,10 +214,11 @@ def build_assessment_preview(template_key: JobType, use_case: UseCase | None) ->
         "verdict": qals_result.verdict,
         "horizon": _preview_horizon(qals_result.score),
         "confidence": _preview_confidence(qals_result.score),
+        "trust_labels": _trust_labels_for_template(template_key),
         "explanation": [
             first_line,
             "The recommendation stays honest about simulation-first constraints and missing evidence.",
-            "The best next step is a hybrid prototype path, not a claim of direct quantum advantage.",
+            "The best next step is a readiness assessment with a declared classical baseline, not a claim of direct quantum advantage.",
         ],
         "assumptions": list(template["assumptions"]),
         "public_signals": list(template["public_signals"]),
@@ -309,7 +320,10 @@ async def create_circuit_run(
             "simulator_warning": simulator_warning,
             "num_qubits": circuit_metrics["num_qubits"],
             "gate_count": circuit_metrics["gate_count"],
+            "one_qubit_gate_count": circuit_metrics["one_qubit_gate_count"],
+            "two_qubit_gate_count": circuit_metrics["two_qubit_gate_count"],
             "circuit_depth": circuit_metrics["circuit_depth"],
+            "shots": resolved_repetitions,
             "measurement_keys": circuit_metrics["measurement_keys"],
             "ideal_histogram": ideal_histogram_entries,
             "noisy_histogram": noisy_histogram_entries,
@@ -317,6 +331,15 @@ async def create_circuit_run(
             "noise_enabled": noise_enabled,
             "noise_level": noise_level,
             "noise_note": NOISE_METADATA_NOTE if noise_enabled else None,
+            "ideal_vs_noisy": "ideal+noisy" if noise_enabled else "ideal",
+            "assumed_noise_model": NOISE_METADATA_NOTE if noise_enabled else None,
+            "hardware_readiness_label": "hardware access-controlled",
+            "trust_labels": _trust_labels_for_template(template_key),
+            "result_caveats": [
+                "This is a simulation trust panel, not hardware characterization.",
+                "Real hardware results may differ because topology, calibration, and noise are not represented by default.",
+                "Toy simulation output does not imply production advantage.",
+            ],
         },
         assessment_preview=assessment_preview,
     )
@@ -349,7 +372,15 @@ def serialize_circuit_run(run: CircuitRun) -> dict[str, Any]:
         "simulator_warning": metadata.get("simulator_warning"),
         "num_qubits": metadata.get("num_qubits"),
         "gate_count": metadata.get("gate_count"),
+        "one_qubit_gate_count": metadata.get("one_qubit_gate_count"),
+        "two_qubit_gate_count": metadata.get("two_qubit_gate_count"),
         "circuit_depth": metadata.get("circuit_depth"),
+        "shots": metadata.get("shots"),
+        "ideal_vs_noisy": metadata.get("ideal_vs_noisy"),
+        "assumed_noise_model": metadata.get("assumed_noise_model"),
+        "hardware_readiness_label": metadata.get("hardware_readiness_label", "hardware access-controlled"),
+        "trust_labels": metadata.get("trust_labels", _trust_labels_for_template(run.template_key)),
+        "result_caveats": metadata.get("result_caveats", []),
         "measurement_keys": metadata.get("measurement_keys", []),
         "ideal_histogram": metadata.get("ideal_histogram", run.histogram),
         "noisy_histogram": metadata.get("noisy_histogram"),

@@ -58,11 +58,11 @@ const CONCEPTS = [
 // ── Journey steps ──────────────────────────────────────────────────────────
 
 const JOURNEY = [
-  { step: "01", icon: BookOpen, label: "Learn", desc: "Grasp the core quantum concepts", href: "/", active: true },
-  { step: "02", icon: Globe, label: "Explore", desc: "Discover industry use cases", href: "/explore" },
-  { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Score credible readiness", href: "/assess" },
-  { step: "04", icon: FlaskConical, label: "Build", desc: "Simulate real quantum circuits", href: "/build" },
-  { step: "05", icon: Map, label: "Map", desc: "Visualize your cloud architecture", href: "/map" },
+  { step: "01", icon: BookOpen, label: "Learn", desc: "Understand the readiness assessment", href: "/learn" },
+  { step: "02", icon: Globe, label: "Explore", desc: "Pick a problem shape", href: "/explore" },
+  { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Generate the evidence-backed verdict", href: "/assess", active: true },
+  { step: "04", icon: FlaskConical, label: "Build", desc: "Create an Experiment Bundle", href: "/build" },
+  { step: "05", icon: Map, label: "Map", desc: "Export decision and architecture", href: "/map" },
 ];
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -80,22 +80,6 @@ export default function HomePage() {
           position: "relative",
         }}
       >
-        {/* Glow orb */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: "10%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "600px",
-            height: "600px",
-            background:
-              "radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
-
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -118,7 +102,7 @@ export default function HomePage() {
             }}
           >
             <Atom size={13} />
-            Quantum Foundry · Independent Simulation Lab
+            Quantum Foundry · Opportunity Triage Workbench
           </div>
 
           <h1
@@ -129,8 +113,7 @@ export default function HomePage() {
               lineHeight: 1.05,
             }}
           >
-            Quantum Computing,{" "}
-            <span className="gradient-text">Demystified</span>
+            Quantum Opportunity Triage
           </h1>
 
           <p
@@ -142,20 +125,19 @@ export default function HomePage() {
               lineHeight: 1.7,
             }}
           >
-            Quantum Foundry is an independent personal project for learning quantum concepts,
-            exploring industry use cases, simulating Cirq-based circuits, and mapping hybrid
-            workflows to Google Cloud architecture patterns.
+            Assess enterprise quantum opportunities with a declared classical baseline,
+            time horizon, evidence, assumptions, and visible trust labels before creating an Experiment Bundle.
           </p>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/learn" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
-              <BookOpen size={16} /> Open Academy
+            <Link href="/assess" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
+              <SlidersHorizontal size={16} /> Assess a quantum opportunity
             </Link>
             <Link href="/explore" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
-              Explore Use Cases <ArrowRight size={16} />
+              Explore examples <ArrowRight size={16} />
             </Link>
-            <Link href="/build" className="btn-ghost" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
-              <Zap size={16} /> Run a Circuit
+            <Link href="/learn" className="btn-ghost" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
+              <BookOpen size={16} /> Learn the basics
             </Link>
           </div>
         </motion.div>

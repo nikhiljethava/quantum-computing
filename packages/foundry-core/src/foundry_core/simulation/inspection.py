@@ -59,9 +59,22 @@ def _histogram_from_result(result: cirq.Result, key: str) -> dict[str, int]:
 def inspect_circuit(circuit: cirq.Circuit) -> dict[str, Any]:
     """Return basic circuit metrics for compact UI rendering."""
 
+    one_qubit_gate_count = 0
+    two_qubit_gate_count = 0
+    for operation in circuit.all_operations():
+        if cirq.is_measurement(operation):
+            continue
+        arity = len(operation.qubits)
+        if arity == 1:
+            one_qubit_gate_count += 1
+        elif arity == 2:
+            two_qubit_gate_count += 1
+
     return {
         "num_qubits": len(circuit.all_qubits()),
         "gate_count": sum(1 for _ in circuit.all_operations()),
+        "one_qubit_gate_count": one_qubit_gate_count,
+        "two_qubit_gate_count": two_qubit_gate_count,
         "circuit_depth": len(circuit),
         "measurement_keys": _measurement_keys(circuit),
     }

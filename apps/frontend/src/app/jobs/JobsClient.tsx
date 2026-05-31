@@ -72,21 +72,30 @@ function readNumber(record: Record<string, unknown> | null | undefined, key: str
 }
 
 function formatJobType(jobType: JobType) {
+  if (jobType === "opportunity_memo_export") {
+    return {
+      label: "Quantum Opportunity Memo export",
+      badge: "Opportunity memo",
+      description:
+        "Packages the evidence-backed verdict, classical baseline, trust labels, caveats, GCP architecture, and next decision into an exportable memo.",
+    };
+  }
+
   if (jobType === "session_summary_export") {
     return {
       label: "Session summary export",
       badge: "Background export",
       description:
-        "Packages the latest run, architecture narrative, and readiness framing into a reusable markdown brief.",
+        "Packages the latest workspace run, architecture narrative, and readiness framing into a reusable markdown brief.",
     };
   }
 
   const starter = getStarterStory(jobType);
   return {
-    label: starter.label,
-    badge: starter.badge,
+    label: `${starter.label} experiment bundle`,
+    badge: "Simulator-first bundle",
     description:
-      "Persists a simulator-backed circuit run, then attaches a hybrid Google Cloud architecture snapshot for the workspace.",
+      "Persists a simulator-backed toy implementation with result trust metrics and a hybrid Google Cloud architecture snapshot.",
   };
 }
 
@@ -136,6 +145,13 @@ function buildJobWorkspaceHref(job: Job) {
 
   const sessionId = readString(result, "session_id") ?? readString(payload, "session_id");
   const useCaseId = readString(result, "use_case_id") ?? readString(payload, "use_case_id");
+  const assessmentId = readString(result, "assessment_id") ?? readString(payload, "assessment_id");
+  const bundleId =
+    readString(result, "experiment_bundle_id") ?? readString(payload, "experiment_bundle_id");
+
+  if (job.job_type === "opportunity_memo_export") {
+    return assessmentId ? `/map?assessment_id=${assessmentId}` : "/map";
+  }
 
   if (job.job_type === "session_summary_export") {
     return sessionId ? `/build?session_id=${sessionId}` : null;
@@ -145,6 +161,8 @@ function buildJobWorkspaceHref(job: Job) {
   params.set("starter", normalizeStarterKey(job.job_type));
   if (sessionId) params.set("session_id", sessionId);
   if (useCaseId) params.set("use_case_id", useCaseId);
+  if (assessmentId) params.set("assessment_id", assessmentId);
+  if (bundleId) params.set("bundle_id", bundleId);
   return `/build?${params.toString()}`;
 }
 
@@ -158,12 +176,19 @@ function buildSessionLibraryHref(job: Job) {
 
 function buildArtifactHref(job: Job) {
   const result = isRecord(job.result) ? job.result : null;
-  const artifactId = readString(result, "artifact_id");
+  const artifactId = readString(result, "artifact_id") ?? job.result_artifact_id;
   return artifactId ? getArtifactDownloadUrl(artifactId) : null;
 }
 
 function buildSummary(job: Job) {
   const meta = formatJobType(job.job_type);
+  if (job.job_type === "opportunity_memo_export") {
+    if (job.status === "PENDING") return "Queued to export a Quantum Opportunity Memo from the attached readiness assessment.";
+    if (job.status === "RUNNING") return "The worker is packaging the verdict, baseline, assumptions, caveats, and GCP architecture.";
+    if (job.status === "COMPLETED") return "The opportunity memo export completed and is available as a downloadable artifact.";
+    return "The opportunity memo export failed before the artifact could be attached.";
+  }
+
   if (job.job_type === "session_summary_export") {
     if (job.status === "PENDING") return "Queued to package a markdown session brief for the current workspace.";
     if (job.status === "RUNNING") return "The worker is assembling a summary bundle and attaching it to session history.";
@@ -171,10 +196,10 @@ function buildSummary(job: Job) {
     return "The export failed before the markdown brief could be attached to the workspace.";
   }
 
-  if (job.status === "PENDING") return `${meta.label} is queued for background simulation and persistence.`;
-  if (job.status === "RUNNING") return `${meta.label} is running on the worker and will rehydrate the Build workspace when complete.`;
-  if (job.status === "COMPLETED") return `${meta.label} finished successfully with a persisted circuit run and architecture snapshot.`;
-  return `${meta.label} failed before the worker could save the prototype outputs.`;
+  if (job.status === "PENDING") return `${meta.label} is queued for simulator-first execution with assessment context.`;
+  if (job.status === "RUNNING") return `${meta.label} is running on the worker and will attach result trust metrics when complete.`;
+  if (job.status === "COMPLETED") return `${meta.label} finished with a persisted toy implementation and architecture snapshot.`;
+  return `${meta.label} failed before the worker could save the experiment bundle outputs.`;
 }
 
 function buildPayloadRows(job: Job) {
@@ -187,6 +212,8 @@ function buildPayloadRows(job: Job) {
   const useCaseId = readString(payload, "use_case_id");
   const circuitRunId = readString(payload, "circuit_run_id");
   const architectureRecordId = readString(payload, "architecture_record_id");
+  const assessmentId = readString(payload, "assessment_id");
+  const bundleId = readString(payload, "experiment_bundle_id");
   const repetitions = readNumber(payload, "repetitions");
   const numQubits = readNumber(payload, "num_qubits");
   const numCities = readNumber(payload, "num_cities");
@@ -197,6 +224,8 @@ function buildPayloadRows(job: Job) {
   if (useCaseId) rows.push(["Use case", useCaseId]);
   if (circuitRunId) rows.push(["Circuit run", circuitRunId]);
   if (architectureRecordId) rows.push(["Architecture", architectureRecordId]);
+  if (assessmentId) rows.push(["Assessment", assessmentId]);
+  if (bundleId) rows.push(["Experiment bundle", bundleId]);
   if (repetitions !== null) rows.push(["Repetitions", String(repetitions)]);
   if (numQubits !== null) rows.push(["Num qubits", String(numQubits)]);
   if (numCities !== null) rows.push(["Num cities", String(numCities)]);
@@ -214,6 +243,8 @@ function buildResultRows(job: Job) {
   const sessionId = readString(result, "session_id");
   const useCaseId = readString(result, "use_case_id");
   const artifactId = readString(result, "artifact_id");
+  const assessmentId = readString(result, "assessment_id");
+  const bundleId = readString(result, "experiment_bundle_id");
   const filename = readString(result, "filename");
   const contentType = readString(result, "content_type");
   const sizeBytes = readNumber(result, "size_bytes");
@@ -225,7 +256,10 @@ function buildResultRows(job: Job) {
   if (architectureId) rows.push(["Architecture", architectureId]);
   if (sessionId) rows.push(["Session", sessionId]);
   if (useCaseId) rows.push(["Use case", useCaseId]);
+  if (assessmentId) rows.push(["Assessment", assessmentId]);
+  if (bundleId) rows.push(["Experiment bundle", bundleId]);
   if (artifactId) rows.push(["Artifact", artifactId]);
+  if (!artifactId && job.result_artifact_id) rows.push(["Artifact", job.result_artifact_id]);
   if (filename) rows.push(["Filename", filename]);
   if (contentType) rows.push(["Content type", contentType]);
   if (sizeBytes !== null) rows.push(["Artifact size", `${sizeBytes.toLocaleString()} bytes`]);
@@ -316,7 +350,7 @@ function JobListCard({
           })
         ) : (
           <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-            No jobs match this filter yet. Queue a background run or a session summary export from the Hybrid Lab.
+            No jobs match this filter yet. Start with a readiness assessment, then create an Experiment Bundle or export an opportunity memo.
           </div>
         )}
       </div>
@@ -369,7 +403,7 @@ function JobDetailPanel({ job }: { job: Job }) {
                 href={workspaceHref}
                 className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
               >
-                Open in Hybrid Lab
+                Open in workbench
                 <ArrowRight className="h-4 w-4" />
               </Link>
             ) : null}
@@ -495,8 +529,8 @@ function JobDetailPanel({ job }: { job: Job }) {
             </div>
             <div className="space-y-3 text-sm leading-7 text-slate-600">
               <p>Jobs make the product feel persistent instead of request-and-forget.</p>
-              <p>Background runs keep the Hybrid Lab responsive while the worker saves real artifacts and architecture state.</p>
-              <p>Exports stay attached to the same product record, which makes follow-up demos and reviews easier.</p>
+              <p>Background runs keep experiment bundles responsive while the worker saves trust metrics and architecture state.</p>
+              <p>Exports stay attached to the same assessment record, which makes follow-up reviews defensible.</p>
             </div>
           </div>
         </div>
@@ -515,14 +549,14 @@ function EmptyJobState() {
         No background work yet
       </h2>
       <p className="mx-auto mt-3 max-w-[560px] text-sm leading-7 text-slate-600">
-        Queue a worker-backed circuit run or a session summary export from the Hybrid Lab to start building an activity trail here.
+        Create a readiness assessment, then queue an assessment-backed Experiment Bundle or Quantum Opportunity Memo export to start building an activity trail here.
       </p>
       <div className="mt-6">
         <Link
-          href="/build"
+          href="/assess"
           className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
         >
-          Open Hybrid Lab
+          Assess opportunity
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -633,19 +667,19 @@ function JobsPageContent() {
               </span>
             </div>
             <h1 className="text-[clamp(2.15rem,4vw,3.35rem)] font-black tracking-[-0.05em] text-slate-900">
-              Track background runs and export jobs
+              Track experiment bundles and memo exports
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
-              One place to see what the worker is doing, what has already completed, and which jobs produced persisted runs or downloadable artifacts.
+              One place to see worker activity for simulator-first runs, opportunity memos, trust metrics, and downloadable artifacts.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/build"
+              href="/assess"
               className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
             >
-              Queue new work
+              Assess opportunity
               <ArrowRight className="h-4 w-4" />
             </Link>
             {activeJobLink ? (
@@ -682,7 +716,7 @@ function JobsPageContent() {
         <div className="grid gap-5 xl:grid-cols-[220px_360px_minmax(0,1fr)]">
           <WorkspaceRail
             active="jobs"
-            tip="Use this page to watch worker-backed runs, export packaging, and persisted background outcomes without leaving the product."
+            tip="Use this page to watch worker-backed bundles, memo exports, and persisted outcomes without losing the assessment context."
           />
 
           <JobListCard
