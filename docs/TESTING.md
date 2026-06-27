@@ -6,7 +6,7 @@ Quantum Foundry is an independent personal project and is not an official Google
 
 Use this plan before pushing a production-facing change or promoting a Cloud Run revision. It covers the main product loop: Learn -> Explore -> Assess -> Build -> Map -> Export -> Jobs.
 
-For the detailed enterprise readiness workflow cases, use [QALS 2.0 End-to-End Test Cases](./QALS_2_E2E_TEST_CASES.md). That matrix covers the new assessment-first guardrails, Experiment Bundle flow, Result Trust panel, hybrid map, and Quantum Opportunity Memo export.
+For the detailed Algorithm Contract workflow cases, use [QALS 3.0 End-to-End Test Cases](./QALS_3_E2E_TEST_CASES.md). That matrix covers assessment-first guardrails, Algorithm Contract creation, Algorithm Experiment Bundle flow, Result Trust panel, hybrid map, Quantum Algorithm Brief export, and PQC Migration Memo export.
 
 ### 1. Static And Unit Checks
 
@@ -24,11 +24,12 @@ With the local frontend and backend running, verify the API contract used by pub
 | Area | Endpoint or route | Expected result |
 | --- | --- | --- |
 | Backend health | `GET /health` | `200` with backend service status |
-| Catalog | `GET /api/v1/use-cases` | seeded use cases and 3 featured records |
-| Featured catalog | `GET /api/v1/use-cases?featured_only=true` | exactly the featured landing use cases |
+| Catalog | `GET /api/v1/use-cases` | seeded use cases and featured Algorithm Contract examples |
+| Featured catalog | `GET /api/v1/use-cases?featured_only=true` | battery/materials, logistics, PQC readiness, and Grover/oracle scoping examples |
 | Circuit templates | `GET /api/v1/circuits/templates` | starter templates for coin flip, Bell, Grover, routing, chemistry |
 | Circuit run | `POST /api/v1/circuits/run` | histogram, Cirq code, metrics, state preview when applicable |
-| Assessment | `POST /api/v1/assessments` | recommendation, blockers, next 90 days, and backward-compatible score |
+| Assessment | `POST /api/v1/assessments` | verdict, Algorithm Contract fields, missing inputs, trust labels, and secondary score |
+| Contract | `POST /api/v1/assessments/{id}/contracts` | persisted Algorithm Contract with validity and build eligibility |
 | Architecture map | `POST /api/v1/architectures` | Google Cloud architecture graph payload |
 | Guide | `POST /api/v1/guide/ask` | deterministic local answer, citations, and next action |
 | Usage analytics | `GET /api/v1/usage?page_path=/jobs` | last-30-day visits summary, even when zero |
@@ -39,9 +40,9 @@ Exercise these pages manually or with a browser automation harness once one is a
 
 1. Open `/` and confirm the independent-project notice is visible without scrolling.
 2. Open `/learn`, start the Beginner path, complete one quiz, and confirm local progress is shown.
-3. Open `/explore` and confirm the default view highlights exactly 3 flagship use cases.
+3. Open `/explore` and confirm the default view highlights the V1 flagship lanes and algorithm-pattern cards.
 4. Open `/use-cases/portfolio-optimization` and confirm evidence cards, Google Cloud architecture notes, and hardware-access disclaimer render.
-5. Open `/assess?starter=routing` or select a use case from Explore, run QALS-lite, and confirm the recommendation is visually primary.
+5. Open `/assess?starter=routing` or select a use case from Explore, run QALS 3.0, and confirm the verdict and contract are visually primary over the score.
 6. Open `/build?starter=bell_state&lesson=entanglement`, run a circuit, and verify metrics, histogram, state preview, Cirq code, and lab controls.
 7. Enable noise mode on Build and verify ideal/noisy comparison appears with the educational approximation copy.
 8. Export Cirq code and Colab notebook from Build and confirm artifacts download.

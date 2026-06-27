@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const LEGACY_HOSTS = new Set([
-  "quantum-foundry-frontend-271301686744.us-central1.run.app",
-]);
+const LEGACY_HOSTS = new Set(
+  (process.env.NEXT_PUBLIC_LEGACY_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean),
+);
 
-const CANONICAL_HOST = "quantum-foundry-frontend-w24p6g25aq-uc.a.run.app";
+const CANONICAL_HOST = process.env.NEXT_PUBLIC_CANONICAL_HOST?.trim().toLowerCase() ?? "";
 
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.toLowerCase();
-  if (!host || !LEGACY_HOSTS.has(host)) {
+  if (!CANONICAL_HOST || !host || !LEGACY_HOSTS.has(host)) {
     return NextResponse.next();
   }
 
@@ -17,4 +20,3 @@ export function proxy(request: NextRequest) {
   url.host = CANONICAL_HOST;
   return NextResponse.redirect(url, 308);
 }
-

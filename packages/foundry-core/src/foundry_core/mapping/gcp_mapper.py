@@ -90,9 +90,9 @@ _COMPONENTS: dict[str, GcpComponent] = {
     ),
     "artifact_export": GcpComponent(
         id="artifact_export",
-        name="Opportunity Memo Export",
+        name="Algorithm Brief Export",
         service="Cloud Storage",
-        description="Stores the Quantum Opportunity Memo and experiment bundle artifacts.",
+        description="Stores the Quantum Algorithm Brief, PQC Migration Memo, and experiment bundle artifacts.",
     ),
     "vertex_ai": GcpComponent(
         id="vertex_ai",

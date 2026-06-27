@@ -5,7 +5,7 @@ import { USE_CASE_PAGES } from "@/content/use-case-pages";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://quantum-foundry-frontend-271301686744.us-central1.run.app";
+  "http://localhost:3000";
 
 function absolute(path: string) {
   return new URL(path, SITE_URL).toString();

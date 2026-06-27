@@ -4,7 +4,7 @@
 >
 > This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
 
-Quantum Foundry is a personal learning and prototyping app for triaging enterprise quantum opportunities, attaching every serious build artifact to a readiness assessment, simulating Cirq-based toy experiments, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
+Quantum Foundry is a personal learning and prototyping app for turning enterprise quantum ideas into Algorithm Contracts, attaching every serious build artifact to an evidence-backed assessment, simulating Cirq-based toy experiments, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
 
 Recommended GitHub repository description:
 
@@ -16,8 +16,8 @@ Quantum Foundry is an educational product scaffold that helps users:
 
 - Learn quantum concepts with visual explanations.
 - Explore industry use cases with business context and evidence.
-- Assess readiness with QALS 2.0, a transparent rule/evidence engine.
-- Build Experiment Bundles only after assessment, while keeping tutorial circuits labeled tutorial-only.
+- Assess readiness with QALS 3.0, a transparent Algorithm Contract rule/evidence engine.
+- Build Algorithm Experiment Bundles only after assessment and contract creation, while keeping tutorial circuits labeled tutorial-only.
 - Compare ideal and educational-noise simulation results.
 - Map hybrid workflows to Google Cloud architecture patterns.
 - Export educational artifacts such as Cirq code, JSON summaries, and Colab notebooks.
@@ -41,17 +41,17 @@ The intended journey is:
 
 1. **Learn** quantum concepts through structured lessons.
 2. **Explore** featured industry use cases before starting a blank workload form.
-3. **Assess** a use case with QALS 2.0, a deterministic readiness assessment.
-4. **Build** an Experiment Bundle with hypothesis, classical baseline, quantum candidate, toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports.
+3. **Assess** a use case with QALS 3.0, a deterministic Algorithm Contract assessment.
+4. **Build** an Algorithm Experiment Bundle with hypothesis, classical baseline, algorithm candidate, toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports.
 5. **Map** the decision, experiment, and Google Cloud architecture patterns.
-6. **Save and export** sessions, code, architecture JSON, notebooks, and Quantum Opportunity Memos.
+6. **Save and export** sessions, code, architecture JSON, notebooks, Quantum Algorithm Briefs, and PQC Migration Memos.
 
 ## Core Surfaces
 
 - `/` introduces the product and visible independent-project disclaimer.
 - `/learn` contains structured learning paths.
 - `/explore` highlights flagship use cases and keeps the catalog accessible.
-- `/assess` turns readiness scoring into a recommendation and next steps.
+- `/assess` turns readiness scoring into an Algorithm Contract, verdict, and next steps.
 - `/build` is the Cirq Lab for circuit templates, metrics, histograms, state preview, optional qsim fallback, and exports.
 - `/map` shows a simulator-first Google Cloud architecture map.
 - `/use-cases/[slug]` provides public, shareable use-case pages.
@@ -109,14 +109,14 @@ Local development uses Docker Compose for PostgreSQL and service orchestration. 
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-For the QALS 2.0 rule engine, verdict meanings, trust labels, async job model,
+For the QALS 3.0 rule engine, verdict meanings, trust labels, async job model,
 simulator-first guardrail, and extension guidance, see
 [docs/QALS_2_WORKBENCH.md](docs/QALS_2_WORKBENCH.md).
 
 ## Simulation and Hardware-Access Guardrails
 
 - Simulation-first by default.
-- QALS-lite is a readiness heuristic, not a scientific proof.
+- QALS 3.0 is a deterministic Algorithm Contract heuristic, not a scientific proof or ML score.
 - Circuit results are educational unless otherwise stated.
 - Noise comparison is an educational approximation unless explicitly configured with a calibrated model.
 - Google quantum hardware access is restricted to approved groups. Quantum Foundry is simulation-first unless approved access is configured.

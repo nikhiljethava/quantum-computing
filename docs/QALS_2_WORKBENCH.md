@@ -1,22 +1,23 @@
-# QALS 2.0 Opportunity Workbench
+# QALS 3.0 Algorithm Contract Workbench
 
-Quantum Foundry now centers the journey on a readiness assessment before Build.
-No serious quantum build artifact should be generated unless it is attached to an
-assessment hypothesis, a declared classical baseline, a time horizon,
-evidence or assumptions, and visible trust labels.
+Quantum Foundry centers the journey on a readiness assessment and Algorithm
+Contract before Build. No serious quantum build artifact should be generated
+unless it is attached to an assessment hypothesis, a declared classical
+baseline, a time horizon, evidence or assumptions, and visible trust labels.
 
 ## Rule Engine
 
-QALS 2.0 lives in `packages/foundry-core/src/foundry_core/assessment/qals.py`.
-It is a deterministic rule/evidence engine, not ML scoring. The readiness score
-is secondary to the verdict, confidence, time horizon, evidence, missing
-evidence, assumptions, caveats, next action, build eligibility, and trust labels.
+QALS 3.0 lives in `packages/foundry-core/src/foundry_core/assessment/qals.py`.
+It is a deterministic Algorithm Contract rule/evidence engine, not ML scoring.
+The readiness score is secondary to verdict, confidence, time horizon, contract
+validity, mathematical reduction, evidence, missing evidence, assumptions,
+caveats, next action, build eligibility, and trust labels.
 
 Missing classical baseline guardrail:
 
 - verdict becomes `BENCHMARK_FIRST` unless the workflow is tutorial-only or PQC migration-now
 - confidence becomes `LOW`
-- build eligibility becomes `LIMITED`
+- build eligibility becomes `LIMITED_TUTORIAL_ONLY`
 - missing evidence includes `current classical baseline`
 - readiness score is capped at 40
 
@@ -29,19 +30,46 @@ Missing classical baseline guardrail:
 - `RESEARCH_PARTNERSHIP`: credible research track with scoped evidence needs.
 - `FUTURE_FTQC`: fault-tolerant hardware is the meaningful horizon.
 - `PQC_MIGRATION_NOW`: action-now crypto inventory and migration planning.
+- `INVENTORY_FIRST`: crypto inventory is the action before migration planning can be complete.
+- `RESEARCH_SCOPING_REQUIRED`: chemistry/materials contract inputs are not yet sufficient.
 
 ## Trust Labels
 
 - `TUTORIAL`
 - `TOY_SIMULATION`
+- `OVERCOMPILED_DEMO`
+- `MEANINGFUL_SMALL_INSTANCE`
 - `BENCHMARK_CANDIDATE`
 - `RESEARCH_CANDIDATE`
 - `HARDWARE_GATED`
 - `FTQC_LATER`
 - `ACTION_NOW`
+- `ORACLE_DEPENDENT`
+- `HAMILTONIAN_DEPENDENT`
+- `CONVERGENCE_UNCERTAIN`
+- `BASELINE_REQUIRED`
+- `INSUFFICIENT_CONTRACT`
 
-Every assessment, Experiment Bundle, simulation result, and architecture map
-should surface one or more labels.
+Every assessment, Algorithm Contract, Experiment Bundle, simulation result, and
+architecture map should surface one or more labels.
+
+## Algorithm Contract
+
+QALS 3.0 emits:
+
+- recommended contract type and algorithm family
+- contract validity status
+- mathematical object
+- reduction summary
+- required, provided, and missing inputs
+- benchmark plan
+- resource estimate
+
+Optimization uses QUBO/QAOA contracts and requires a classical baseline.
+Battery/materials simulation uses Hamiltonian/VQE/Trotter/phase-estimation
+contracts and requires a molecule or material fragment plus Hamiltonian path.
+Grover search requires an explicit oracle and data-loading assumption. Crypto
+security produces a PQC risk contract and migration memo, not a quantum circuit.
 
 ## Async Job Model
 
@@ -58,8 +86,10 @@ Simulation and export work is represented by `jobs` rows with:
 - `error_message`
 
 The existing worker continues to process circuit simulations and export jobs.
-Experiment Bundles can queue simulator-first jobs with the assessment id, trust
-labels, and baseline context attached in the payload.
+Algorithm Experiment Bundles can queue simulator-first jobs with the assessment
+id, contract id, trust labels, and baseline context attached in the payload.
+Exports are represented as jobs and generate a Quantum Algorithm Brief or PQC
+Migration Memo artifact.
 
 ## Simulator-First Guardrail
 
@@ -73,7 +103,7 @@ It is not QCVV or hardware characterization.
 
 1. Add the enum value in `ProblemClass`.
 2. Add keyword inference if useful.
-3. Add a rule branch in `run_qals_2`.
-4. Define verdict, confidence, time horizon, trust labels, missing evidence, caveats, and build eligibility.
-5. Add an Experiment Bundle mapping in `foundry_backend.services.opportunity`.
-6. Add tests that cover missing baseline behavior and required output fields.
+3. Add a rule branch in `run_qals_2` or its compatibility wrapper.
+4. Define verdict, confidence, time horizon, contract type, algorithm family, trust labels, missing evidence, caveats, and build eligibility.
+5. Add an Algorithm Contract and Experiment Bundle mapping in `foundry_backend.services.opportunity`.
+6. Add tests that cover hard gates, missing baseline behavior, required contract fields, and required output fields.

@@ -16,8 +16,9 @@ import {
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import { getArtifactDownloadUrl } from "@/lib/api";
 import {
+  useCreateAlgorithmContract,
   useCreateAssessment,
-  useCreateExperimentBundle,
+  useCreateContractExperimentBundle,
   useExportAssessmentMemo,
   useUseCases,
 } from "@/lib/hooks";
@@ -44,11 +45,18 @@ const INDUSTRIES = ["energy", "materials", "logistics", "finance", "pharma", "ae
 const TRUST_LABEL_TEXT: Record<TrustLabel, string> = {
   TUTORIAL: "Tutorial",
   TOY_SIMULATION: "Toy simulation",
+  OVERCOMPILED_DEMO: "Overcompiled demo",
+  MEANINGFUL_SMALL_INSTANCE: "Meaningful small instance",
   BENCHMARK_CANDIDATE: "Benchmark candidate",
   RESEARCH_CANDIDATE: "Research candidate",
   HARDWARE_GATED: "Hardware-gated",
   FTQC_LATER: "FTQC-later",
   ACTION_NOW: "Action-now",
+  ORACLE_DEPENDENT: "Oracle-dependent",
+  HAMILTONIAN_DEPENDENT: "Hamiltonian-dependent",
+  CONVERGENCE_UNCERTAIN: "Convergence uncertain",
+  BASELINE_REQUIRED: "Baseline required",
+  INSUFFICIENT_CONTRACT: "Insufficient contract",
 };
 
 function inferProblemClass(useCase: UseCase | null): ProblemClass {
@@ -58,6 +66,12 @@ function inferProblemClass(useCase: UseCase | null): ProblemClass {
   }
   if (text.includes("routing") || text.includes("scheduling") || text.includes("portfolio") || text.includes("supply chain")) {
     return "OPTIMIZATION";
+  }
+  if (text.includes("crypto") || text.includes("pqc") || text.includes("rsa") || text.includes("ecc")) {
+    return "CRYPTO_SECURITY";
+  }
+  if (text.includes("grover") || text.includes("oracle") || text.includes("search")) {
+    return "SEARCH";
   }
   return "UNKNOWN";
 }
@@ -88,6 +102,22 @@ function defaultInputs(useCase: UseCase | null): AssessmentInputs {
     evidenceLinks: [],
     userFilesOrNotes: "",
     securityCryptoInventory: {},
+    moleculeOrMaterialFragment: "",
+    hamiltonianPath: "",
+    observable: "",
+    ansatz: "",
+    optimizer: "",
+    variables: "",
+    quboConstraints: "",
+    quboObjective: "",
+    penaltyTerms: "",
+    predicateDefinition: "",
+    inputSizeN: "",
+    markedItemCountM: "",
+    dataLoadingAssumption: "",
+    functionDescription: "",
+    assumesRealHardware: false,
+    tutorialSampleSelected: false,
   };
 }
 
@@ -185,8 +215,10 @@ function AssessPageContent() {
   const [result, setResult] = useState<Assessment | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [bundleId, setBundleId] = useState<string | null>(null);
+  const [contractId, setContractId] = useState<string | null>(null);
   const createAssessment = useCreateAssessment();
-  const createBundle = useCreateExperimentBundle();
+  const createContract = useCreateAlgorithmContract();
+  const createBundle = useCreateContractExperimentBundle();
   const exportMemo = useExportAssessmentMemo();
 
   useEffect(() => {
@@ -215,6 +247,7 @@ function AssessPageContent() {
     setInputs(defaultInputs(useCase));
     setResult(null);
     setBundleId(null);
+    setContractId(null);
     router.replace(`/assess?use_case_id=${useCase.id}`, { scroll: false });
   }
 
@@ -223,6 +256,7 @@ function AssessPageContent() {
     try {
       setPageError(null);
       setBundleId(null);
+      setContractId(null);
       const assessment = await createAssessment.mutateAsync({
         use_case_id: selectedUseCase.id,
         user_inputs: inputs,
@@ -237,14 +271,15 @@ function AssessPageContent() {
     if (!result) return;
     try {
       setPageError(null);
-      const bundle = await createBundle.mutateAsync({
-        assessmentId: result.id,
-        body: { queue_simulation: true },
-      });
+      const contract = await createContract.mutateAsync(result.id);
+      setContractId(contract.id);
+      const bundle = await createBundle.mutateAsync({ contractId: contract.id, body: { queue_simulation: true } });
       setBundleId(bundle.id);
-      router.push(`/build?assessment_id=${result.id}&bundle_id=${bundle.id}&starter=${starterForAssessment(result)}`);
+      router.push(
+        `/build?assessment_id=${result.id}&contract_id=${contract.id}&bundle_id=${bundle.id}&starter=${starterForAssessment(result)}`,
+      );
     } catch (error) {
-      setPageError(error instanceof Error ? error.message : "The experiment bundle could not be created.");
+      setPageError(error instanceof Error ? error.message : "The Algorithm Experiment Bundle could not be created.");
     }
   }
 
@@ -261,12 +296,20 @@ function AssessPageContent() {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      setPageError(error instanceof Error ? error.message : "The opportunity memo could not be exported.");
+      setPageError(error instanceof Error ? error.message : "The Algorithm Brief could not be exported.");
     }
   }
 
   const isCrypto = inputs.problemClass === "CRYPTO_SECURITY";
-  const canCreateBundle = result?.build_eligibility === "ELIGIBLE";
+  const isQuantumSimulation = inputs.problemClass === "QUANTUM_SIMULATION";
+  const isOptimization = inputs.problemClass === "OPTIMIZATION";
+  const isSearch = inputs.problemClass === "SEARCH";
+  const canCreateBundle =
+    result?.build_eligibility === "ELIGIBLE_FOR_TOY_EXPERIMENT" ||
+    result?.build_eligibility === "ELIGIBLE_FOR_BENCHMARK" ||
+    result?.build_eligibility === "ELIGIBLE_FOR_RESEARCH_PROTOTYPE" ||
+    result?.build_eligibility === "NON_COMPUTE_ACTION_ONLY";
+  const buildIsBusy = createContract.isPending || createBundle.isPending;
 
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
@@ -287,8 +330,9 @@ function AssessPageContent() {
             Assess a quantum opportunity before you build
           </h1>
           <p className="mt-3 max-w-[820px] text-[1.02rem] leading-8 text-slate-600">
-            QALS 2.0 produces a verdict, confidence, time horizon, trust labels, evidence, missing evidence,
-            assumptions, caveats, and the next decision. The score is intentionally secondary.
+            QALS 3.0 turns the intake into an Algorithm Contract: problem statement, mathematical reduction,
+            classical baseline, algorithm family, trust labels, missing inputs, and a simulator-first next decision.
+            The score is intentionally secondary.
           </p>
         </div>
 
@@ -357,6 +401,53 @@ function AssessPageContent() {
                 <InputField label="Evidence links or notes" value={inputs.userFilesOrNotes ?? ""} onChange={(value) => updateInput("userFilesOrNotes", value)} textarea placeholder="Papers, internal notes, dataset names, assumptions..." />
               </div>
 
+              {isQuantumSimulation ? (
+                <div className="mt-5 rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <FlaskConical className="h-4 w-4 text-[#2f5be3]" />
+                    Hamiltonian / VQE contract inputs
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <InputField label="Molecule or material fragment" value={inputs.moleculeOrMaterialFragment ?? ""} onChange={(value) => updateInput("moleculeOrMaterialFragment", value)} placeholder="Li-ion electrolyte fragment, catalyst active site..." />
+                    <InputField label="Hamiltonian path" value={inputs.hamiltonianPath ?? ""} onChange={(value) => updateInput("hamiltonianPath", value)} placeholder="OpenFermion transform, active-space plan, imported Hamiltonian..." />
+                    <InputField label="Observable" value={inputs.observable ?? ""} onChange={(value) => updateInput("observable", value)} placeholder="Ground-state energy, band gap proxy, reaction energy..." />
+                    <InputField label="Ansatz" value={inputs.ansatz ?? ""} onChange={(value) => updateInput("ansatz", value)} placeholder="UCCSD, hardware-efficient, problem-inspired..." />
+                    <InputField label="Optimizer" value={inputs.optimizer ?? ""} onChange={(value) => updateInput("optimizer", value)} placeholder="COBYLA, SPSA, L-BFGS, fixed grid..." />
+                    <InputField label="Hardware assumption" value={inputs.assumesRealHardware ? "yes" : ""} onChange={(value) => updateInput("assumesRealHardware", value.trim().toLowerCase() === "yes")} placeholder="yes only when hardware access is assumed" />
+                  </div>
+                </div>
+              ) : null}
+
+              {isOptimization ? (
+                <div className="mt-5 rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ClipboardCheck className="h-4 w-4 text-[#2f5be3]" />
+                    QUBO / QAOA contract inputs
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <InputField label="Variables" value={inputs.variables ?? ""} onChange={(value) => updateInput("variables", value)} placeholder="Binary route/staffing/portfolio variables" />
+                    <InputField label="QUBO objective" value={inputs.quboObjective ?? ""} onChange={(value) => updateInput("quboObjective", value)} placeholder="Minimize cost, lateness, risk, emissions..." />
+                    <InputField label="QUBO constraints" value={inputs.quboConstraints ?? ""} onChange={(value) => updateInput("quboConstraints", value)} placeholder="Capacity, time windows, assignment constraints..." />
+                    <InputField label="Penalty terms" value={inputs.penaltyTerms ?? ""} onChange={(value) => updateInput("penaltyTerms", value)} placeholder="Penalty weights or tuning plan" />
+                  </div>
+                </div>
+              ) : null}
+
+              {isSearch ? (
+                <div className="mt-5 rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ShieldCheck className="h-4 w-4 text-[#2f5be3]" />
+                    Grover oracle contract inputs
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <InputField label="Predicate / oracle definition" value={inputs.predicateDefinition ?? ""} onChange={(value) => updateInput("predicateDefinition", value)} placeholder="The reversible predicate that marks a solution" />
+                    <InputField label="Input size N" value={inputs.inputSizeN ?? ""} onChange={(value) => updateInput("inputSizeN", value)} placeholder="Search-space size or qubit count" />
+                    <InputField label="Marked items M" value={inputs.markedItemCountM ?? ""} onChange={(value) => updateInput("markedItemCountM", value)} placeholder="Expected number of marked states" />
+                    <InputField label="Data-loading assumption" value={inputs.dataLoadingAssumption ?? ""} onChange={(value) => updateInput("dataLoadingAssumption", value)} placeholder="How the data becomes a reversible oracle" />
+                  </div>
+                </div>
+              ) : null}
+
               {isCrypto ? (
                 <div className="mt-5 rounded-[24px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
                   <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -365,10 +456,13 @@ function AssessPageContent() {
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <InputField label="RSA / ECC / DH / ECDSA usage" value={String(inputs.securityCryptoInventory?.algorithms ?? "")} onChange={(value) => updateCryptoInventory("algorithms", value)} />
-                    <InputField label="Certificate lifetime" value={String(inputs.securityCryptoInventory?.certificate_lifetime ?? "")} onChange={(value) => updateCryptoInventory("certificate_lifetime", value)} />
-                    <InputField label="Data retention sensitivity" value={String(inputs.securityCryptoInventory?.retention_sensitivity ?? "")} onChange={(value) => updateCryptoInventory("retention_sensitivity", value)} />
+                    <InputField label="Certificate lifetimes" value={String(inputs.securityCryptoInventory?.certificateLifetimes ?? "")} onChange={(value) => updateCryptoInventory("certificateLifetimes", value)} />
+                    <InputField label="Data shelf life / retention" value={String(inputs.securityCryptoInventory?.dataShelfLife ?? "")} onChange={(value) => updateCryptoInventory("dataShelfLife", value)} />
                     <InputField label="Systems needing inventory" value={String(inputs.securityCryptoInventory?.systems ?? "")} onChange={(value) => updateCryptoInventory("systems", value)} />
-                    <InputField label="Migration owner / status" value={String(inputs.securityCryptoInventory?.migration_owner_status ?? "")} onChange={(value) => updateCryptoInventory("migration_owner_status", value)} />
+                    <InputField label="Migration time / owner" value={String(inputs.securityCryptoInventory?.migrationTime ?? "")} onChange={(value) => updateCryptoInventory("migrationTime", value)} />
+                    <InputField label="Assumed quantum risk horizon" value={String(inputs.securityCryptoInventory?.assumedQuantumCollapseTimeYears ?? "")} onChange={(value) => updateCryptoInventory("assumedQuantumCollapseTimeYears", value)} placeholder="Years until relevant cryptanalytic risk" />
+                    <InputField label="Inventory completeness" value={String(inputs.securityCryptoInventory?.inventoryCompleteness ?? "")} onChange={(value) => updateCryptoInventory("inventoryCompleteness", value)} placeholder="complete, partial, unknown" />
+                    <InputField label="Crypto agility status" value={String(inputs.securityCryptoInventory?.cryptoAgility ?? "")} onChange={(value) => updateCryptoInventory("cryptoAgility", value)} />
                   </div>
                 </div>
               ) : null}
@@ -399,6 +493,9 @@ function AssessPageContent() {
                       <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold uppercase text-[#2f5be3]">
                         Time horizon: {result.time_horizon.replaceAll("_", " ")}
                       </span>
+                      <span className="rounded-full bg-[#fff7ed] px-3 py-2 text-xs font-semibold uppercase text-[#c2410c]">
+                        Build: {result.build_eligibility.replaceAll("_", " ")}
+                      </span>
                     </div>
                     <p className="mt-5 text-base leading-8 text-slate-700">
                       {result.plain_english_recommendation}
@@ -415,8 +512,16 @@ function AssessPageContent() {
                 </div>
 
                 <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  <EvidenceList title="Recommended contract" items={[`${result.recommended_contract_type.replaceAll("_", " ")} / ${result.recommended_algorithm_family.replaceAll("_", " ")}`]} empty="No contract recommended." />
+                  <EvidenceList title="Contract validity" items={[result.contract_validity_status.replaceAll("_", " ")]} empty="No validity status." />
+                  <EvidenceList title="Mathematical object" items={[result.mathematical_object]} empty="No mathematical object supplied." />
+                  <EvidenceList title="Reduction summary" items={[result.reduction_summary]} empty="No reduction summary supplied." />
                   <EvidenceList title="Classical baseline" items={[result.classical_baseline_summary]} empty="Classical baseline required." />
                   <EvidenceList title="Quantum candidate" items={[result.quantum_candidate_summary]} empty="No candidate recommended." />
+                  <EvidenceList title="Required inputs" items={result.required_inputs} empty="No required inputs recorded." />
+                  <EvidenceList title="Missing contract inputs" items={result.missing_inputs} empty="No missing contract inputs recorded." />
+                  <EvidenceList title="Benchmark plan" items={[result.benchmark_plan]} empty="No benchmark plan supplied." />
+                  <EvidenceList title="Resource estimate" items={[JSON.stringify(result.resource_estimate)]} empty="No resource estimate supplied." />
                   <EvidenceList title="Evidence used" items={result.evidence_used} empty="No evidence attached yet." />
                   <EvidenceList title="Missing evidence" items={result.missing_evidence} empty="No missing evidence recorded." />
                   <EvidenceList title="Assumptions" items={result.assumptions} empty="No assumptions recorded." />
@@ -431,15 +536,15 @@ function AssessPageContent() {
                       <button
                         type="button"
                         onClick={() => void createExperimentBundle()}
-                        disabled={createBundle.isPending}
+                        disabled={buildIsBusy}
                         className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.25)] transition hover:-translate-y-[1px]"
                       >
-                        {createBundle.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-                        Create experiment bundle
+                        {buildIsBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+                        Create Algorithm Experiment Bundle
                       </button>
                     ) : (
                       <span className="rounded-full bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#c2410c]">
-                        Build eligibility: {result.build_eligibility.replaceAll("_", " ")}
+                        Build gated: {result.build_eligibility.replaceAll("_", " ")}
                       </span>
                     )}
                     <button
@@ -449,12 +554,12 @@ function AssessPageContent() {
                       className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
                     >
                       {exportMemo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      Export opportunity memo
+                      Export Algorithm Brief
                     </button>
                   </div>
                   {bundleId ? (
                     <Link
-                      href={`/build?assessment_id=${result.id}&bundle_id=${bundleId}&starter=${starterForAssessment(result)}`}
+                      href={`/build?assessment_id=${result.id}${contractId ? `&contract_id=${contractId}` : ""}&bundle_id=${bundleId}&starter=${starterForAssessment(result)}`}
                       className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#2f5be3]"
                     >
                       Open bundle in Build
@@ -498,9 +603,9 @@ function AssessPageContent() {
             <div className="rounded-[28px] border border-[#d8e2f3] bg-[#f8fbff] p-5 shadow-[0_18px_40px_rgba(148,163,184,0.12)]">
               <div className="text-xs font-semibold uppercase text-slate-400">Guardrails</div>
               <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
-                <p>No serious quantum build artifact is generated without a hypothesis, classical baseline, time horizon, evidence or assumptions, and trust label.</p>
-                <p>Logistics recommendations are benchmark-first, and production advantage unproven is always explicit.</p>
-                <p>Crypto/security defaults to PQC migration-now, not QKD or quantum hardware.</p>
+                <p>No serious quantum build artifact is generated without a valid or partial Algorithm Contract, classical baseline, time horizon, evidence or assumptions, and trust label.</p>
+                <p>Logistics remains benchmark-first unless the QUBO/QAOA reduction and baseline are explicit; production advantage unproven is always visible.</p>
+                <p>Crypto/security produces a PQC Migration Memo, not a quantum circuit or QKD recommendation.</p>
               </div>
             </div>
 

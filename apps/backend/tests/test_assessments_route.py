@@ -96,9 +96,18 @@ def test_create_assessment_returns_recommendation_fields() -> None:
     assert body["verdict"] == "SIMULATOR_PROTOTYPE_NOW"
     assert body["confidence"] == "MEDIUM"
     assert body["time_horizon"] == "SIMULATOR_NOW"
+    assert body["recommended_contract_type"] in {"QUBO_ISING", "QAOA"}
+    assert body["recommended_algorithm_family"] == "QAOA"
+    assert body["contract_validity_status"] in {"VALID", "PARTIAL"}
+    assert body["build_eligibility"] == "ELIGIBLE_FOR_BENCHMARK"
     assert body["trust_labels"]
+    assert "BENCHMARK_CANDIDATE" in body["trust_labels"]
     assert body["classical_baseline_summary"]
     assert body["quantum_candidate_summary"]
+    assert body["mathematical_object"]
+    assert body["reduction_summary"]
+    assert body["required_inputs"]
+    assert body["resource_estimate"]
     assert body["evidence_used"]
     assert body["missing_evidence"] is not None
     assert body["assumptions"]

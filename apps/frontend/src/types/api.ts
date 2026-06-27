@@ -28,7 +28,9 @@ export type ArtifactType =
   | "assessment_json"
   | "architecture_json"
   | "session_summary"
-  | "opportunity_memo";
+  | "opportunity_memo"
+  | "algorithm_brief"
+  | "pqc_migration_memo";
 export type ProjectStatus = "draft" | "active" | "archived";
 export type AssessmentRecommendation =
   | "classical_now"
@@ -46,6 +48,8 @@ export type ProblemClass =
   | "UNKNOWN";
 export type Verdict =
   | "CLASSICAL_FIRST"
+  | "INVENTORY_FIRST"
+  | "RESEARCH_SCOPING_REQUIRED"
   | "EDUCATION_ONLY"
   | "BENCHMARK_FIRST"
   | "SIMULATOR_PROTOTYPE_NOW"
@@ -62,12 +66,50 @@ export type TimeHorizon =
 export type TrustLabel =
   | "TUTORIAL"
   | "TOY_SIMULATION"
+  | "OVERCOMPILED_DEMO"
+  | "MEANINGFUL_SMALL_INSTANCE"
   | "BENCHMARK_CANDIDATE"
   | "RESEARCH_CANDIDATE"
   | "HARDWARE_GATED"
   | "FTQC_LATER"
-  | "ACTION_NOW";
-export type BuildEligibility = "ELIGIBLE" | "LIMITED" | "BLOCKED" | "TUTORIAL_ONLY";
+  | "ACTION_NOW"
+  | "ORACLE_DEPENDENT"
+  | "HAMILTONIAN_DEPENDENT"
+  | "CONVERGENCE_UNCERTAIN"
+  | "BASELINE_REQUIRED"
+  | "INSUFFICIENT_CONTRACT";
+export type AlgorithmFamily =
+  | "SHOR_PERIOD_FINDING"
+  | "QUANTUM_FOURIER_TRANSFORM"
+  | "GROVER_SEARCH"
+  | "AMPLITUDE_AMPLIFICATION"
+  | "HAMILTONIAN_SIMULATION"
+  | "TROTTERIZATION"
+  | "PHASE_ESTIMATION"
+  | "VQE"
+  | "QAOA"
+  | "ADIABATIC_AQC"
+  | "QUANTUM_ANNEALING"
+  | "PQC_READINESS"
+  | "UNKNOWN";
+export type ContractType =
+  | "HAMILTONIAN"
+  | "VQE"
+  | "TROTTER"
+  | "QUBO_ISING"
+  | "QAOA"
+  | "ORACLE"
+  | "PERIOD_ORDER"
+  | "PQC_RISK"
+  | "TUTORIAL";
+export type ContractValidityStatus = "VALID" | "PARTIAL" | "INVALID" | "TUTORIAL_ONLY";
+export type BuildEligibility =
+  | "BLOCKED"
+  | "LIMITED_TUTORIAL_ONLY"
+  | "ELIGIBLE_FOR_TOY_EXPERIMENT"
+  | "ELIGIBLE_FOR_BENCHMARK"
+  | "ELIGIBLE_FOR_RESEARCH_PROTOTYPE"
+  | "NON_COMPUTE_ACTION_ONLY";
 
 export interface UseCaseBlueprint {
   persona: string;
@@ -139,6 +181,22 @@ export interface AssessmentInputs {
   evidenceLinks?: string[];
   userFilesOrNotes?: string;
   securityCryptoInventory?: Record<string, unknown>;
+  moleculeOrMaterialFragment?: string;
+  hamiltonianPath?: string;
+  observable?: string;
+  ansatz?: string;
+  optimizer?: string;
+  variables?: string;
+  quboConstraints?: string;
+  quboObjective?: string;
+  penaltyTerms?: string;
+  predicateDefinition?: string;
+  inputSizeN?: string;
+  markedItemCountM?: string;
+  dataLoadingAssumption?: string;
+  functionDescription?: string;
+  assumesRealHardware?: boolean;
+  tutorialSampleSelected?: boolean;
   problem_size?: "small" | "medium" | "large" | "very_large";
   data_structure?: "unstructured" | "structured" | "quantum_native";
   classical_hardness?: "easy" | "medium" | "hard" | "intractable";
@@ -158,6 +216,9 @@ export interface Assessment {
   time_horizon: TimeHorizon;
   trust_labels: TrustLabel[];
   problem_class: ProblemClass;
+  recommended_contract_type: ContractType;
+  recommended_algorithm_family: AlgorithmFamily;
+  contract_validity_status: ContractValidityStatus;
   plain_english_recommendation: string;
   classical_baseline_summary: string;
   quantum_candidate_summary: string;
@@ -169,12 +230,44 @@ export interface Assessment {
   build_eligibility: BuildEligibility;
   recommended_experiment_type: string;
   hardware_assumptions: string[];
+  mathematical_object: string;
+  reduction_summary: string;
+  required_inputs: string[];
+  provided_inputs: string[];
+  missing_inputs: string[];
+  benchmark_plan: string;
+  resource_estimate: Record<string, unknown>;
   exportable_memo: string;
   why_promising: string[];
   why_not_now: string[];
   top_blockers: string[];
   next_90_days: string[];
   created_at: string;
+  updated_at?: string | null;
+}
+
+export interface AlgorithmContract {
+  id: string;
+  assessment_id: string;
+  contract_type: ContractType;
+  algorithm_family: AlgorithmFamily;
+  title: string;
+  description: string;
+  validity_status: ContractValidityStatus;
+  mathematical_object: string;
+  reduction_summary: string;
+  required_inputs: string[];
+  provided_inputs: string[];
+  missing_inputs: string[];
+  assumptions: string[];
+  caveats: string[];
+  classical_baseline: string;
+  benchmark_plan: string;
+  resource_estimate: Record<string, unknown>;
+  trust_labels: TrustLabel[];
+  build_eligibility: BuildEligibility;
+  created_at: string;
+  updated_at?: string | null;
 }
 
 export interface ExperimentBundleCreate {
@@ -198,6 +291,7 @@ export interface ResultTrustMetrics {
 export interface ExperimentBundle {
   id: string;
   assessment_id: string;
+  contract_id: string | null;
   simulation_job_id: string | null;
   title: string;
   hypothesis: string;

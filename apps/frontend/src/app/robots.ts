@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://quantum-foundry-frontend-271301686744.us-central1.run.app";
+  "http://localhost:3000";
 
 export default function robots(): MetadataRoute.Robots {
   return {

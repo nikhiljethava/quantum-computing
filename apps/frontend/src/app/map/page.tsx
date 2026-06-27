@@ -216,7 +216,7 @@ function MapPageContent() {
 
   async function downloadOpportunityMemo() {
     if (!assessmentId) {
-      setPageError("Run or open an assessment before exporting a Quantum Opportunity Memo.");
+      setPageError("Run or open an assessment before exporting a Quantum Algorithm Brief.");
       return;
     }
 
@@ -233,7 +233,7 @@ function MapPageContent() {
       document.body.removeChild(link);
     } catch (err) {
       setPageError(
-        err instanceof Error ? err.message : "The opportunity memo export could not be prepared.",
+        err instanceof Error ? err.message : "The Algorithm Brief export could not be prepared.",
       );
     } finally {
       setIsExportingMemo(false);
@@ -282,7 +282,7 @@ function MapPageContent() {
         <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_320px]">
           <WorkspaceRail
             active="exports"
-            tip="Use Map after a circuit exists so the architecture feels connected to a real prototype instead of a detached cloud diagram."
+            tip="Use Map after an assessment or Algorithm Contract so the architecture stays connected to a decision, baseline, and trust labels."
           />
 
           <div className="space-y-5">
@@ -434,17 +434,17 @@ function MapPageContent() {
           <div className="space-y-5">
             <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
               <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Quantum Opportunity Memo
+                Quantum Algorithm Brief
               </div>
               <div className="mt-4 space-y-3">
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Executive verdict and problem shape
+                  Executive verdict, contract, and problem shape
                 </div>
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Classical baseline and quantum candidate
+                  Classical baseline, algorithm candidate, and trust labels
                 </div>
                 <div className="rounded-[18px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-medium text-slate-700">
-                  Evidence, caveats, Experiment Bundle, GCP architecture, time horizon, next decision
+                  Evidence, caveats, Algorithm Experiment Bundle, GCP architecture, time horizon, next decision
                 </div>
               </div>
               <button
@@ -454,7 +454,7 @@ function MapPageContent() {
                 className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.3)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isExportingMemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {isExportingMemo ? "Packaging memo..." : "Export opportunity memo"}
+                {isExportingMemo ? "Packaging brief..." : "Export Algorithm Brief"}
               </button>
               <button
                 type="button"

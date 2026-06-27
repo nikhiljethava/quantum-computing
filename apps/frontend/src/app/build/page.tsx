@@ -38,6 +38,7 @@ import {
   useCreateProject,
   useCreateSession,
   useAssessment,
+  useAlgorithmContract,
   useExperimentBundle,
   useGeminiCircuitUpdate,
   useJob,
@@ -2331,12 +2332,14 @@ function BuildPageContent() {
   const activeSessionId = searchParams.get("session_id");
   const lessonSlug = searchParams.get("lesson");
   const assessmentId = searchParams.get("assessment_id");
+  const contractId = searchParams.get("contract_id");
   const bundleId = searchParams.get("bundle_id");
   const sourceLesson = lessonSlug ? LESSON_BY_SLUG.get(lessonSlug) ?? null : null;
   const hasBuildContext = Boolean(
     activeSessionId ||
       lessonSlug ||
       assessmentId ||
+      contractId ||
       bundleId ||
       searchParams.get("starter") ||
       searchParams.get("circuit"),
@@ -2387,6 +2390,7 @@ function BuildPageContent() {
   const architectureRef = useRef<HTMLDivElement>(null);
   const { data: sessionDetail } = useSession(activeSessionId);
   const { data: sourceAssessment } = useAssessment(assessmentId);
+  const { data: sourceContract } = useAlgorithmContract(contractId);
   const { data: experimentBundle } = useExperimentBundle(bundleId);
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
@@ -3144,7 +3148,7 @@ function BuildPageContent() {
           <div className="mb-6 border-b border-[#dbe5f1] pb-5">
             <div className="mb-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
-                Experiment Bundle
+                Algorithm Experiment Bundle
               </span>
               <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs font-semibold uppercase text-[#c2410c]">
                 Start with assessment
@@ -3154,14 +3158,14 @@ function BuildPageContent() {
               Start with an assessment or open a tutorial
             </h1>
             <p className="mt-3 max-w-[760px] text-[1.02rem] leading-8 text-slate-600">
-              Serious experiment bundles require an assessment hypothesis, declared classical baseline,
-              time horizon, evidence or assumptions, and visible trust labels.
+              Serious experiment bundles require an Algorithm Contract, assessment hypothesis,
+              declared classical baseline, time horizon, evidence or assumptions, and visible trust labels.
             </p>
           </div>
           <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
             <WorkspaceRail
               active="hybrid-lab"
-              tip="Build waits for an evidence-backed verdict. Tutorial circuits stay labeled tutorial-only."
+              tip="Build waits for an Algorithm Contract and evidence-backed verdict. Tutorial circuits stay labeled tutorial-only."
             />
             <div className="grid gap-5 md:grid-cols-2">
               <Link
@@ -3171,7 +3175,7 @@ function BuildPageContent() {
                 <div className="mb-3 text-xs font-semibold uppercase text-slate-400">Primary</div>
                 <h2 className="text-xl font-bold text-slate-900">Assess a quantum opportunity</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Create an evidence-backed verdict before generating an Experiment Bundle.
+                  Create an evidence-backed verdict and Algorithm Contract before generating an Experiment Bundle.
                 </p>
               </Link>
               <Link
@@ -3198,7 +3202,7 @@ function BuildPageContent() {
           <div className="max-w-[760px]">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
-                Experiment Bundle
+                Algorithm Experiment Bundle
               </span>
               <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#157052]">
                 Simulation first
@@ -3213,12 +3217,20 @@ function BuildPageContent() {
               ) : null}
             </div>
             <h1 className="text-[clamp(2.15rem,4vw,3.35rem)] font-black tracking-[-0.05em] text-slate-900">
-              Build an Experiment Bundle, not an isolated circuit
+              Build an Algorithm Experiment Bundle, not an isolated circuit
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
               The bundle keeps the hypothesis, classical baseline, quantum candidate,
               toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports in one place.
             </p>
+            {sourceContract ? (
+              <div className="mt-4 rounded-[18px] border border-[#ddd6fe] bg-[#f5f3ff] px-4 py-3 text-sm leading-7 text-[#5b21b6]">
+                Algorithm Contract attached: <strong>{sourceContract.contract_type.replaceAll("_", " ")}</strong> / {sourceContract.algorithm_family.replaceAll("_", " ")} · {sourceContract.validity_status.replaceAll("_", " ")} · {sourceContract.build_eligibility.replaceAll("_", " ")}
+                <div className="mt-2 text-xs leading-6 text-[#6d28d9]">
+                  {sourceContract.reduction_summary}
+                </div>
+              </div>
+            ) : null}
             {sourceAssessment ? (
               <div className="mt-4 rounded-[18px] border border-[#c6dafc] bg-[#e8f0fe] px-4 py-3 text-sm leading-7 text-[#174ea6]">
                 Assessment attached: <strong>{sourceAssessment.verdict.replaceAll("_", " ")}</strong> · {sourceAssessment.confidence} confidence · {sourceAssessment.time_horizon.replaceAll("_", " ")}
@@ -3233,7 +3245,7 @@ function BuildPageContent() {
             ) : null}
             {experimentBundle ? (
               <div className="mt-4 rounded-[18px] border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-sm leading-7 text-[#166534]">
-                Experiment Bundle loaded: <strong>{experimentBundle.title}</strong>. Classical baseline: {experimentBundle.classical_baseline}
+                Algorithm Experiment Bundle loaded: <strong>{experimentBundle.title}</strong>. Classical baseline: {experimentBundle.classical_baseline}
               </div>
             ) : null}
             {workspaceError ? (

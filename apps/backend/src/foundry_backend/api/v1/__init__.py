@@ -7,6 +7,7 @@ from foundry_backend.api.v1.routes import (
     artifacts,
     assessments,
     circuits,
+    contracts,
     experiment_bundles,
     guide,
     health,
@@ -23,6 +24,7 @@ router.include_router(projects.router, prefix="/projects", tags=["projects"])
 router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(use_cases.router, prefix="/use-cases", tags=["use-cases"])
 router.include_router(assessments.router, prefix="/assessments", tags=["assessments"])
+router.include_router(contracts.router, prefix="/contracts", tags=["contracts"])
 router.include_router(
     experiment_bundles.router,
     prefix="/experiment-bundles",

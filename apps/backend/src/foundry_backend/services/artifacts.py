@@ -206,7 +206,7 @@ async def create_assessment_memo_artifact(
     assessment: Assessment,
     job_id: uuid.UUID | None = None,
 ) -> Artifact:
-    """Generate the primary Quantum Opportunity Memo export for an assessment."""
+    """Generate the primary Quantum Algorithm Brief or PQC Migration Memo export."""
 
     memo = assessment.exportable_memo or assessment.qals_output.get("exportable_memo", "")
     if not memo:
@@ -217,7 +217,11 @@ async def create_assessment_memo_artifact(
         artifact_dir=settings.artifact_dir,
         gcs_bucket=settings.gcs_bucket,
     )
-    filename = f"quantum_opportunity_memo_{assessment.id}.md"
+    contract_type = str(assessment.qals_output.get("recommended_contract_type", ""))
+    is_pqc = contract_type == "PQC_RISK"
+    filename_prefix = "pqc_migration_memo" if is_pqc else "quantum_algorithm_brief"
+    artifact_type = ArtifactType.pqc_migration_memo if is_pqc else ArtifactType.algorithm_brief
+    filename = f"{filename_prefix}_{assessment.id}.md"
     content = memo.encode("utf-8")
     storage_uri = await storage.save(
         content=content,
@@ -228,7 +232,7 @@ async def create_assessment_memo_artifact(
     artifact = Artifact(
         job_id=job_id,
         assessment_id=assessment.id,
-        artifact_type=ArtifactType.opportunity_memo,
+        artifact_type=artifact_type,
         filename=filename,
         content_type="text/markdown",
         storage_uri=storage_uri,

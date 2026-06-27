@@ -5,23 +5,50 @@ import { ArrowRight } from "lucide-react";
 import ExploreClient from "./ExploreClient";
 
 const description =
-  "Explore simulation-first quantum learning scenarios with business context, classical baselines, Cirq-based workflows, and Google Cloud architecture patterns.";
+  "Explore Algorithm Contract patterns with business context, classical baselines, Cirq-based workflows, and Google Cloud architecture patterns.";
+
+const algorithmPatterns = [
+  {
+    title: "Hamiltonian / VQE",
+    posture: "Research candidate",
+    copy: "Battery, materials, catalyst, and molecular simulation ideas need a molecule or fragment, Hamiltonian path, observable, baseline workflow, and future-hardware upside caveats.",
+  },
+  {
+    title: "QUBO / QAOA",
+    posture: "Benchmark candidate",
+    copy: "Routing, scheduling, supply-chain, and portfolio ideas need variables, objective, constraints, penalties, and a declared classical baseline before any benchmark bundle.",
+  },
+  {
+    title: "PQC Risk",
+    posture: "Action-now",
+    copy: "Crypto/security work produces a PQC Migration Memo from inventory, certificate lifetime, retention sensitivity, owner, and migration status. No quantum hardware or QKD default.",
+  },
+  {
+    title: "Grover Oracle",
+    posture: "Oracle-dependent",
+    copy: "Search ideas must define a reversible predicate, input size, marked item estimate, oracle cost, and data-loading assumption. It is not a generic database replacement.",
+  },
+  {
+    title: "Phase Estimation",
+    posture: "FTQC-later",
+    copy: "Phase estimation and Shor-style period finding stay tutorial or future-fault-tolerant unless the contract explicitly supports the hardware assumptions.",
+  },
+];
 
 const flagshipScenarios = [
   {
-    title: "Portfolio Optimization",
-    industry: "Finance",
-    persona: "Quant researcher, portfolio manager, or fintech PM",
-    businessKpi: "Improve portfolio allocation experiments under constraints and risk tradeoffs.",
+    title: "Battery Materials Simulation",
+    industry: "Energy / Materials",
+    persona: "Battery R&D lead, computational chemistry lead, or materials platform PM",
+    businessKpi: "Screen a narrowed molecule or material fragment with simulator-first evidence and future-hardware upside.",
     classicalBaseline:
-      "Convex optimization, mixed-integer programming, Monte Carlo simulation, and heuristic solvers.",
+      "DFT, molecular dynamics, classical HPC workflows, and existing chemistry simulation pipelines.",
     quantumApproach:
-      "QAOA / Ising or QUBO-style optimization, framed as an educational hybrid workflow.",
-    maturity: "Simulate now / pilot carefully",
+      "Hamiltonian / VQE contract with OpenFermion/Cirq-style toy implementation when the reduction is supplied.",
+    maturity: "Research candidate / simulator-first",
     ctas: [
-      { label: "View use case", href: "/use-cases/portfolio-optimization" },
-      { label: "Run related lab", href: "/build" },
-      { label: "Assess fit", href: "/assess" },
+      { label: "Create contract", href: "/assess" },
+      { label: "Open learning path", href: "/learn/openfermion" },
     ],
   },
   {
@@ -33,12 +60,12 @@ const flagshipScenarios = [
     classicalBaseline:
       "Molecular docking, molecular dynamics, density functional theory, and classical simulation pipelines.",
     quantumApproach:
-      "OpenFermion/Cirq-style educational chemistry workflow; clearly simulation-first.",
+      "Hamiltonian simulation or VQE contract; clearly simulator-first and hardware-gated for production claims.",
     maturity: "Research only / simulate small examples",
     ctas: [
       { label: "View use case", href: "/use-cases/molecular-docking-drug-design" },
       { label: "Open learning path", href: "/learn/openfermion" },
-      { label: "Assess fit", href: "/assess" },
+      { label: "Create contract", href: "/assess" },
     ],
   },
   {
@@ -50,12 +77,27 @@ const flagshipScenarios = [
     classicalBaseline:
       "Vehicle routing heuristics, mixed-integer programming, local search, and metaheuristics.",
     quantumApproach:
-      "QAOA/QUBO-style educational optimization workflow with classical orchestration.",
-    maturity: "Simulate now / pilot carefully",
+      "QUBO/QAOA benchmark candidate with classical orchestration and production advantage unproven caveat.",
+    maturity: "Benchmark-first / toy simulation",
     ctas: [
       { label: "View use case", href: "/use-cases/vehicle-routing-optimization" },
-      { label: "Run related lab", href: "/build" },
-      { label: "Assess fit", href: "/assess" },
+      { label: "Create contract", href: "/assess" },
+    ],
+  },
+  {
+    title: "PQC Readiness",
+    industry: "Security",
+    persona: "CISO, platform security lead, compliance owner, or crypto inventory program manager",
+    businessKpi:
+      "Prioritize systems that use RSA, ECC, DH, or ECDSA against long-lived secrets and harvest-now-decrypt-later risk.",
+    classicalBaseline:
+      "Current certificate inventory, crypto usage inventory, data retention policy, migration owner, and crypto-agility status.",
+    quantumApproach:
+      "PQC readiness contract and migration memo. This is a non-compute action path, not a quantum circuit or QKD recommendation.",
+    maturity: "Action-now",
+    ctas: [
+      { label: "Create contract", href: "/assess" },
+      { label: "Learn the basics", href: "/learn" },
     ],
   },
 ];
@@ -66,7 +108,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Explore Industry Scenarios | Quantum Foundry",
     description:
-      "Flagship learning scenarios for exploring quantum concepts, Cirq-based simulation, and Google Cloud architecture patterns.",
+      "Flagship Algorithm Contract scenarios for exploring quantum concepts, Cirq-based simulation, and Google Cloud architecture patterns.",
   },
   alternates: {
     canonical: "/explore",
@@ -83,16 +125,16 @@ export default function ExplorePage() {
               Flagship scenarios
             </div>
             <h1 className="mt-3 text-[clamp(2.25rem,5vw,4rem)] font-black tracking-[-0.05em] text-slate-950">
-              Flagship learning scenarios
+              Flagship Algorithm Contract scenarios
             </h1>
             <p className="mt-4 text-sm leading-8 text-slate-600">
-              Start with three practical, simulation-first scenarios that connect quantum concepts
-              to real industry questions. Each scenario is framed as a learning and pilot-design
-              exercise, not a claim of quantum advantage.
+              Start with practical, simulator-first scenarios that connect quantum concepts to real
+              enterprise questions. Each path is framed as an Algorithm Contract with baseline,
+              evidence, trust labels, and caveats before Build.
             </p>
           </div>
 
-          <div className="mt-7 grid gap-5 lg:grid-cols-3">
+          <div className="mt-7 grid gap-5 lg:grid-cols-4">
             {flagshipScenarios.map((scenario) => (
               <article
                 key={scenario.title}
@@ -153,6 +195,25 @@ export default function ExplorePage() {
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className="mt-8 rounded-[28px] border border-[#d8e2f3] bg-white/80 p-5">
+            <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#1967d2]">
+              Algorithm patterns
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-5">
+              {algorithmPatterns.map((pattern) => (
+                <article key={pattern.title} className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fbff] p-4">
+                  <h2 className="text-base font-black tracking-[-0.03em] text-slate-950">
+                    {pattern.title}
+                  </h2>
+                  <div className="mt-2 inline-flex rounded-full bg-[#e8f0fe] px-2.5 py-1 text-[11px] font-bold text-[#1967d2]">
+                    {pattern.posture}
+                  </div>
+                  <p className="mt-3 text-xs leading-6 text-slate-600">{pattern.copy}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>

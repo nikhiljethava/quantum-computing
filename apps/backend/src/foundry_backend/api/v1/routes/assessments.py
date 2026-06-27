@@ -1,4 +1,4 @@
-"""Assessment routes for the QALS 2.0 opportunity workbench."""
+"""Assessment routes for the QALS 3.0 Algorithm Contract workbench."""
 
 import uuid
 
@@ -11,6 +11,7 @@ from foundry_backend.schemas.schemas import (
     AssessmentCreate,
     AssessmentRead,
     AssessmentUpdate,
+    AlgorithmContractRead,
     ExperimentBundleCreate,
     ExperimentBundleRead,
     ArtifactRead,
@@ -23,8 +24,10 @@ from foundry_backend.services.artifacts import (
 )
 from foundry_backend.services.opportunity import (
     apply_qals_to_assessment,
+    create_algorithm_contract,
     create_experiment_bundle,
     run_qals_for_use_case,
+    serialize_algorithm_contract,
     serialize_assessment,
     serialize_experiment_bundle,
 )
@@ -45,7 +48,7 @@ async def create_assessment(
     db: AsyncSession = Depends(get_db),
 ) -> AssessmentRead:
     """
-    Run QALS 2.0 against user inputs and persist the evidence-backed verdict.
+    Run QALS 3.0 against user inputs and persist the Algorithm Contract verdict.
 
     The readiness score is secondary to verdict, confidence, time horizon, evidence,
     missing evidence, assumptions, caveats, and trust labels.
@@ -93,7 +96,7 @@ async def update_assessment(
     body: AssessmentUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> AssessmentRead:
-    """Merge revised intake fields and rerun QALS 2.0 deterministically."""
+    """Merge revised intake fields and rerun QALS 3.0 deterministically."""
 
     assessment = await _get_assessment_or_404(db, assessment_id)
     use_case = await db.get(UseCase, assessment.use_case_id)
@@ -114,6 +117,22 @@ async def update_assessment(
 
 
 @router.post(
+    "/{assessment_id}/contracts",
+    response_model=AlgorithmContractRead,
+    status_code=201,
+)
+async def create_assessment_contract(
+    assessment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> AlgorithmContractRead:
+    """Create the recommended Algorithm Contract from a persisted assessment."""
+
+    assessment = await _get_assessment_or_404(db, assessment_id)
+    contract = await create_algorithm_contract(db, assessment=assessment)
+    return AlgorithmContractRead.model_validate(serialize_algorithm_contract(contract))
+
+
+@router.post(
     "/{assessment_id}/experiment-bundles",
     response_model=ExperimentBundleRead,
     status_code=201,
@@ -123,13 +142,15 @@ async def create_assessment_experiment_bundle(
     body: ExperimentBundleCreate,
     db: AsyncSession = Depends(get_db),
 ) -> ExperimentBundleRead:
-    """Create an Experiment Bundle only after a persisted assessment exists."""
+    """Create an Algorithm Contract-backed Experiment Bundle from a persisted assessment."""
 
     assessment = await _get_assessment_or_404(db, assessment_id)
     try:
+        contract = await create_algorithm_contract(db, assessment=assessment)
         bundle = await create_experiment_bundle(
             db,
             assessment=assessment,
+            contract=contract,
             queue_simulation=body.queue_simulation,
         )
     except ValueError as exc:
@@ -142,14 +163,16 @@ async def export_assessment_memo(
     assessment_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> MemoExportRead:
-    """Represent Quantum Opportunity Memo export as a completed job plus artifact."""
+    """Represent Quantum Algorithm Brief or PQC Migration Memo export as a completed job."""
 
     assessment = await _get_assessment_or_404(db, assessment_id)
+    contract_type = str(assessment.qals_output.get("recommended_contract_type", ""))
+    export_label = "PQC Migration Memo" if contract_type == "PQC_RISK" else "Quantum Algorithm Brief"
     job = Job(
         job_type=JobType.opportunity_memo_export,
         status=JobStatus.running,
         payload={"assessment_id": str(assessment.id)},
-        logs=["Preparing Quantum Opportunity Memo export."],
+        logs=[f"Preparing {export_label} export."],
     )
     db.add(job)
     await db.commit()
@@ -170,7 +193,7 @@ async def export_assessment_memo(
         "filename": artifact.filename,
         "download_path": f"/api/v1/artifacts/{artifact.id}/download",
     }
-    job.logs = [*job.logs, "Quantum Opportunity Memo export succeeded."]
+    job.logs = [*job.logs, f"{export_label} export succeeded."]
     await db.commit()
     await db.refresh(job)
     await db.refresh(artifact)
@@ -179,3 +202,13 @@ async def export_assessment_memo(
         job=JobRead.model_validate(job),
         artifact=ArtifactRead.model_validate(serialize_artifact(artifact)),
     )
+
+
+@router.post("/{assessment_id}/export-brief", response_model=MemoExportRead, status_code=202)
+async def export_assessment_brief(
+    assessment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> MemoExportRead:
+    """Export the Quantum Algorithm Brief or PQC Migration Memo for an assessment."""
+
+    return await export_assessment_memo(assessment_id=assessment_id, db=db)

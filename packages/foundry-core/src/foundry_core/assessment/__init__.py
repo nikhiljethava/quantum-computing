@@ -3,8 +3,11 @@
 from foundry_core.assessment.qals import (
     AssessmentInput,
     AssessmentOutput,
+    AlgorithmFamily,
     BuildEligibility,
     Confidence,
+    ContractType,
+    ContractValidityStatus,
     ProblemClass,
     TimeHorizon,
     TrustLabel,
@@ -17,8 +20,11 @@ from foundry_core.assessment.qals import (
 __all__ = [
     "AssessmentInput",
     "AssessmentOutput",
+    "AlgorithmFamily",
     "BuildEligibility",
     "Confidence",
+    "ContractType",
+    "ContractValidityStatus",
     "ProblemClass",
     "TimeHorizon",
     "TrustLabel",

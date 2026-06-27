@@ -58,6 +58,8 @@ class ArtifactType(str, enum.Enum):
     architecture_json = "architecture_json"
     session_summary = "session_summary"
     opportunity_memo = "opportunity_memo"
+    algorithm_brief = "algorithm_brief"
+    pqc_migration_memo = "pqc_migration_memo"
 
 
 class Project(Base):
@@ -167,18 +169,65 @@ class Assessment(Base):
     time_horizon: Mapped[str | None] = mapped_column(String(50), nullable=True)
     trust_labels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     qals_output: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    build_eligibility: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    build_eligibility: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     exportable_memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     use_case: Mapped["UseCase"] = relationship("UseCase", back_populates="assessments")
+    algorithm_contracts: Mapped[list["AlgorithmContract"]] = relationship(
+        "AlgorithmContract", back_populates="assessment", cascade="all, delete-orphan"
+    )
     experiment_bundles: Mapped[list["ExperimentBundle"]] = relationship(
         "ExperimentBundle", back_populates="assessment", cascade="all, delete-orphan"
     )
     architecture_records: Mapped[list["ArchitectureRecord"]] = relationship(
         "ArchitectureRecord", back_populates="assessment"
+    )
+
+
+class AlgorithmContract(Base):
+    """Assessment-backed mathematical reduction contract required before serious Build."""
+
+    __tablename__ = "algorithm_contracts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False, index=True
+    )
+    contract_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    algorithm_family: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    validity_status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    mathematical_object: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reduction_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    required_inputs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    provided_inputs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    missing_inputs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    assumptions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    caveats: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    classical_baseline: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    benchmark_plan: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    resource_estimate: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    trust_labels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    build_eligibility: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    assessment: Mapped["Assessment"] = relationship(
+        "Assessment", back_populates="algorithm_contracts"
+    )
+    experiment_bundles: Mapped[list["ExperimentBundle"]] = relationship(
+        "ExperimentBundle", back_populates="algorithm_contract"
     )
 
 
@@ -193,6 +242,9 @@ class ExperimentBundle(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     assessment_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False, index=True
+    )
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("algorithm_contracts.id"), nullable=True, index=True
     )
     simulation_job_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=True, index=True
@@ -213,6 +265,9 @@ class ExperimentBundle(Base):
     )
 
     assessment: Mapped["Assessment"] = relationship("Assessment", back_populates="experiment_bundles")
+    algorithm_contract: Mapped["AlgorithmContract | None"] = relationship(
+        "AlgorithmContract", back_populates="experiment_bundles"
+    )
     simulation_job: Mapped["Job | None"] = relationship("Job")
 
 

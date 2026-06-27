@@ -130,7 +130,7 @@ class SessionList(BaseModel):
 
 
 class AssessmentCreate(BaseModel):
-    """Request body for a persisted QALS 2.0 readiness assessment."""
+    """Request body for a persisted QALS 3.0 Algorithm Contract assessment."""
 
     use_case_id: uuid.UUID
     user_inputs: dict[str, Any] = Field(
@@ -155,7 +155,7 @@ class AssessmentUpdate(BaseModel):
 
 
 class AssessmentRead(BaseModel):
-    """Read model for a persisted QALS 2.0 assessment."""
+    """Read model for a persisted QALS 3.0 assessment."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -171,6 +171,9 @@ class AssessmentRead(BaseModel):
     time_horizon: str = "NOW_CLASSICAL"
     trust_labels: list[str] = Field(default_factory=list)
     problem_class: str = "UNKNOWN"
+    recommended_contract_type: str = "TUTORIAL"
+    recommended_algorithm_family: str = "UNKNOWN"
+    contract_validity_status: str = "TUTORIAL_ONLY"
     plain_english_recommendation: str = ""
     classical_baseline_summary: str = ""
     quantum_candidate_summary: str = ""
@@ -179,15 +182,70 @@ class AssessmentRead(BaseModel):
     assumptions: list[str] = Field(default_factory=list)
     caveats: list[str] = Field(default_factory=list)
     next_best_action: str = ""
-    build_eligibility: str = "LIMITED"
+    build_eligibility: str = "LIMITED_TUTORIAL_ONLY"
     recommended_experiment_type: str = ""
     hardware_assumptions: list[str] = Field(default_factory=list)
+    mathematical_object: str = ""
+    reduction_summary: str = ""
+    required_inputs: list[str] = Field(default_factory=list)
+    provided_inputs: list[str] = Field(default_factory=list)
+    missing_inputs: list[str] = Field(default_factory=list)
+    benchmark_plan: str = ""
+    resource_estimate: dict[str, Any] = Field(default_factory=dict)
     exportable_memo: str = ""
     why_promising: list[str] = Field(default_factory=list)
     why_not_now: list[str] = Field(default_factory=list)
     top_blockers: list[str] = Field(default_factory=list)
     next_90_days: list[str] = Field(default_factory=list)
     created_at: datetime
+    updated_at: datetime | None = None
+
+
+class AlgorithmContractUpdate(BaseModel):
+    """Patch body for user-supplied contract refinements."""
+
+    title: str | None = None
+    description: str | None = None
+    mathematical_object: str | None = None
+    reduction_summary: str | None = None
+    provided_inputs: list[str] | None = None
+    missing_inputs: list[str] | None = None
+    assumptions: list[str] | None = None
+    caveats: list[str] | None = None
+    classical_baseline: str | None = None
+    benchmark_plan: str | None = None
+    resource_estimate: dict[str, Any] | None = None
+    trust_labels: list[str] | None = None
+    build_eligibility: str | None = None
+    validity_status: str | None = None
+
+
+class AlgorithmContractRead(BaseModel):
+    """Read model for an assessment-backed Algorithm Contract."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    assessment_id: uuid.UUID
+    contract_type: str
+    algorithm_family: str
+    title: str
+    description: str
+    validity_status: str
+    mathematical_object: str
+    reduction_summary: str
+    required_inputs: list[str] = Field(default_factory=list)
+    provided_inputs: list[str] = Field(default_factory=list)
+    missing_inputs: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    classical_baseline: str
+    benchmark_plan: str
+    resource_estimate: dict[str, Any] = Field(default_factory=dict)
+    trust_labels: list[str] = Field(default_factory=list)
+    build_eligibility: str
+    created_at: datetime
+    updated_at: datetime | None = None
 
 
 class ExperimentBundleCreate(BaseModel):
@@ -206,6 +264,7 @@ class ExperimentBundleRead(BaseModel):
 
     id: uuid.UUID
     assessment_id: uuid.UUID
+    contract_id: uuid.UUID | None = None
     simulation_job_id: uuid.UUID | None = None
     title: str
     hypothesis: str

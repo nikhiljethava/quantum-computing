@@ -1,4 +1,4 @@
-# QALS 2.0 End-to-End Test Cases
+# QALS 3.0 End-to-End Test Cases
 
 Quantum Foundry is an independent personal project and is not an official Google product.
 
@@ -46,7 +46,7 @@ Every E2E case should preserve these invariants:
 - Tutorial circuits can exist, but they are labeled `TUTORIAL` and cannot become business recommendations.
 - Simulation output is simulator-first and includes a Result Trust panel.
 - Architecture maps show the classical/quantum split and mark hardware as optional and hardware access-controlled.
-- Exports produce a Quantum Opportunity Memo with the required decision sections.
+- Exports produce a Quantum Algorithm Brief with the required decision sections.
 - Copy must not claim guaranteed quantum advantage, guaranteed ROI, unrestricted hardware access, or production-ready quantum solutions.
 
 ## E2E-001 Home And Navigation Hierarchy
@@ -228,7 +228,7 @@ Steps:
 1. Submit the assessment.
 2. Review the result card.
 3. Try to create a serious quantum experiment bundle.
-4. Export a Quantum Opportunity Memo.
+4. Export a Quantum Algorithm Brief.
 
 Expected results:
 
@@ -367,7 +367,7 @@ Expected results:
 - Hardware path is optional and hardware access-controlled.
 - Trust labels and time horizon are visible.
 
-## E2E-013 Quantum Opportunity Memo Export
+## E2E-013 Quantum Algorithm Brief Export
 
 Purpose: verify the primary export is a decision memo, not only an architecture diagram.
 
@@ -383,7 +383,7 @@ Steps:
 
 Expected results:
 
-- Export job type is an opportunity memo export.
+- Export job type is an Algorithm Brief export.
 - Artifact is attached to the assessment and job.
 - Memo contains these sections: Executive verdict, Problem shape, Classical baseline, Quantum candidate, Evidence and caveats, Experiment bundle, GCP architecture, Time horizon, Next decision, Assumptions, Missing evidence.
 - Memo includes verdict, confidence, trust labels, evidence, caveats, and missing evidence.
@@ -401,8 +401,8 @@ Steps:
 Expected results:
 
 - Hero cards say `Experiment bundle jobs`, `Simulation trust jobs`, and `Opportunity memo jobs`.
-- Empty state points users to a readiness assessment, Experiment Bundle, or Quantum Opportunity Memo export.
-- Memo export jobs are labeled `Quantum Opportunity Memo export`.
+- Empty state points users to a readiness assessment, Experiment Bundle, or Quantum Algorithm Brief export.
+- Memo export jobs are labeled `Quantum Algorithm Brief export`.
 - Job detail shows assessment and experiment bundle ids when present.
 - Artifact link uses the job result artifact id when available.
 - No duplicate-key warnings or layout warnings appear in the browser console.

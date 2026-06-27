@@ -5,6 +5,7 @@
 import {
   Artifact,
   ArtifactCreate,
+  AlgorithmContract,
   ArchitectureMap,
   ArchitectureRequest,
   Assessment,
@@ -172,6 +173,16 @@ export async function updateAssessment(
   });
 }
 
+export async function createAlgorithmContract(assessmentId: string): Promise<AlgorithmContract> {
+  return apiFetch<AlgorithmContract>(`/api/v1/assessments/${assessmentId}/contracts`, {
+    method: "POST",
+  });
+}
+
+export async function fetchAlgorithmContract(id: string): Promise<AlgorithmContract> {
+  return apiFetch<AlgorithmContract>(`/api/v1/contracts/${id}`);
+}
+
 export async function createExperimentBundle(
   assessmentId: string,
   body: ExperimentBundleCreate = {},
@@ -182,12 +193,22 @@ export async function createExperimentBundle(
   });
 }
 
+export async function createContractExperimentBundle(
+  contractId: string,
+  body: ExperimentBundleCreate = {},
+): Promise<ExperimentBundle> {
+  return apiFetch<ExperimentBundle>(`/api/v1/contracts/${contractId}/experiment-bundles`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export async function fetchExperimentBundle(id: string): Promise<ExperimentBundle> {
   return apiFetch<ExperimentBundle>(`/api/v1/experiment-bundles/${id}`);
 }
 
 export async function exportAssessmentMemo(assessmentId: string): Promise<MemoExport> {
-  return apiFetch<MemoExport>(`/api/v1/assessments/${assessmentId}/export-memo`, {
+  return apiFetch<MemoExport>(`/api/v1/assessments/${assessmentId}/export-brief`, {
     method: "POST",
   });
 }

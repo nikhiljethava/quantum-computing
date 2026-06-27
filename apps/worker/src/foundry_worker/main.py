@@ -161,7 +161,7 @@ async def _execute_export_job(db: AsyncSession, *, job_id: str, payload: dict) -
 
 
 async def _execute_opportunity_memo_job(db: AsyncSession, *, job_id: str, payload: dict) -> dict:
-    """Generate a Quantum Opportunity Memo artifact from a persisted assessment."""
+    """Generate a Quantum Algorithm Brief or PQC Migration Memo from a persisted assessment."""
 
     from foundry_backend.models.models import Assessment  # type: ignore[import]
 

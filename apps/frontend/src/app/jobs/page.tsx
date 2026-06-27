@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import JobsClient from "./JobsClient";
 
 const description =
-  "Quantum Foundry tracks assessment-backed experiment bundles, simulator-first jobs, opportunity memo exports, and hybrid Google Cloud architecture artifacts.";
+  "Quantum Foundry tracks Algorithm Contract-backed experiment bundles, simulator-first jobs, Algorithm Brief exports, and hybrid Google Cloud architecture artifacts.";
 
 const jobCards = [
   {
@@ -21,8 +21,8 @@ const jobCards = [
     href: "/build",
   },
   {
-    title: "Opportunity memo jobs",
-    copy: "Track Quantum Opportunity Memo exports that preserve verdict, classical baseline, caveats, and next decision.",
+    title: "Algorithm Brief jobs",
+    copy: "Track Quantum Algorithm Brief and PQC Migration Memo exports that preserve verdict, contract, baseline, caveats, and next decision.",
     cta: "Map architecture",
     href: "/map",
   },
@@ -53,7 +53,7 @@ export default function JobsPage() {
               Jobs
             </h1>
             <p className="mt-4 text-xl font-semibold leading-8 text-slate-700">
-              Track assessment-backed experiment, memo, and architecture workflows.
+              Track assessment-backed contract, experiment, brief, and architecture workflows.
             </p>
             <p className="mt-4 text-sm leading-8 text-slate-600">
               Jobs represent simulator-first runs and exports that keep the assessment hypothesis,

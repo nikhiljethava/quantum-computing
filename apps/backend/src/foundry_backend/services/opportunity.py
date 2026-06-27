@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from foundry_backend.models.models import (
+    AlgorithmContract,
     Assessment,
     ExperimentBundle,
     Job,
@@ -33,13 +34,13 @@ def _now_iso() -> str:
 
 
 def _recommendation_compat(verdict: str) -> str:
-    """Map QALS 2.0 verdicts onto the legacy frontend recommendation enum."""
+    """Map QALS 3.0 verdicts onto the legacy frontend recommendation enum."""
 
     if verdict == "SIMULATOR_PROTOTYPE_NOW":
         return "hybrid_pilot_now"
-    if verdict in {"RESEARCH_PARTNERSHIP", "FUTURE_FTQC"}:
+    if verdict in {"RESEARCH_PARTNERSHIP", "FUTURE_FTQC", "RESEARCH_SCOPING_REQUIRED"}:
         return "research_only"
-    if verdict in {"BENCHMARK_FIRST", "PQC_MIGRATION_NOW"}:
+    if verdict in {"BENCHMARK_FIRST", "PQC_MIGRATION_NOW", "INVENTORY_FIRST"}:
         return "watchlist"
     return "classical_now"
 
@@ -86,7 +87,7 @@ def run_qals_for_use_case(
     assessment_id: uuid.UUID | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
-    """Run QALS 2.0 against a use case and return JSON-safe output."""
+    """Run QALS 3.0 against a use case and return JSON-safe output."""
 
     qals = run_qals_2(
         user_inputs=user_inputs,
@@ -107,7 +108,7 @@ def apply_qals_to_assessment(
     assessment: Assessment,
     qals_output: dict[str, Any],
 ) -> None:
-    """Copy QALS 2.0 output into the persisted assessment row."""
+    """Copy QALS 3.0 output into the persisted assessment row."""
 
     assessment.qals_score = float(qals_output["readiness_score"]) / 100
     assessment.verdict = qals_output["verdict"]
@@ -140,6 +141,9 @@ def serialize_assessment(assessment: Assessment) -> dict[str, Any]:
         "time_horizon": qals_output.get("time_horizon", assessment.time_horizon or "NOW_CLASSICAL"),
         "trust_labels": qals_output.get("trust_labels", assessment.trust_labels or []),
         "problem_class": qals_output.get("problem_class", assessment.problem_class or "UNKNOWN"),
+        "recommended_contract_type": qals_output.get("recommended_contract_type", "TUTORIAL"),
+        "recommended_algorithm_family": qals_output.get("recommended_algorithm_family", "UNKNOWN"),
+        "contract_validity_status": qals_output.get("contract_validity_status", "TUTORIAL_ONLY"),
         "plain_english_recommendation": qals_output.get("plain_english_recommendation", ""),
         "classical_baseline_summary": qals_output.get("classical_baseline_summary", ""),
         "quantum_candidate_summary": qals_output.get("quantum_candidate_summary", ""),
@@ -148,15 +152,104 @@ def serialize_assessment(assessment: Assessment) -> dict[str, Any]:
         "assumptions": qals_output.get("assumptions", []),
         "caveats": qals_output.get("caveats", []),
         "next_best_action": qals_output.get("next_best_action", ""),
-        "build_eligibility": qals_output.get("build_eligibility", assessment.build_eligibility or "LIMITED"),
+        "build_eligibility": qals_output.get(
+            "build_eligibility",
+            assessment.build_eligibility or BuildEligibility.LIMITED_TUTORIAL_ONLY.value,
+        ),
         "recommended_experiment_type": qals_output.get("recommended_experiment_type", ""),
         "hardware_assumptions": qals_output.get("hardware_assumptions", []),
+        "mathematical_object": qals_output.get("mathematical_object", ""),
+        "reduction_summary": qals_output.get("reduction_summary", ""),
+        "required_inputs": qals_output.get("required_inputs", []),
+        "provided_inputs": qals_output.get("provided_inputs", []),
+        "missing_inputs": qals_output.get("missing_inputs", []),
+        "benchmark_plan": qals_output.get("benchmark_plan", ""),
+        "resource_estimate": qals_output.get("resource_estimate", {}),
         "exportable_memo": qals_output.get("exportable_memo", assessment.exportable_memo or ""),
         "why_promising": why_promising,
         "why_not_now": why_not_now,
         "top_blockers": blockers,
         "next_90_days": next_90_days,
         "created_at": assessment.created_at,
+        "updated_at": getattr(assessment, "updated_at", None),
+    }
+
+
+def _contract_title(qals_output: dict[str, Any]) -> str:
+    contract_type = qals_output.get("recommended_contract_type", "TUTORIAL").replace("_", " ").title()
+    family = qals_output.get("recommended_algorithm_family", "UNKNOWN").replace("_", " ").title()
+    return f"{contract_type} Algorithm Contract - {family}"
+
+
+async def create_algorithm_contract(
+    db: AsyncSession,
+    *,
+    assessment: Assessment,
+) -> AlgorithmContract:
+    """Create or return the latest Algorithm Contract generated from an assessment."""
+
+    qals_output = assessment.qals_output or {}
+    stmt = (
+        select(AlgorithmContract)
+        .where(AlgorithmContract.assessment_id == assessment.id)
+        .order_by(AlgorithmContract.created_at.desc())
+        .limit(1)
+    )
+    existing = (await db.execute(stmt)).scalar_one_or_none()
+    if existing:
+        return existing
+
+    contract = AlgorithmContract(
+        assessment_id=assessment.id,
+        contract_type=qals_output.get("recommended_contract_type", "TUTORIAL"),
+        algorithm_family=qals_output.get("recommended_algorithm_family", "UNKNOWN"),
+        title=_contract_title(qals_output),
+        description=qals_output.get("plain_english_recommendation", ""),
+        validity_status=qals_output.get("contract_validity_status", "TUTORIAL_ONLY"),
+        mathematical_object=qals_output.get("mathematical_object", ""),
+        reduction_summary=qals_output.get("reduction_summary", ""),
+        required_inputs=qals_output.get("required_inputs", []),
+        provided_inputs=qals_output.get("provided_inputs", []),
+        missing_inputs=qals_output.get("missing_inputs", []),
+        assumptions=qals_output.get("assumptions", []),
+        caveats=qals_output.get("caveats", []),
+        classical_baseline=qals_output.get("classical_baseline_summary", ""),
+        benchmark_plan=qals_output.get("benchmark_plan", ""),
+        resource_estimate=qals_output.get("resource_estimate", {}),
+        trust_labels=qals_output.get("trust_labels", []),
+        build_eligibility=qals_output.get("build_eligibility", BuildEligibility.LIMITED_TUTORIAL_ONLY.value),
+    )
+    db.add(contract)
+    await db.commit()
+    await db.refresh(contract)
+    return contract
+
+
+def serialize_algorithm_contract(contract: AlgorithmContract) -> dict[str, Any]:
+    """Return an AlgorithmContractRead-compatible dictionary."""
+
+    return {
+        "id": contract.id,
+        "assessment_id": contract.assessment_id,
+        "contract_type": contract.contract_type,
+        "algorithm_family": contract.algorithm_family,
+        "title": contract.title,
+        "description": contract.description,
+        "validity_status": contract.validity_status,
+        "mathematical_object": contract.mathematical_object,
+        "reduction_summary": contract.reduction_summary,
+        "required_inputs": contract.required_inputs,
+        "provided_inputs": contract.provided_inputs,
+        "missing_inputs": contract.missing_inputs,
+        "assumptions": contract.assumptions,
+        "caveats": contract.caveats,
+        "classical_baseline": contract.classical_baseline,
+        "benchmark_plan": contract.benchmark_plan,
+        "resource_estimate": contract.resource_estimate,
+        "trust_labels": contract.trust_labels,
+        "build_eligibility": contract.build_eligibility,
+        "created_at": contract.created_at,
+        "updated_at": contract.updated_at,
     }
 
 
@@ -193,7 +286,11 @@ def _build_gcp_map(qals_output: dict[str, Any]) -> dict[str, Any]:
 
 def _default_trust_metrics(qals_output: dict[str, Any]) -> dict[str, Any]:
     is_crypto = qals_output.get("problem_class") == ProblemClass.CRYPTO_SECURITY.value
-    is_stub = is_crypto or qals_output.get("build_eligibility") == BuildEligibility.LIMITED.value
+    is_stub = qals_output.get("build_eligibility") not in {
+        BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
+        BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
+        BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
+    }
     return {
         "backend": "stub" if is_stub else "simulator",
         "number_of_qubits": 0 if is_stub else None,
@@ -216,18 +313,33 @@ async def create_experiment_bundle(
     db: AsyncSession,
     *,
     assessment: Assessment,
+    contract: AlgorithmContract | None = None,
     queue_simulation: bool = True,
 ) -> ExperimentBundle:
-    """Create an assessment-anchored Experiment Bundle."""
+    """Create an assessment and contract-anchored Experiment Bundle."""
 
     qals_output = assessment.qals_output or {}
-    eligibility = qals_output.get("build_eligibility", BuildEligibility.LIMITED.value)
-    if eligibility in {BuildEligibility.BLOCKED.value, BuildEligibility.TUTORIAL_ONLY.value}:
-        raise ValueError("This assessment is tutorial-only or blocked and cannot create a serious experiment bundle.")
+    eligibility = (
+        contract.build_eligibility
+        if contract
+        else qals_output.get("build_eligibility", BuildEligibility.LIMITED_TUTORIAL_ONLY.value)
+    )
+    if eligibility in {
+        BuildEligibility.BLOCKED.value,
+        BuildEligibility.LIMITED_TUTORIAL_ONLY.value,
+    }:
+        raise ValueError(
+            "This Algorithm Contract is blocked or tutorial-only and cannot create a serious Experiment Bundle."
+        )
 
     is_crypto = qals_output.get("problem_class") == ProblemClass.CRYPTO_SECURITY.value
+    can_queue_simulation = eligibility in {
+        BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
+        BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
+        BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
+    }
     job = None
-    if queue_simulation and not is_crypto and eligibility != BuildEligibility.LIMITED.value:
+    if queue_simulation and not is_crypto and can_queue_simulation:
         job_type = _job_type_for_problem_class(str(qals_output.get("problem_class", "")))
         stmt = (
             select(Job)
@@ -242,6 +354,7 @@ async def create_experiment_bundle(
                 job_type=job_type,
                 payload={
                     "assessment_id": str(assessment.id),
+                    "contract_id": str(contract.id) if contract else None,
                     "trust_labels": qals_output.get("trust_labels", []),
                     "recommended_experiment_type": qals_output.get("recommended_experiment_type", ""),
                     "prompt": qals_output.get("quantum_candidate_summary", ""),
@@ -257,17 +370,18 @@ async def create_experiment_bundle(
     trust_labels = qals_output.get("trust_labels") or [TrustLabel.BENCHMARK_CANDIDATE.value]
     bundle = ExperimentBundle(
         assessment_id=assessment.id,
+        contract_id=contract.id if contract else None,
         simulation_job_id=job.id if job else None,
-        title=f"{qals_output.get('problem_class', 'UNKNOWN').replace('_', ' ').title()} Experiment Bundle",
+        title=f"{qals_output.get('recommended_algorithm_family', qals_output.get('problem_class', 'UNKNOWN')).replace('_', ' ').title()} Algorithm Experiment Bundle",
         hypothesis=qals_output.get("plain_english_recommendation", ""),
         classical_baseline=qals_output.get("classical_baseline_summary", ""),
         quantum_candidate=qals_output.get("quantum_candidate_summary", ""),
         toy_implementation={
             "type": qals_output.get("recommended_experiment_type", ""),
-            "status": "stub" if is_crypto or eligibility == BuildEligibility.LIMITED.value else "queued",
+            "status": "stub" if is_crypto or not can_queue_simulation else "queued",
             "notes": [
                 "Simulator-first guardrail is active.",
-                "Classical baseline remains attached to the bundle.",
+                "Algorithm Contract and classical baseline remain attached to the bundle.",
             ],
         },
         result_trust_metrics=_default_trust_metrics(qals_output),
@@ -289,6 +403,7 @@ def serialize_experiment_bundle(bundle: ExperimentBundle) -> dict[str, Any]:
     return {
         "id": bundle.id,
         "assessment_id": bundle.assessment_id,
+        "contract_id": bundle.contract_id,
         "simulation_job_id": bundle.simulation_job_id,
         "title": bundle.title,
         "hypothesis": bundle.hypothesis,

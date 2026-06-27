@@ -36,6 +36,7 @@ TITLE_SLUGS = {
     "Power Grid Scheduling": "power-grid-scheduling",
     "Battery Material Discovery": "battery-material-discovery",
     "Post-Quantum Cryptography Readiness": "post-quantum-cryptography-readiness",
+    "Grover Oracle Benchmark Scoping": "grover-oracle-benchmark-scoping",
     "Aerodynamic Simulation": "aerodynamic-simulation",
     "Satellite Orbit Scheduling": "satellite-orbit-scheduling",
     "Catalyst Design for Green Chemistry": "catalyst-design",
@@ -57,6 +58,12 @@ FEATURED_BLUEPRINT_EXTRAS = {
         "maturity_label": "pilot_carefully",
         "recommended_lessons": ["why-chemistry-is-hard", "hamiltonians", "small-molecule-story"],
         "recommended_labs": ["chemistry"],
+        "algorithm_contract": {
+            "contract_type": "VQE",
+            "algorithm_family": "VQE",
+            "required_inputs": ["molecule or material fragment", "Hamiltonian path", "observable", "ansatz", "optimizer", "DFT / HPC baseline"],
+            "trust_labels": ["HAMILTONIAN_DEPENDENT", "CONVERGENCE_UNCERTAIN", "RESEARCH_CANDIDATE"],
+        },
         "google_cloud_architecture_notes": [
             "Use Cloud Storage for molecular inputs, fragment definitions, and simulation artifacts.",
             "Keep the DFT / classical HPC workflow attached as the declared classical baseline.",
@@ -69,6 +76,12 @@ FEATURED_BLUEPRINT_EXTRAS = {
         "maturity_label": "simulate_now",
         "recommended_lessons": ["simulation-first-architecture"],
         "recommended_labs": [],
+        "algorithm_contract": {
+            "contract_type": "PQC_RISK",
+            "algorithm_family": "PQC_READINESS",
+            "required_inputs": ["public-key crypto inventory", "certificate lifetimes", "data shelf life", "migration owner", "crypto agility status"],
+            "trust_labels": ["ACTION_NOW"],
+        },
         "google_cloud_architecture_notes": [
             "Use Cloud SQL for crypto asset inventory state and migration ownership.",
             "Use Cloud Storage for exported readiness memos and evidence files.",
@@ -81,6 +94,12 @@ FEATURED_BLUEPRINT_EXTRAS = {
         "maturity_label": "simulate_now",
         "recommended_lessons": ["qaoa-intuition", "measurement-histograms", "simulation-first-architecture"],
         "recommended_labs": ["routing"],
+        "algorithm_contract": {
+            "contract_type": "QAOA",
+            "algorithm_family": "QAOA",
+            "required_inputs": ["QUBO variables", "objective", "constraints", "penalty terms", "OR-Tools or MILP baseline"],
+            "trust_labels": ["BENCHMARK_CANDIDATE", "TOY_SIMULATION", "CONVERGENCE_UNCERTAIN"],
+        },
         "google_cloud_architecture_notes": [
             "Use BigQuery or Cloud Storage for portfolio inputs and benchmark results.",
             "Run Cirq/qsim simulations through Cloud Run Jobs for repeatable experiments.",
@@ -109,6 +128,24 @@ FEATURED_BLUEPRINT_EXTRAS = {
             "Use BigQuery for route history and Cloud Storage for bounded benchmark instances.",
             "Run simulator sweeps through Cloud Run Jobs or Cloud Tasks-backed workers.",
             "Post-process candidate routes in the backend before exporting planner-facing artifacts.",
+        ],
+        "hardware_access_note": HARDWARE_ACCESS_NOTE,
+    },
+    "Grover Oracle Benchmark Scoping": {
+        "google_stack": ["Cirq", "qsim", "Cloud Run Jobs", "Cloud Storage", "BigQuery"],
+        "maturity_label": "research_only",
+        "recommended_lessons": ["grover-search", "measurement-histograms", "simulation-first-architecture"],
+        "recommended_labs": ["grover"],
+        "algorithm_contract": {
+            "contract_type": "ORACLE",
+            "algorithm_family": "GROVER_SEARCH",
+            "required_inputs": ["predicate definition", "input size N", "marked item count M", "oracle cost estimate", "data loading assumption"],
+            "trust_labels": ["ORACLE_DEPENDENT", "INSUFFICIENT_CONTRACT", "TUTORIAL"],
+        },
+        "google_cloud_architecture_notes": [
+            "Use BigQuery or Cloud Storage only for benchmark inputs that can be reduced to a reversible predicate.",
+            "Keep the data-loading assumption visible because it can dominate the theoretical speedup.",
+            "Do not position Grover as a generic database, analytics, or vector-search replacement.",
         ],
         "hardware_access_note": HARDWARE_ACCESS_NOTE,
     },
@@ -278,6 +315,55 @@ SEED_DATA: list[dict] = [
         "horizon": "long-term",
         "featured": False,
         "featured_rank": None,
+    },
+    {
+        "title": "Grover Oracle Benchmark Scoping",
+        "industry": IndustryTag.other,
+        "description": (
+            "Scope whether a proposed enterprise search workload can be expressed as a reversible "
+            "oracle with a defensible data-loading path, input size, marked item estimate, and benchmark baseline."
+        ),
+        "quantum_approach": (
+            "Grover-style amplitude amplification remains oracle-dependent. The default V1 output is a "
+            "tutorial or benchmark-scoping contract, not a generic database or vector-search replacement."
+        ),
+        "complexity_score": 2.5,
+        "horizon": "long-term",
+        "featured": True,
+        "featured_rank": 4,
+        "blueprint": {
+            "persona": "Search platform owner, data systems architect, or quantum exploration lead",
+            "business_kpi": "Decide whether a search claim has an oracle and data-loading path worth benchmarking",
+            "classical_baseline": "Current search/index/vector retrieval workflow and measured query latency",
+            "hybrid_pattern": (
+                "Classical scoping defines the predicate and input encoding -> Grover tutorial simulation demonstrates amplitude amplification -> "
+                "classical benchmark plan decides whether the contract remains educational."
+            ),
+            "pilot_scope_weeks": 4,
+            "sample_input": "A small synthetic search space with an explicit reversible predicate and known marked states.",
+            "success_thresholds": [
+                "Define the oracle predicate and data-loading assumption without hand-waving",
+                "Estimate input size, marked states, and oracle cost",
+                "Document why the workload is or is not a benchmark candidate",
+            ],
+            "next_90_days": [
+                "Write the reversible predicate and identify data-loading assumptions",
+                "Compare the existing classical search/index path with a toy Grover simulation",
+                "Stop at education-only if the oracle or data-loading path remains unclear",
+            ],
+        },
+        "evidence_items": [
+            {
+                "title": "Grover search requires an oracle and data-loading model",
+                "publisher": "Curated seed note",
+                "published_at": "2026-06-27",
+                "claim": (
+                    "Grover-style workflows are useful for education and narrow benchmark scoping, "
+                    "but enterprise recommendations must account for reversible oracle and data-loading costs."
+                ),
+                "source_url": "https://quantumai.google/cirq",
+            }
+        ],
     },
     {
         "title": "Vehicle Routing Optimization",

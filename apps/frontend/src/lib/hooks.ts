@@ -6,13 +6,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createArtifact,
+  createAlgorithmContract,
   createAssessment,
+  createContractExperimentBundle,
   createExperimentBundle,
   createProject,
   createSession,
   askGuide,
   exportAssessmentMemo,
   fetchArchitecture,
+  fetchAlgorithmContract,
   fetchAssessment,
   fetchCircuitRun,
   fetchCircuitTemplates,
@@ -33,6 +36,7 @@ import {
 } from "@/lib/api";
 import {
   ArtifactCreate,
+  AlgorithmContract,
   ArchitectureRequest,
   AssessmentInputs,
   CircuitRunCreate,
@@ -157,6 +161,25 @@ export function useAssessment(id: string | null) {
   });
 }
 
+export function useCreateAlgorithmContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assessmentId: string) => createAlgorithmContract(assessmentId),
+    onSuccess: (contract) => {
+      qc.setQueryData(["algorithm-contract", contract.id], contract);
+      qc.invalidateQueries({ queryKey: ["assessment", contract.assessment_id] });
+    },
+  });
+}
+
+export function useAlgorithmContract(id: string | null) {
+  return useQuery<AlgorithmContract>({
+    queryKey: ["algorithm-contract", id],
+    queryFn: () => fetchAlgorithmContract(id!),
+    enabled: !!id,
+  });
+}
+
 export function useCreateExperimentBundle() {
   const qc = useQueryClient();
   return useMutation({
@@ -164,6 +187,19 @@ export function useCreateExperimentBundle() {
       createExperimentBundle(assessmentId, body),
     onSuccess: (bundle) => {
       qc.setQueryData(["experiment-bundle", bundle.id], bundle);
+      qc.invalidateQueries({ queryKey: ["assessment", bundle.assessment_id] });
+    },
+  });
+}
+
+export function useCreateContractExperimentBundle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ contractId, body }: { contractId: string; body?: ExperimentBundleCreate }) =>
+      createContractExperimentBundle(contractId, body),
+    onSuccess: (bundle) => {
+      qc.setQueryData(["experiment-bundle", bundle.id], bundle);
+      if (bundle.contract_id) qc.invalidateQueries({ queryKey: ["algorithm-contract", bundle.contract_id] });
       qc.invalidateQueries({ queryKey: ["assessment", bundle.assessment_id] });
     },
   });

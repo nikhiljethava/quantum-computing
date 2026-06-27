@@ -74,10 +74,10 @@ function readNumber(record: Record<string, unknown> | null | undefined, key: str
 function formatJobType(jobType: JobType) {
   if (jobType === "opportunity_memo_export") {
     return {
-      label: "Quantum Opportunity Memo export",
-      badge: "Opportunity memo",
+      label: "Quantum Algorithm Brief export",
+      badge: "Algorithm brief",
       description:
-        "Packages the evidence-backed verdict, classical baseline, trust labels, caveats, GCP architecture, and next decision into an exportable memo.",
+        "Packages the evidence-backed verdict, Algorithm Contract, classical baseline, trust labels, caveats, GCP architecture, and next decision into an exportable brief.",
     };
   }
 
@@ -183,10 +183,10 @@ function buildArtifactHref(job: Job) {
 function buildSummary(job: Job) {
   const meta = formatJobType(job.job_type);
   if (job.job_type === "opportunity_memo_export") {
-    if (job.status === "PENDING") return "Queued to export a Quantum Opportunity Memo from the attached readiness assessment.";
+    if (job.status === "PENDING") return "Queued to export a Quantum Algorithm Brief from the attached readiness assessment.";
     if (job.status === "RUNNING") return "The worker is packaging the verdict, baseline, assumptions, caveats, and GCP architecture.";
-    if (job.status === "COMPLETED") return "The opportunity memo export completed and is available as a downloadable artifact.";
-    return "The opportunity memo export failed before the artifact could be attached.";
+    if (job.status === "COMPLETED") return "The Algorithm Brief export completed and is available as a downloadable artifact.";
+    return "The Algorithm Brief export failed before the artifact could be attached.";
   }
 
   if (job.job_type === "session_summary_export") {
@@ -350,7 +350,7 @@ function JobListCard({
           })
         ) : (
           <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-            No jobs match this filter yet. Start with a readiness assessment, then create an Experiment Bundle or export an opportunity memo.
+            No jobs match this filter yet. Start with a readiness assessment, then create an Algorithm Experiment Bundle or export an Algorithm Brief.
           </div>
         )}
       </div>
@@ -549,7 +549,7 @@ function EmptyJobState() {
         No background work yet
       </h2>
       <p className="mx-auto mt-3 max-w-[560px] text-sm leading-7 text-slate-600">
-        Create a readiness assessment, then queue an assessment-backed Experiment Bundle or Quantum Opportunity Memo export to start building an activity trail here.
+        Create a readiness assessment, then queue an Algorithm Contract-backed Experiment Bundle or Quantum Algorithm Brief export to start building an activity trail here.
       </p>
       <div className="mt-6">
         <Link
@@ -670,7 +670,7 @@ function JobsPageContent() {
               Track experiment bundles and memo exports
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
-              One place to see worker activity for simulator-first runs, opportunity memos, trust metrics, and downloadable artifacts.
+              One place to see worker activity for simulator-first runs, Algorithm Briefs, trust metrics, and downloadable artifacts.
             </p>
           </div>
 

@@ -59,9 +59,9 @@ const CONCEPTS = [
 
 const JOURNEY = [
   { step: "01", icon: BookOpen, label: "Learn", desc: "Understand the readiness assessment", href: "/learn" },
-  { step: "02", icon: Globe, label: "Explore", desc: "Pick a problem shape", href: "/explore" },
-  { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Generate the evidence-backed verdict", href: "/assess", active: true },
-  { step: "04", icon: FlaskConical, label: "Build", desc: "Create an Experiment Bundle", href: "/build" },
+  { step: "02", icon: Globe, label: "Explore", desc: "Pick an algorithm pattern", href: "/explore" },
+  { step: "03", icon: SlidersHorizontal, label: "Assess", desc: "Create the Algorithm Contract", href: "/assess", active: true },
+  { step: "04", icon: FlaskConical, label: "Build", desc: "Create an Algorithm Experiment Bundle", href: "/build" },
   { step: "05", icon: Map, label: "Map", desc: "Export decision and architecture", href: "/map" },
 ];
 
@@ -102,7 +102,7 @@ export default function HomePage() {
             }}
           >
             <Atom size={13} />
-            Quantum Foundry · Opportunity Triage Workbench
+            Quantum Foundry · Algorithm Contract Workbench
           </div>
 
           <h1
@@ -113,7 +113,7 @@ export default function HomePage() {
               lineHeight: 1.05,
             }}
           >
-            Quantum Opportunity Triage
+            Quantum Algorithm Contract Workbench
           </h1>
 
           <p
@@ -125,8 +125,8 @@ export default function HomePage() {
               lineHeight: 1.7,
             }}
           >
-            Assess enterprise quantum opportunities with a declared classical baseline,
-            time horizon, evidence, assumptions, and visible trust labels before creating an Experiment Bundle.
+            Turn enterprise quantum ideas into evidence-backed Algorithm Contracts with a declared classical
+            baseline, time horizon, mathematical reduction, assumptions, and visible trust labels before Build.
           </p>
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
@@ -134,7 +134,7 @@ export default function HomePage() {
               <SlidersHorizontal size={16} /> Assess a quantum opportunity
             </Link>
             <Link href="/explore" className="btn-primary" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
-              Explore examples <ArrowRight size={16} />
+              Explore algorithm patterns <ArrowRight size={16} />
             </Link>
             <Link href="/learn" className="btn-ghost" style={{ fontSize: "1rem", padding: "0.75rem 1.75rem" }}>
               <BookOpen size={16} /> Learn the basics
