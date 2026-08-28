@@ -4,7 +4,7 @@
 >
 > This project is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC. It uses publicly available Google Cloud and Google Quantum AI ecosystem technologies where applicable.
 
-Quantum Foundry is a personal learning and prototyping app for turning enterprise quantum ideas into Algorithm Contracts, attaching every serious build artifact to an evidence-backed assessment, simulating Cirq-based toy experiments, and mapping hybrid quantum-classical workflows to Google Cloud architecture patterns.
+Quantum Foundry is an independent, simulator-first lab for understanding the platform around quantum computing and turning real problems into evidence-backed Algorithm Contracts and honest next decisions. Every serious build artifact remains attached to an assessment hypothesis, classical baseline, time horizon, evidence or assumptions, and visible trust labels.
 
 Recommended GitHub repository description:
 
@@ -37,23 +37,25 @@ Quantum computing can feel inaccessible because product teams often see either d
 
 ## Product Walkthrough
 
-The intended journey is:
+The intended public journey is:
 
-1. **Learn** quantum concepts through structured lessons.
-2. **Explore** featured industry use cases before starting a blank workload form.
-3. **Assess** a use case with QALS 3.0, a deterministic Algorithm Contract assessment.
-4. **Build** an Algorithm Experiment Bundle with hypothesis, classical baseline, algorithm candidate, toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports.
-5. **Map** the decision, experiment, and Google Cloud architecture patterns.
-6. **Save and export** sessions, code, architecture JSON, notebooks, Quantum Algorithm Briefs, and PQC Migration Memos.
+1. **Read** an idea on the homepage or in the Beyond the Quantum Processor series.
+2. **Understand it visually** through a companion or focused Learn page.
+3. **Try a guided example** that remains labeled tutorial or toy simulation.
+4. **Assess a real problem** first with Quick Assessment, then with the full QALS 3.0 Algorithm Contract.
+5. **Build** an Algorithm Experiment Bundle only when the full contract permits it.
+6. **Map and export** the decision, experiment, reference architecture, and cloud implementation example.
 
 ## Core Surfaces
 
 - `/` introduces the product and visible independent-project disclaimer.
 - `/learn` contains structured learning paths.
+- `/learn/quantum-software-stack` explains frameworks, domain libraries, compilers, simulators, runtimes, and QPUs without becoming a marketplace.
+- `/series` contains reusable interactive companions for the first two Beyond the Quantum Processor articles.
 - `/explore` highlights flagship use cases and keeps the catalog accessible.
-- `/assess` turns readiness scoring into an Algorithm Contract, verdict, and next steps.
-- `/build` is the Cirq Lab for circuit templates, metrics, histograms, state preview, optional qsim fallback, and exports.
-- `/map` shows a simulator-first Google Cloud architecture map.
+- `/assess` provides a non-authoritative Quick Assessment and the full Readiness and Algorithm Contract flow. Only the full deterministic QALS 3.0 result controls verdicts and Build gates.
+- `/build` is the Algorithm Experiment Workspace. Tutorial mode stays tutorial-only; Contract mode is backend-gated and keeps Result Trust attached to simulations and exports.
+- `/map` branches into optimization, chemistry/materials, search, or circuit-free PQC workflows and offers vendor-neutral reference and Google Cloud implementation-example views.
 - `/use-cases/[slug]` provides public, shareable use-case pages.
 - `/about` explains ownership, limitations, hardware access, and attribution.
 
@@ -113,6 +115,10 @@ For the QALS 3.0 rule engine, verdict meanings, trust labels, async job model,
 simulator-first guardrail, and extension guidance, see
 [docs/QALS_2_WORKBENCH.md](docs/QALS_2_WORKBENCH.md).
 
+For the article content model, evidence records, safe canonical URL configuration,
+Quick versus Full Assessment boundary, Result Trust categories, and companion
+extension workflow, see [docs/ARTICLE_COMPANIONS.md](docs/ARTICLE_COMPANIONS.md).
+
 ## Simulation and Hardware-Access Guardrails
 
 - Simulation-first by default.
@@ -168,6 +174,7 @@ Configuration is documented in [.env.example](.env.example) and [docs/ENVIRONMEN
 Important groups:
 
 - Frontend API URL
+- Trusted canonical URLs for Series Articles 1 and 2
 - Database URL
 - Storage backend and artifact path
 - Cloud Storage bucket
@@ -199,7 +206,7 @@ Primary checks:
 - Backend and foundry-core: `pytest`
 - Frontend lint: `npm run lint`
 - Frontend production build: `npm run build -- --webpack`
-- Manual route smoke tests for `/`, `/learn`, `/explore`, `/assess`, `/build`, `/map`, `/about`, and `/use-cases/portfolio-optimization`
+- Public route smoke tests for `/`, `/learn`, `/learn/quantum-software-stack`, `/series`, both article companions, `/assess`, `/build`, and `/map`
 
 See [docs/TESTING.md](docs/TESTING.md).
 

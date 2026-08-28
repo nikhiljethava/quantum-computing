@@ -31,12 +31,12 @@ flowchart LR
 
 The frontend lives in `apps/frontend` and uses the Next.js App Router. Public pages provide the visible journey:
 
-- `/` for the product introduction.
+- `/` for the curiosity-first article companion, primer entry, Explore entry, and returning-user continuation.
 - `/learn` and lesson routes for structured learning.
 - `/explore` and `/use-cases/[slug]` for scenario discovery.
 - `/assess` for readiness recommendations.
-- `/build` for the Cirq Lab.
-- `/map` for workflow mapping.
+- `/build` for explicit Tutorial and Contract modes in the Algorithm Experiment Workspace.
+- `/map` for contract-specific workflow mapping and trust context.
 - `/projects`, `/sessions`, and `/jobs` for saved workspace and worker state.
 
 Server-rendered wrappers are used where public explanatory content should be visible in HTML. Client components preserve API-driven interactivity.
@@ -66,7 +66,7 @@ The shared package lives in `packages/foundry-core`. It contains reusable logic 
 - Cirq circuit templates.
 - Circuit inspection and simulation helpers.
 - Optional qsim fallback behavior when `qsimcirq` is installed.
-- QALS-lite assessment heuristics.
+- QALS 3.0 deterministic Algorithm Contract rules plus a legacy internal tutorial-preview compatibility helper.
 - Google Cloud architecture mapping rules.
 - Storage and job adapter interfaces.
 
@@ -90,7 +90,7 @@ Alembic migrations live under the backend package and should be run before a dep
 
 ## Artifact Storage
 
-Artifacts include Cirq code, assessment JSON, architecture JSON, session summaries, Colab notebooks, and worker outputs.
+Artifacts include Cirq code, assessment JSON, architecture JSON, session summaries, Colab notebooks, and worker outputs. Contract-backed artifacts persist nullable assessment/contract references and Result Trust context; exported content also carries the declared baseline, horizon, assumptions, and labels.
 
 - **Local development**: filesystem-backed artifact storage.
 - **Deployment**: Cloud Storage can be used through the storage adapter.
@@ -114,21 +114,38 @@ The job abstraction supports local and Cloud Tasks-backed execution.
 
 Circuit results are educational unless separately validated.
 
-## Assessment Flow
+## Assessment And Contract Flow
 
 1. The user chooses a use case or starter context.
 2. The frontend submits assumptions to `POST /api/v1/assessments`.
-3. The backend runs QALS-lite heuristics.
-4. The API returns a recommendation, blockers, promising signals, next 90 days, and the backward-compatible score fields.
+3. The backend runs QALS 3.0 deterministic rules against the supplied evidence and assumptions.
+4. The API returns the verdict, confidence, time horizon, contract reduction, baseline status,
+   missing evidence, caveats, build eligibility, trust labels, and backward-compatible score fields.
+5. Serious Build work creates a persisted Algorithm Contract and Experiment Bundle. The backend
+   blocks invalid and tutorial-only contracts from creating a serious bundle.
+6. A compute simulation is queued only when required contract inputs are complete. The worker
+   resolves matching assessment, contract, and bundle rows and rechecks QALS eligibility plus the
+   declared baseline before circuit creation. PQC remains a non-compute migration action.
 
-QALS-lite is a readiness heuristic, not a scientific proof.
+QALS 3.0 is not an ML model, advantage predictor, probability of success, or guaranteed ROI score.
 
 ## Architecture Mapping Flow
 
 1. The user maps a circuit run, assessment, or use case.
-2. The frontend calls `POST /api/v1/architectures`.
-3. The backend generates a rule-based simulator-first workflow.
-4. The result can be persisted and exported as JSON or summarized in a session artifact.
+2. The frontend calls `POST /api/v1/architectures` with assessment and contract context when available.
+3. The backend selects optimization, chemistry/materials, search, PQC, or tutorial mapping rules.
+4. Each node is labeled classical, simulated quantum, optional approved hardware, or future-only.
+5. PQC maps are classical migration paths and contain no circuit or QPU node.
+6. Persisted maps retain trust context and can be exported as JSON or summarized in an artifact.
+
+## Result Trust Flow
+
+The additive Result Trust representation is shared by assessments, circuit runs, Experiment Bundles,
+architecture maps, Saved details, and export previews. It includes evidence category, backend and
+execution status, simulation metrics where applicable, baseline and contract status, verdict,
+confidence, horizon, labels, assumptions, missing evidence, caveats, provenance, timestamp, and
+software/version context. It is not QCVV or hardware characterization. Generic educational noise is
+never described as calibrated hardware noise.
 
 ## Deployment Overview
 

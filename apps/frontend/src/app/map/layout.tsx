@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Google Cloud Architecture Map",
+  title: "Reference and Cloud Implementation Map",
   description:
-    "Map simulator-first Cirq workflows to Cloud Run, Cloud Run Jobs, Cloud Storage, Cloud SQL, Cloud Tasks, BigQuery, and Vertex AI.",
+    "Compare a vendor-neutral contract workflow with one clearly labeled Google Cloud implementation example.",
   openGraph: {
-    title: "Google Cloud Architecture Map | Quantum Foundry",
+    title: "Reference and Cloud Implementation Map | Quantum Foundry",
     description:
       "Explain hybrid quantum-classical architecture with Google Cloud services and honest hardware guardrails.",
   },
@@ -27,10 +27,12 @@ export default function MapLayout({ children }: { children: ReactNode }) {
             Hybrid quantum-classical architecture
           </h1>
           <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-            Map shows a simulator-first workflow: data from BigQuery or Cloud Storage,
-            classical preprocessing, a Cirq/qsim simulation job, classical post-processing,
-            and artifacts in Cloud Storage. Cloud Tasks and Cloud Run Jobs can replace the
-            local worker queue when the app moves fully onto Google Cloud.
+            Map follows the attached Algorithm Contract. Optimization, chemistry/materials, and
+            search show their distinct classical and simulated-quantum steps. PQC shows a purely
+            classical migration workflow with no circuit or QPU node. Optional hardware remains
+            access-controlled and future-only where applicable.
+            The reference view is vendor-neutral; the cloud view is one implementation example,
+            not an official Google quantum product or universal reference architecture.
           </p>
         </div>
       </section>

@@ -36,7 +36,7 @@ Example create request:
 ```json
 {
   "name": "Battery materials exploration",
-  "description": "Learning path, assessment, and Cirq Lab runs.",
+  "description": "Learning path, assessment, and Tutorial-mode runs.",
   "status": "active"
 }
 ```
@@ -68,9 +68,13 @@ Use-case records include stable fields such as title, industry, description, hor
 
 ```http
 POST /api/v1/assessments
+GET /api/v1/assessments/{assessment_id}
+PATCH /api/v1/assessments/{assessment_id}
+POST /api/v1/assessments/{assessment_id}/contracts
+POST /api/v1/contracts/{contract_id}/experiment-bundles
 ```
 
-Runs the deterministic QALS-lite readiness heuristic and stores the result.
+Runs the deterministic QALS 3.0 Algorithm Contract assessment and stores the evidence-backed result.
 
 Example request:
 
@@ -78,15 +82,17 @@ Example request:
 {
   "use_case_id": "00000000-0000-0000-0000-000000000000",
   "user_inputs": {
-    "problem_size": "large",
-    "data_structure": "structured",
-    "classical_hardness": "hard",
-    "timeline": "1-2 years"
+    "problemClass": "OPTIMIZATION",
+    "problemDescription": "Vehicle routing with time windows",
+    "currentClassicalBaseline": "OR-Tools",
+    "baselineMetrics": "Runtime and objective gap recorded"
   }
 }
 ```
 
-The response includes recommendation fields plus backward-compatible `qals_score`, `verdict`, and `score_breakdown`.
+The response includes verdict, confidence, time horizon, contract fields, evidence, missing evidence,
+assumptions, caveats, trust labels, build eligibility, additive `result_trust`, and backward-compatible
+`qals_score` and `score_breakdown` fields.
 
 ## Circuits
 
@@ -121,7 +127,7 @@ The Gemini update route uses a user-supplied API key ephemerally for draft assis
 POST /api/v1/architectures
 ```
 
-Generates a rule-based Google Cloud architecture map from a circuit run, job, assessment, or use case context.
+Generates a rule-based Google Cloud architecture map from a circuit run, job, assessment, or use case context. Assessment-backed requests may add `contract_id`; responses add contract/problem classification, per-node `execution_kind`, and `result_trust` while retaining legacy fields and defaults.
 
 At least one context identifier is required.
 
@@ -134,7 +140,7 @@ GET /api/v1/artifacts/{artifact_id}
 GET /api/v1/artifacts/{artifact_id}/download
 ```
 
-Supported export types include Cirq code, Colab notebook, assessment JSON, architecture JSON, session summary, and worker job output. Artifact storage can be local or Cloud Storage depending on configuration.
+Supported export types include Cirq code, Colab notebook, assessment JSON, architecture JSON, session summary, and worker job output. Contract-backed artifacts add nullable `contract_id` and `result_trust` response fields, and their content preserves assessment, baseline, horizon, assumptions, and trust context. Artifact storage can be local or Cloud Storage depending on configuration.
 
 ## Jobs
 

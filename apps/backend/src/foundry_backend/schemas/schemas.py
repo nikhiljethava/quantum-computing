@@ -154,6 +154,69 @@ class AssessmentUpdate(BaseModel):
     user_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
+class ResultTrustRead(BaseModel):
+    """Shared trust representation for assessments, simulations, bundles, and maps."""
+
+    result_type: Literal[
+        "Tutorial",
+        "Simulation",
+        "Estimated",
+        "Hardware Measured",
+        "Vendor Reported",
+        "Independently Reproduced",
+        "Unknown",
+    ] = "Unknown"
+    evidence_category: Literal[
+        "tutorial",
+        "toy simulation",
+        "estimate",
+        "measured hardware result",
+        "vendor-reported claim",
+        "independently reproduced result",
+    ] = "estimate"
+    backend: str | None = None
+    hardware_or_simulator_name: str | None = None
+    execution_status: str | None = None
+    estimate_level: str | None = None
+    hardware_horizon: str | None = None
+    qubit_count: int | None = None
+    circuit_depth: int | None = None
+    one_qubit_gate_count: int | None = None
+    two_qubit_gate_count: int | None = None
+    shots: int | None = None
+    result_distribution: list[dict[str, Any]] = Field(default_factory=list)
+    ideal_or_noisy: str | None = None
+    noise_model_description: str | None = None
+    classical_baseline_status: str = "missing"
+    contract_validity_status: str | None = None
+    readiness_verdict: str | None = None
+    confidence: str | None = None
+    time_horizon: str | None = None
+    trust_labels: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    provenance: list[str] = Field(default_factory=list)
+    generated_at: datetime | None = None
+    software_or_model_version: str | None = None
+    source_type: Literal[
+        "PEER_REVIEWED",
+        "GOVERNMENT_STANDARD",
+        "OFFICIAL_DOCUMENTATION",
+        "VENDOR_REPORTED",
+        "INDEPENDENT_BENCHMARK",
+        "PERSONAL_ANALYSIS",
+        "TUTORIAL",
+        "USER_DECLARED",
+        "UNKNOWN",
+    ] = "UNKNOWN"
+    source_organization: str | None = None
+    source_link: str | None = None
+    publication_date: datetime | None = None
+    last_verified_date: datetime | None = None
+    claim_status: str | None = None
+
+
 class AssessmentRead(BaseModel):
     """Read model for a persisted QALS 3.0 assessment."""
 
@@ -197,6 +260,7 @@ class AssessmentRead(BaseModel):
     why_not_now: list[str] = Field(default_factory=list)
     top_blockers: list[str] = Field(default_factory=list)
     next_90_days: list[str] = Field(default_factory=list)
+    result_trust: ResultTrustRead | None = None
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -277,6 +341,7 @@ class ExperimentBundleRead(BaseModel):
     gcp_map: dict[str, Any]
     export_artifacts: list[dict[str, Any]] = Field(default_factory=list)
     trust_labels: list[str] = Field(default_factory=list)
+    result_trust: ResultTrustRead | None = None
     created_at: datetime
 
 
@@ -388,7 +453,7 @@ class CircuitRunCreate(BaseModel):
     )
     use_case_id: uuid.UUID | None = Field(
         default=None,
-        description="Optional seeded use case to anchor the narrative and QALS-lite preview.",
+        description="Optional seeded use case to anchor the educational readiness preview.",
     )
     session_id: uuid.UUID | None = Field(
         default=None,
@@ -545,6 +610,7 @@ class CircuitRunRead(BaseModel):
     ideal_histogram: list[HistogramEntryRead] | None = None
     noisy_histogram: list[HistogramEntryRead] | None = None
     state_preview: StatePreviewRead | None = None
+    result_trust: ResultTrustRead | None = None
     created_at: datetime
 
 
@@ -555,6 +621,9 @@ class GcpComponentRead(BaseModel):
     name: str
     service: str
     description: str
+    execution_kind: Literal[
+        "classical", "simulated_quantum", "optional_approved_hardware", "future_only"
+    ] = "classical"
 
 
 class ArchitectureRequest(BaseModel):
@@ -570,7 +639,11 @@ class ArchitectureRequest(BaseModel):
     )
     assessment_id: uuid.UUID | None = Field(
         default=None,
-        description="Persisted QALS-lite assessment to layer into the architecture context.",
+        description="Persisted QALS 3.0 assessment to layer into the architecture context.",
+    )
+    contract_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional Algorithm Contract that selects a contract-specific map.",
     )
     use_case_id: uuid.UUID | None = Field(
         default=None,
@@ -584,12 +657,19 @@ class ArchitectureRead(BaseModel):
     id: uuid.UUID | None = None
     circuit_run_id: uuid.UUID | None = None
     assessment_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
     use_case_id: uuid.UUID | None = None
+    problem_class: str = "UNKNOWN"
+    contract_type: str = "TUTORIAL"
+    time_horizon: str = "SIMULATOR_NOW"
+    assumptions: list[str] = Field(default_factory=list)
+    trust_labels: list[str] = Field(default_factory=list)
     title: str
     summary: str
     components: list[GcpComponentRead]
     connections: list[list[str]]
     notes: list[str]
+    result_trust: ResultTrustRead | None = None
     created_at: datetime | None = None
 
 
@@ -618,6 +698,8 @@ class ArtifactRead(BaseModel):
     circuit_run_id: uuid.UUID | None = None
     architecture_record_id: uuid.UUID | None = None
     assessment_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
+    result_trust: ResultTrustRead | None = None
     filename: str
     content_type: str
     storage_uri: str

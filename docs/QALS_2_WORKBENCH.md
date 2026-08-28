@@ -53,6 +53,18 @@ Missing classical baseline guardrail:
 Every assessment, Algorithm Contract, Experiment Bundle, simulation result, and
 architecture map should surface one or more labels.
 
+## Build Modes
+
+- **Tutorial mode** runs without an assessment. Its circuit and export trust remains
+  `TUTORIAL` / `TOY_SIMULATION`, and it is never a business recommendation.
+- **Contract mode** requires matching persisted assessment, Algorithm Contract,
+  and Experiment Bundle records. Worker execution rechecks the assessment-owned QALS
+  eligibility, contract validity, required inputs, and declared classical baseline.
+- A user-edited contract cannot override an assessment-level QALS gate. Incomplete
+  contracts may retain a scoped bundle plan, but no simulation job is queued.
+- PQC uses the Contract workspace as a non-compute migration flow and does not create
+  a quantum circuit or QPU path.
+
 ## Algorithm Contract
 
 QALS 3.0 emits:
@@ -86,10 +98,13 @@ Simulation and export work is represented by `jobs` rows with:
 - `error_message`
 
 The existing worker continues to process circuit simulations and export jobs.
-Algorithm Experiment Bundles can queue simulator-first jobs with the assessment
-id, contract id, trust labels, and baseline context attached in the payload.
-Exports are represented as jobs and generate a Quantum Algorithm Brief or PQC
-Migration Memo artifact.
+Algorithm Experiment Bundles can queue simulator-first jobs with persisted
+assessment, contract, and bundle references. The worker resolves the declared
+baseline, time horizon, assumptions, and trust labels from those authoritative
+records before execution. Contract exports store the assessment id, contract id,
+and Result Trust context; code, notebook, summary, assessment JSON, and architecture
+JSON content also carry that context. Exports are represented as jobs and generate
+a Quantum Algorithm Brief or PQC Migration Memo artifact.
 
 ## Simulator-First Guardrail
 
@@ -98,6 +113,23 @@ hardware access-controlled. The Result Trust panel reports backend, qubits,
 depth, one-qubit gate count, two-qubit gate count, shots, histogram,
 ideal/noisy flag, assumed noise model, hardware readiness label, and caveats.
 It is not QCVV or hardware characterization.
+
+## Contract-Specific Map
+
+The deterministic mapper branches on `ProblemClass` and `ContractType`:
+
+- optimization: problem construction, classical solver, QUBO/Ising, simulator,
+  optimizer loop, and comparison decision;
+- chemistry/materials: fragment, basis/active-space assumptions, Hamiltonian,
+  OpenFermion/Cirq, simulator, classical chemistry baseline, interpretation, and
+  future resource estimation;
+- Grover/search: search space, oracle, data loading, simulator, query complexity,
+  and end-to-end caveats;
+- PQC: inventory, risk clock, prioritization, standards selection, interoperability
+  tests, staged migration, crypto agility, and memo, with no circuit or QPU node.
+
+Every node declares `classical`, `simulated_quantum`,
+`optional_approved_hardware`, or `future_only` execution kind.
 
 ## Adding A Problem Class
 

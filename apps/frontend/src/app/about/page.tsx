@@ -55,8 +55,8 @@ export default function AboutPage() {
         </h1>
         <p className="mt-5 text-base leading-8 text-slate-700">
           Quantum Foundry is an independent personal project created by Nikhil Jethava to make
-          quantum computing easier to learn, explore, and prototype. It is not an official Google
-          product and is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC.
+          quantum computing easier to learn, explore, and prototype. It is not an official Google product
+          and is not affiliated with, sponsored by, endorsed by, or maintained by Google LLC.
         </p>
       </section>
 

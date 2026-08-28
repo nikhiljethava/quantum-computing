@@ -39,13 +39,6 @@ async def create_artifact(
             detail="job_output and opportunity_memo artifacts are created by jobs or assessment memo export.",
         )
 
-    if not body.circuit_run_id:
-        raise HTTPException(status_code=400, detail="circuit_run_id is required for export generation.")
-
-    circuit_run = await db.get(CircuitRun, body.circuit_run_id)
-    if not circuit_run:
-        raise HTTPException(status_code=404, detail=f"CircuitRun {body.circuit_run_id} not found.")
-
     architecture_record = None
     if body.architecture_record_id:
         architecture_record = await db.get(ArchitectureRecord, body.architecture_record_id)
@@ -54,7 +47,17 @@ async def create_artifact(
                 status_code=404,
                 detail=f"ArchitectureRecord {body.architecture_record_id} not found.",
             )
-    elif body.artifact_type in {ArtifactType.architecture_json, ArtifactType.session_summary}:
+    circuit_run = None
+    if body.circuit_run_id:
+        circuit_run = await db.get(CircuitRun, body.circuit_run_id)
+        if not circuit_run:
+            raise HTTPException(status_code=404, detail=f"CircuitRun {body.circuit_run_id} not found.")
+
+    if (
+        architecture_record is None
+        and circuit_run is not None
+        and body.artifact_type in {ArtifactType.architecture_json, ArtifactType.session_summary}
+    ):
         stmt = (
             select(ArchitectureRecord)
             .where(ArchitectureRecord.circuit_run_id == circuit_run.id)
@@ -68,7 +71,23 @@ async def create_artifact(
                 detail="architecture_json export requires a persisted architecture record.",
             )
 
-    use_case = await db.get(UseCase, circuit_run.use_case_id) if circuit_run.use_case_id else None
+    if circuit_run is None and body.artifact_type != ArtifactType.architecture_json:
+        raise HTTPException(
+            status_code=400,
+            detail="circuit_run_id is required for this export type.",
+        )
+
+    if body.artifact_type == ArtifactType.architecture_json and architecture_record is None:
+        raise HTTPException(
+            status_code=400,
+            detail="architecture_record_id is required for an architecture-only export.",
+        )
+
+    use_case = (
+        await db.get(UseCase, circuit_run.use_case_id)
+        if circuit_run and circuit_run.use_case_id
+        else None
+    )
 
     artifact = await create_export_artifact(
         db,

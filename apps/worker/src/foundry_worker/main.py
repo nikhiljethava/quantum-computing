@@ -163,7 +163,7 @@ async def _execute_export_job(db: AsyncSession, *, job_id: str, payload: dict) -
 async def _execute_opportunity_memo_job(db: AsyncSession, *, job_id: str, payload: dict) -> dict:
     """Generate a Quantum Algorithm Brief or PQC Migration Memo from a persisted assessment."""
 
-    from foundry_backend.models.models import Assessment  # type: ignore[import]
+    from foundry_backend.models.models import AlgorithmContract, Assessment  # type: ignore[import]
 
     assessment_id = _safe_uuid(payload.get("assessment_id"), "assessment_id")
     if assessment_id is None:
@@ -173,9 +173,24 @@ async def _execute_opportunity_memo_job(db: AsyncSession, *, job_id: str, payloa
     if assessment is None:
         raise ValueError(f"Assessment {assessment_id} not found.")
 
+    contract_id = _safe_uuid(payload.get("contract_id"), "contract_id")
+    if contract_id is not None:
+        contract = await db.get(AlgorithmContract, contract_id)
+    else:
+        contract_stmt = (
+            select(AlgorithmContract)
+            .where(AlgorithmContract.assessment_id == assessment.id)
+            .order_by(AlgorithmContract.created_at.desc())
+            .limit(1)
+        )
+        contract = (await db.execute(contract_stmt)).scalar_one_or_none()
+    if contract is not None and contract.assessment_id != assessment.id:
+        raise ValueError("Algorithm Contract does not belong to the supplied assessment.")
+
     artifact = await create_assessment_memo_artifact(
         db,
         assessment=assessment,
+        contract=contract,
         job_id=uuid.UUID(job_id),
     )
     serialized = serialize_artifact(artifact)
@@ -194,7 +209,13 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
     """Run the async simulation job and return JSON-safe result metadata."""
 
     # Import models here to avoid eager ORM initialization during module import.
-    from foundry_backend.models.models import Session, UseCase  # type: ignore[import]
+    from foundry_backend.models.models import (  # type: ignore[import]
+        AlgorithmContract,
+        Assessment,
+        ExperimentBundle,
+        Session,
+        UseCase,
+    )
 
     try:
         template_key = JobType(job_type)
@@ -203,6 +224,12 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
 
     use_case_id = _safe_uuid(payload.get("use_case_id"), "use_case_id")
     session_id = _safe_uuid(payload.get("session_id"), "session_id")
+    assessment_id = _safe_uuid(payload.get("assessment_id"), "assessment_id")
+    contract_id = _safe_uuid(payload.get("contract_id"), "contract_id")
+    experiment_bundle_id = _safe_uuid(
+        payload.get("experiment_bundle_id"),
+        "experiment_bundle_id",
+    )
 
     use_case = None
     if use_case_id is not None:
@@ -214,6 +241,83 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
         session = await db.get(Session, session_id)
         if session is None:
             raise ValueError(f"Session {session_id} not found.")
+
+    assessment = None
+    if assessment_id is not None:
+        assessment = await db.get(Assessment, assessment_id)
+        if assessment is None:
+            raise ValueError(f"Assessment {assessment_id} not found.")
+
+    contract = None
+    if contract_id is not None:
+        contract = await db.get(AlgorithmContract, contract_id)
+        if contract is None:
+            raise ValueError(f"AlgorithmContract {contract_id} not found.")
+        if assessment and contract.assessment_id != assessment.id:
+            raise ValueError("Algorithm Contract does not belong to the supplied assessment.")
+
+    bundle = None
+    contract_context_requested = any(
+        value is not None for value in (assessment_id, contract_id, experiment_bundle_id)
+    )
+    if contract_context_requested:
+        if assessment is None or contract is None:
+            raise ValueError(
+                "Contract Experiment requires assessment_id and contract_id; use Tutorial Lab for unassessed circuits."
+            )
+
+        if experiment_bundle_id is not None:
+            bundle = await db.get(ExperimentBundle, experiment_bundle_id)
+        else:
+            bundle_stmt = (
+                select(ExperimentBundle)
+                .where(ExperimentBundle.simulation_job_id == uuid.UUID(job_id))
+                .limit(1)
+            )
+            bundle = (await db.execute(bundle_stmt)).scalar_one_or_none()
+
+        if bundle is None:
+            raise ValueError("Contract Experiment requires a persisted Experiment Bundle.")
+        if bundle.assessment_id != assessment.id or bundle.contract_id != contract.id:
+            raise ValueError(
+                "Experiment Bundle, Algorithm Contract, and assessment must belong to the same workflow."
+            )
+
+        qals_output = assessment.qals_output or {}
+        problem_class = str(qals_output.get("problem_class", assessment.problem_class or ""))
+        if problem_class == "CRYPTO_SECURITY" or contract.contract_type == "PQC_RISK":
+            raise ValueError(
+                "PQC Contract Experiments are non-compute migration workflows and cannot create a quantum circuit."
+            )
+
+        allowed_eligibilities = {
+            "ELIGIBLE_FOR_TOY_EXPERIMENT",
+            "ELIGIBLE_FOR_BENCHMARK",
+            "ELIGIBLE_FOR_RESEARCH_PROTOTYPE",
+        }
+        if (
+            qals_output.get("build_eligibility") not in allowed_eligibilities
+            or contract.build_eligibility not in allowed_eligibilities
+        ):
+            raise ValueError("The QALS 3.0 build eligibility gate blocks this Contract Experiment.")
+        if qals_output.get("contract_validity_status") != "VALID" or qals_output.get(
+            "missing_inputs", []
+        ):
+            raise ValueError(
+                "Complete the required Algorithm Contract fields before running a Contract Experiment."
+            )
+
+        missing_evidence = {
+            str(item).strip().lower() for item in qals_output.get("missing_evidence", [])
+        }
+        if (
+            not str(qals_output.get("classical_baseline_summary", "")).strip()
+            or not str(contract.classical_baseline).strip()
+            or "current classical baseline" in missing_evidence
+        ):
+            raise ValueError(
+                "A declared current classical baseline is required before running a Contract Experiment."
+            )
 
     parameter_overrides = {
         key: value for key, value in payload.items() if key in SUPPORTED_PARAMETERS.get(job_type, [])
@@ -238,6 +342,8 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
     architecture_record = await create_architecture_record(
         db,
         circuit_run=run,
+        assessment=assessment,
+        contract=contract,
         use_case=use_case,
     )
 
@@ -252,6 +358,7 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
         "circuit_run_id": str(run.id),
         "use_case_id": str(run.use_case_id) if run.use_case_id else None,
         "session_id": str(run.session_id) if run.session_id else None,
+        "experiment_bundle_id": str(bundle.id) if bundle else None,
         "histogram": run.histogram,
         "metadata": run.run_metadata,
         "job_output_artifact_uri": artifact_uri,
@@ -264,14 +371,20 @@ async def _execute_circuit_job(db: AsyncSession, *, job_id: str, job_type: str, 
             "assessment_id": str(architecture_record.assessment_id)
             if architecture_record.assessment_id
             else None,
+            "contract_id": str(architecture_record.contract_id)
+            if architecture_record.contract_id
+            else None,
             "use_case_id": str(architecture_record.use_case_id)
             if architecture_record.use_case_id
             else None,
+            "problem_class": architecture_record.problem_class,
+            "contract_type": architecture_record.contract_type,
             "title": architecture_record.title,
             "summary": architecture_record.summary,
             "components": architecture_record.components,
             "connections": architecture_record.connections,
             "notes": architecture_record.notes,
+            "result_trust": architecture_record.trust_context,
             "created_at": architecture_record.created_at.isoformat()
             if architecture_record.created_at
             else None,
@@ -309,9 +422,28 @@ async def process_job_record(db: AsyncSession, job) -> None:
         result = await _execute_job(db, job_id=str(job.id), job_type=job.job_type.value, payload=job.payload)
         job.result = result
         if result.get("job_output_artifact_uri"):
+            architecture_data = (
+                result.get("architecture")
+                if isinstance(result.get("architecture"), dict)
+                else {}
+            )
             artifact = Artifact(
                 job_id=job.id,
                 artifact_type=ArtifactType.job_output,
+                circuit_run_id=_safe_uuid(result.get("circuit_run_id"), "circuit_run_id"),
+                architecture_record_id=_safe_uuid(
+                    architecture_data.get("id"),
+                    "architecture_record_id",
+                ),
+                assessment_id=_safe_uuid(
+                    architecture_data.get("assessment_id"),
+                    "assessment_id",
+                ),
+                contract_id=_safe_uuid(
+                    architecture_data.get("contract_id"),
+                    "contract_id",
+                ),
+                trust_context=dict(architecture_data.get("result_trust", {}) or {}),
                 filename=f"{job.id}_circuit.txt",
                 content_type="text/plain",
                 storage_uri=str(result["job_output_artifact_uri"]),

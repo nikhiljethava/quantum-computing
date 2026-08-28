@@ -53,6 +53,10 @@ def test_run_circuit_without_lab_controls_still_works() -> None:
     assert body["gate_count"] == 2
     assert body["circuit_depth"] >= 2
     assert body["measurement_keys"] == ["result"]
+    assert body["result_trust"]["evidence_category"] == "tutorial"
+    assert body["result_trust"]["contract_validity_status"] == "TUTORIAL_ONLY"
+    assert {"TUTORIAL", "TOY_SIMULATION"} <= set(body["result_trust"]["trust_labels"])
+    assert "declared classical baseline" in body["result_trust"]["missing_evidence"]
 
 
 def test_run_circuit_with_noise_returns_noisy_histogram() -> None:
@@ -76,6 +80,8 @@ def test_run_circuit_with_noise_returns_noisy_histogram() -> None:
     assert body["ideal_histogram"]
     assert body["noisy_histogram"]
     assert body["metadata"]["noise_enabled"] is True
+    assert "Educational approximation" in body["result_trust"]["noise_model_description"]
+    assert body["result_trust"]["evidence_category"] != "measured hardware result"
 
 
 def test_run_circuit_qsim_falls_back_gracefully_when_unavailable(monkeypatch) -> None:

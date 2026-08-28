@@ -45,6 +45,8 @@ async def get_usage_summary(
     ]
     if page_path:
         filters.append(PageUsage.page_path == page_path)
+    else:
+        filters.append(PageUsage.page_path.not_like("/__events__/%"))
 
     total_query = select(func.count()).select_from(PageUsage).where(*filters)
     total_result = await db.execute(total_query)

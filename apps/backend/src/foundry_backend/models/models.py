@@ -229,6 +229,12 @@ class AlgorithmContract(Base):
     experiment_bundles: Mapped[list["ExperimentBundle"]] = relationship(
         "ExperimentBundle", back_populates="algorithm_contract"
     )
+    architecture_records: Mapped[list["ArchitectureRecord"]] = relationship(
+        "ArchitectureRecord", back_populates="algorithm_contract"
+    )
+    artifacts: Mapped[list["Artifact"]] = relationship(
+        "Artifact", back_populates="algorithm_contract"
+    )
 
 
 class ExperimentBundle(Base):
@@ -356,11 +362,17 @@ class ArchitectureRecord(Base):
     assessment_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=True, index=True
     )
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("algorithm_contracts.id"), nullable=True, index=True
+    )
+    problem_class: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    contract_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(240), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     components: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     connections: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     notes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    trust_context: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -371,6 +383,9 @@ class ArchitectureRecord(Base):
     use_case: Mapped["UseCase | None"] = relationship("UseCase", back_populates="architecture_records")
     assessment: Mapped["Assessment | None"] = relationship(
         "Assessment", back_populates="architecture_records"
+    )
+    algorithm_contract: Mapped["AlgorithmContract | None"] = relationship(
+        "AlgorithmContract", back_populates="architecture_records"
     )
     artifacts: Mapped[list["Artifact"]] = relationship(
         "Artifact", back_populates="architecture_record"
@@ -398,6 +413,10 @@ class Artifact(Base):
     assessment_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=True, index=True
     )
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("algorithm_contracts.id"), nullable=True, index=True
+    )
+    trust_context: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     artifact_type: Mapped[ArtifactType] = mapped_column(
         Enum(ArtifactType), nullable=False, default=ArtifactType.job_output, index=True
     )
@@ -415,6 +434,9 @@ class Artifact(Base):
         "ArchitectureRecord", back_populates="artifacts"
     )
     assessment: Mapped["Assessment | None"] = relationship("Assessment")
+    algorithm_contract: Mapped["AlgorithmContract | None"] = relationship(
+        "AlgorithmContract", back_populates="artifacts"
+    )
 
 
 class PageUsage(Base):

@@ -7,6 +7,8 @@ Do not commit real secrets. Use Secret Manager or deployment-specific secret inj
 | Variable | Required | Used by | Default | Description | Example |
 | --- | --- | --- | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Yes | Frontend | `http://127.0.0.1:8000` | Backend API base URL | `https://api.example.run.app` |
+| `NEXT_PUBLIC_SERIES_ARTICLE_01_URL` | No | Frontend | empty | Trusted HTTPS canonical URL for Series Article 1; the external CTA is hidden when empty or invalid | `https://example.substack.com/p/article-one` |
+| `NEXT_PUBLIC_SERIES_ARTICLE_02_URL` | No | Frontend | empty | Trusted HTTPS canonical URL for Series Article 2; the external CTA is hidden when empty or invalid | `https://example.substack.com/p/article-two` |
 | `DATABASE_URL` | Yes | Backend, worker | none | SQLAlchemy async PostgreSQL URL | `postgresql+asyncpg://...` |
 | `COMPOSE_DATABASE_URL` | Local | Docker Compose | local Postgres | Compose database URL | `postgresql+asyncpg://foundry:...` |
 | `STORAGE_BACKEND` | No | Backend, worker | `local` | Artifact storage backend | `local` or `gcs` |
@@ -25,3 +27,5 @@ Do not commit real secrets. Use Secret Manager or deployment-specific secret inj
 | `BUILD_TIME` | Deployment | Frontend/backend | empty | Build timestamp | ISO timestamp |
 
 Capability flags for qsim/OpenFermion should be documented when introduced as runtime flags. Today qsim is optional dependency behavior, not a required environment variable.
+
+Series canonical URLs are read at frontend build time. Only absolute HTTPS URLs are accepted by the content model. They are not populated from query parameters, and an invalid value fails closed by hiding the CTA.

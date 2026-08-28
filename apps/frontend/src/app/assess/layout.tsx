@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Assess Quantum Readiness",
+  title: "Readiness and Algorithm Contract",
   description:
-    "Use a transparent QALS-lite heuristic to turn a quantum use case into a decision-style recommendation and next 90-day plan.",
+    "Use the deterministic QALS 3.0 Algorithm Contract assessment to produce an evidence-backed verdict, horizon, and next decision.",
   openGraph: {
-    title: "Assess Quantum Readiness | Quantum Foundry",
+    title: "Readiness and Algorithm Contract | Quantum Foundry",
     description:
       "Decision-style recommendations for simulation-first quantum exploration.",
   },
@@ -23,13 +23,13 @@ export default function AssessLayout({ children }: { children: ReactNode }) {
           <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#1967d2]">
             Public decision context
           </div>
-          <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">
-            What QALS-lite means
-          </h1>
+          <div className="mt-2 text-2xl font-black text-slate-950">
+            Deterministic decision context
+          </div>
           <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-            Assess uses deterministic heuristics to recommend Classical now, Hybrid pilot now,
-            Watchlist, or Research only. It is an explainable readiness aid, not a quantum
-            advantage claim and not a replacement for benchmark evidence.
+            Assess uses deterministic rules and evidence to produce a verdict, Algorithm Contract,
+            confidence, time horizon, build eligibility, missing evidence, and trust labels. It is
+            not an ML model, advantage predictor, probability of success, or guaranteed ROI score.
           </p>
         </div>
       </section>

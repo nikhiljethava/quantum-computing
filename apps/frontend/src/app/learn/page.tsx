@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Clock3 } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, GitBranch, Layers3 } from "lucide-react";
 
 import { GCard } from "@/components/ui/GCard";
 import { GChip } from "@/components/ui/GChip";
@@ -26,7 +26,7 @@ export default function LearnPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(135deg,#ffffff,#eef5ff)] p-6 shadow-[0_35px_90px_rgba(15,23,42,0.16)] md:p-8">
         <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-          <GSectionHeader eyebrow="Learn" title="Quantum Academy">
+          <GSectionHeader eyebrow="Learn" title="Quantum Academy" level={1}>
             Learn quantum concepts, build Cirq circuits, simulate with publicly available tools,
             and map workloads to Google Cloud. The path is intentionally practical:
             understand the idea, run a small lab, then decide what belongs in a pilot.
@@ -52,6 +52,29 @@ export default function LearnPage() {
             </Link>
           </GCard>
         </div>
+      </section>
+
+      <section className="mt-8 grid gap-4 border-y border-[#d8e2f3] bg-white py-6 md:grid-cols-2" aria-label="Article companions and software stack">
+        <Link href="/series" className="group px-5 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1967d2]">
+          <GitBranch className="h-5 w-5 text-[#1967d2]" />
+          <h2 className="mt-4 text-xl font-black text-slate-950">Beyond the Quantum Processor companions</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-600">
+            Read one-minute summaries, inspect interactive architectures, and carry an idea into Quick Assessment.
+          </p>
+          <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#1967d2]">
+            Explore the series <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+          </span>
+        </Link>
+        <Link href="/learn/quantum-software-stack" className="group border-t border-[#d8e2f3] px-5 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1967d2] md:border-l md:border-t-0">
+          <Layers3 className="h-5 w-5 text-[#0f766e]" />
+          <h2 className="mt-4 text-xl font-black text-slate-950">Quantum software stack overview</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-600">
+            Understand frameworks, domain libraries, compilers, simulators, runtimes, backends, and QPUs.
+          </p>
+          <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#1967d2]">
+            Explore the software stack <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+          </span>
+        </Link>
       </section>
 
       <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">

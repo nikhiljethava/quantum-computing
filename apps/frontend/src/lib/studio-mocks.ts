@@ -355,7 +355,7 @@ circuit = cirq.Circuit(
         "Scheduling and routing are common public-facing optimization narratives.",
         "This fits PM and architect conversations better than a pure concept demo.",
       ],
-      nextAction: "Attach a QALS-lite explanation and an exportable architecture brief for follow-up.",
+      nextAction: "Open Assess to attach a QALS 3.0 verdict and exportable Algorithm Contract brief.",
     },
     architectureSummary:
       "Classical systems prepare the routing instance, a Cirq + qsim worker handles the toy quantum kernel, and post-processing scores candidate routes before packaging results for notebooks and briefs.",

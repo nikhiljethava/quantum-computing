@@ -66,7 +66,7 @@ export function WorkspaceRail({
         </div>
         <p className="leading-6">
           {tip ??
-            "Start with the 60-second primer, then move into one use case before opening the hybrid lab."}
+            "Start with the primer, then move into one use case before opening the Algorithm Experiment Workspace."}
         </p>
       </div>
     </aside>

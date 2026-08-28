@@ -26,9 +26,12 @@ def test_list_templates_includes_expected_starters() -> None:
 def test_build_assessment_preview_is_deterministic() -> None:
     preview = build_assessment_preview(JobType.routing, use_case=None)
 
-    assert 0 <= preview["score"] <= 100
-    assert preview["horizon"] == "Prototype now"
-    assert "simulation-first" in preview["explanation"][1].lower()
+    assert preview["score"] == 0
+    assert preview["verdict"] == "EDUCATION_ONLY"
+    assert preview["horizon"] == "SIMULATOR_NOW"
+    assert preview["confidence"] == "LOW"
+    assert "TOY_SIMULATION" in preview["trust_labels"]
+    assert "not a business recommendation" in preview["explanation"][1].lower()
     assert preview["next_action"]
 
 

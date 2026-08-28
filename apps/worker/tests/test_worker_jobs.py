@@ -10,10 +10,13 @@ import pytest
 
 from foundry_backend.core.config import settings
 from foundry_backend.models.models import (
+    AlgorithmContract,
     ArchitectureRecord,
+    Assessment,
     Artifact,
     ArtifactType,
     CircuitRun,
+    ExperimentBundle,
     Job,
     JobStatus,
     JobType,
@@ -108,6 +111,83 @@ def _build_architecture(circuit_run: CircuitRun) -> ArchitectureRecord:
     )
 
 
+def _build_contract_records(
+    *,
+    problem_class: str = "OPTIMIZATION",
+    validity_status: str = "VALID",
+    missing_inputs: list[str] | None = None,
+    baseline: str = "OR-Tools with objective and runtime metrics",
+) -> tuple[Assessment, AlgorithmContract, ExperimentBundle]:
+    assessment_id = uuid.uuid4()
+    contract_id = uuid.uuid4()
+    bundle_id = uuid.uuid4()
+    is_pqc = problem_class == "CRYPTO_SECURITY"
+    eligibility = "NON_COMPUTE_ACTION_ONLY" if is_pqc else "ELIGIBLE_FOR_BENCHMARK"
+    qals_output = {
+        "problem_class": problem_class,
+        "recommended_contract_type": "PQC_RISK" if is_pqc else "QAOA",
+        "contract_validity_status": validity_status,
+        "build_eligibility": eligibility,
+        "classical_baseline_summary": baseline,
+        "missing_inputs": missing_inputs or [],
+        "missing_evidence": ["current classical baseline"] if not baseline else [],
+    }
+    assessment = Assessment(
+        id=assessment_id,
+        use_case_id=uuid.uuid4(),
+        user_inputs={},
+        qals_score=0.6,
+        verdict="PQC_MIGRATION_NOW" if is_pqc else "SIMULATOR_PROTOTYPE_NOW",
+        score_breakdown={},
+        problem_class=problem_class,
+        readiness_score=60,
+        confidence="MEDIUM",
+        time_horizon="NOW_CLASSICAL" if is_pqc else "SIMULATOR_NOW",
+        trust_labels=["ACTION_NOW"] if is_pqc else ["BENCHMARK_CANDIDATE"],
+        qals_output=qals_output,
+        build_eligibility=eligibility,
+        exportable_memo="memo",
+    )
+    contract = AlgorithmContract(
+        id=contract_id,
+        assessment_id=assessment_id,
+        contract_type="PQC_RISK" if is_pqc else "QAOA",
+        algorithm_family="PQC_READINESS" if is_pqc else "QAOA",
+        title="Contract",
+        description="Contract description",
+        validity_status=validity_status,
+        mathematical_object="Migration inventory" if is_pqc else "QUBO",
+        reduction_summary="Scoped reduction",
+        required_inputs=["classical baseline"],
+        provided_inputs=[] if missing_inputs else ["classical baseline"],
+        missing_inputs=missing_inputs or [],
+        assumptions=[],
+        caveats=[],
+        classical_baseline=baseline,
+        benchmark_plan="Compare the same instance.",
+        resource_estimate={},
+        trust_labels=["ACTION_NOW"] if is_pqc else ["BENCHMARK_CANDIDATE"],
+        build_eligibility=eligibility,
+    )
+    bundle = ExperimentBundle(
+        id=bundle_id,
+        assessment_id=assessment_id,
+        contract_id=contract_id,
+        title="Contract bundle",
+        hypothesis="Test the candidate against the baseline.",
+        classical_baseline=baseline,
+        quantum_candidate="QAOA" if not is_pqc else "No quantum circuit",
+        toy_implementation={},
+        result_trust_metrics={},
+        limitations=[],
+        next_evidence_required=[],
+        gcp_map={},
+        export_artifacts=[],
+        trust_labels=["ACTION_NOW"] if is_pqc else ["BENCHMARK_CANDIDATE"],
+    )
+    return assessment, contract, bundle
+
+
 @pytest.mark.asyncio
 async def test_poll_once_completes_job_and_persists_job_output_artifact(monkeypatch) -> None:
     job = Job(
@@ -174,6 +254,133 @@ async def test_poll_once_marks_failed_jobs_and_skips_artifact_creation(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_contract_experiment_rejects_missing_required_contract_fields() -> None:
+    assessment, contract, bundle = _build_contract_records(
+        validity_status="PARTIAL",
+        missing_inputs=["penalty terms or QUBO coefficients"],
+    )
+    db = _FakeAsyncSession(
+        get_map={
+            (Assessment, assessment.id): assessment,
+            (AlgorithmContract, contract.id): contract,
+            (ExperimentBundle, bundle.id): bundle,
+        }
+    )
+
+    with pytest.raises(ValueError, match="Complete the required Algorithm Contract fields"):
+        await worker_main._execute_circuit_job(
+            db,
+            job_id=str(uuid.uuid4()),
+            job_type=JobType.routing.value,
+            payload={
+                "assessment_id": str(assessment.id),
+                "contract_id": str(contract.id),
+                "experiment_bundle_id": str(bundle.id),
+            },
+        )
+
+
+@pytest.mark.asyncio
+async def test_contract_experiment_rejects_missing_classical_baseline() -> None:
+    assessment, contract, bundle = _build_contract_records(baseline="")
+    db = _FakeAsyncSession(
+        get_map={
+            (Assessment, assessment.id): assessment,
+            (AlgorithmContract, contract.id): contract,
+            (ExperimentBundle, bundle.id): bundle,
+        }
+    )
+
+    with pytest.raises(ValueError, match="classical baseline is required"):
+        await worker_main._execute_circuit_job(
+            db,
+            job_id=str(uuid.uuid4()),
+            job_type=JobType.routing.value,
+            payload={
+                "assessment_id": str(assessment.id),
+                "contract_id": str(contract.id),
+                "experiment_bundle_id": str(bundle.id),
+            },
+        )
+
+
+@pytest.mark.asyncio
+async def test_pqc_contract_experiment_never_creates_a_quantum_circuit() -> None:
+    assessment, contract, bundle = _build_contract_records(problem_class="CRYPTO_SECURITY")
+    db = _FakeAsyncSession(
+        get_map={
+            (Assessment, assessment.id): assessment,
+            (AlgorithmContract, contract.id): contract,
+            (ExperimentBundle, bundle.id): bundle,
+        }
+    )
+
+    with pytest.raises(ValueError, match="non-compute migration workflows"):
+        await worker_main._execute_circuit_job(
+            db,
+            job_id=str(uuid.uuid4()),
+            job_type=JobType.grover.value,
+            payload={
+                "assessment_id": str(assessment.id),
+                "contract_id": str(contract.id),
+                "experiment_bundle_id": str(bundle.id),
+            },
+        )
+
+
+@pytest.mark.asyncio
+async def test_valid_contract_experiment_runs_with_bundle_context(monkeypatch) -> None:
+    assessment, contract, bundle = _build_contract_records()
+    db = _FakeAsyncSession(
+        get_map={
+            (Assessment, assessment.id): assessment,
+            (AlgorithmContract, contract.id): contract,
+            (ExperimentBundle, bundle.id): bundle,
+        }
+    )
+    run = _build_circuit_run()
+    architecture = _build_architecture(run)
+    architecture.assessment_id = assessment.id
+    architecture.contract_id = contract.id
+    architecture.problem_class = assessment.problem_class
+    architecture.contract_type = contract.contract_type
+    architecture.trust_context = {
+        "classical_baseline_status": "declared",
+        "contract_validity_status": "VALID",
+        "trust_labels": ["BENCHMARK_CANDIDATE"],
+    }
+
+    async def fake_create_circuit_run(**_kwargs):
+        return run
+
+    async def fake_create_architecture_record(_db, **_kwargs):
+        return architecture
+
+    async def fake_save(**_kwargs):
+        return "local:///tmp/contract-circuit.txt"
+
+    monkeypatch.setattr(worker_main, "create_circuit_run", fake_create_circuit_run)
+    monkeypatch.setattr(worker_main, "create_architecture_record", fake_create_architecture_record)
+    monkeypatch.setattr(worker_main.storage, "save", fake_save)
+
+    result = await worker_main._execute_circuit_job(
+        db,
+        job_id=str(uuid.uuid4()),
+        job_type=JobType.routing.value,
+        payload={
+            "assessment_id": str(assessment.id),
+            "contract_id": str(contract.id),
+            "experiment_bundle_id": str(bundle.id),
+        },
+    )
+
+    assert result["experiment_bundle_id"] == str(bundle.id)
+    assert result["architecture"]["assessment_id"] == str(assessment.id)
+    assert result["architecture"]["contract_id"] == str(contract.id)
+    assert result["architecture"]["result_trust"]["contract_validity_status"] == "VALID"
+
+
+@pytest.mark.asyncio
 async def test_execute_export_job_creates_session_summary_artifact(tmp_path, monkeypatch) -> None:
     circuit_run = _build_circuit_run()
     architecture = _build_architecture(circuit_run)
@@ -210,4 +417,7 @@ async def test_execute_export_job_creates_session_summary_artifact(tmp_path, mon
     assert output_path.exists()
     contents = output_path.read_text(encoding="utf-8")
     assert "Simulation-first output only." in contents
-    assert "QALS-lite is a heuristic readiness aid" in contents
+    assert "Serious recommendations require a QALS 3.0 Algorithm Contract" in contents
+    assert "This tutorial preview is not a business recommendation" in contents
+    assert "Educational noise is not calibrated hardware noise." in contents
+    assert "## Result Trust" in contents

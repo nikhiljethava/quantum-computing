@@ -166,12 +166,16 @@ async def export_assessment_memo(
     """Represent Quantum Algorithm Brief or PQC Migration Memo export as a completed job."""
 
     assessment = await _get_assessment_or_404(db, assessment_id)
+    contract = await create_algorithm_contract(db, assessment=assessment)
     contract_type = str(assessment.qals_output.get("recommended_contract_type", ""))
     export_label = "PQC Migration Memo" if contract_type == "PQC_RISK" else "Quantum Algorithm Brief"
     job = Job(
         job_type=JobType.opportunity_memo_export,
         status=JobStatus.running,
-        payload={"assessment_id": str(assessment.id)},
+        payload={
+            "assessment_id": str(assessment.id),
+            "contract_id": str(contract.id),
+        },
         logs=[f"Preparing {export_label} export."],
     )
     db.add(job)
@@ -179,7 +183,12 @@ async def export_assessment_memo(
     await db.refresh(job)
 
     try:
-        artifact = await create_assessment_memo_artifact(db, assessment=assessment, job_id=job.id)
+        artifact = await create_assessment_memo_artifact(
+            db,
+            assessment=assessment,
+            contract=contract,
+            job_id=job.id,
+        )
     except ValueError as exc:
         job.status = JobStatus.failed
         job.error_message = str(exc)

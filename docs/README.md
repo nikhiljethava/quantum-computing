@@ -15,6 +15,7 @@ This documentation hub distinguishes implemented behavior from partially impleme
 ## Documentation Index
 
 - [PRODUCT.md](PRODUCT.md): Product vision, target users, core journey, and limitations.
+- [ARTICLE_COMPANIONS.md](ARTICLE_COMPANIONS.md): Series content model, evidence records, safe links, Quick/Full Assessment boundary, and extension guide.
 - [ARCHITECTURE.md](ARCHITECTURE.md): Frontend, backend, worker, foundry-core, database, artifacts, jobs, and deployment architecture.
 - [GOOGLE_CLOUD_STACK.md](GOOGLE_CLOUD_STACK.md): Google Cloud services used descriptively by the project and what is implemented versus planned.
 - [QUANTUM_SIMULATION.md](QUANTUM_SIMULATION.md): Simulation-first Cirq approach, qsim fallback, state previews, noise comparison, and limits.

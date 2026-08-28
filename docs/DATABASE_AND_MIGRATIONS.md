@@ -30,6 +30,13 @@ python -m foundry_backend.seeds.seed_use_cases
 
 Seed data includes use cases, featured ranks, blueprints, evidence, and slugs.
 
+## Phase 0 Migration
+
+`0011_phase0_result_trust_maps` adds nullable contract/problem classification and JSON trust
+context to architecture records. It also adds a nullable Algorithm Contract reference and JSON
+trust context to artifacts. Existing rows remain valid; all new API fields are additive and default
+to `null`, an empty object, or documented tutorial/classical compatibility values.
+
 ## Deployment
 
 Deployment should run migrations before shifting traffic to a new backend revision. Seed jobs should run after migrations and before public smoke tests.

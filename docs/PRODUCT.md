@@ -6,7 +6,7 @@ Quantum Foundry is licensed under Apache-2.0. See the root [LICENSE](../LICENSE)
 
 ## Vision
 
-Quantum Foundry helps people learn quantum computing, run small Cirq-based simulations, explore plausible industry use cases, and map simulator-first hybrid workflows to Google Cloud architecture patterns.
+Quantum Foundry is an independent, simulator-first lab and the interactive companion to the Beyond the Quantum Processor article series. It helps people read an idea, understand it visually, try a clearly labeled Cirq tutorial, qualify a real opportunity with an Algorithm Contract, and receive an honest next decision.
 
 ## Target Users
 
@@ -19,19 +19,20 @@ Quantum Foundry helps people learn quantum computing, run small Cirq-based simul
 ## Core Journey
 
 - **Learn**: structured concept lessons and quizzes. Implemented.
+- **Series**: reusable companions for Articles 1 and 2 with guided examples, evidence, glossary, and safe assessment handoff. Implemented.
 - **Explore**: featured use cases with deeper business context. Implemented.
-- **Assess**: QALS-lite recommendation, blockers, evidence, and next steps. Implemented.
-- **Build**: Cirq Lab with templates, histograms, metrics, state preview, and exports. Implemented.
-- **Map**: rule-based Google Cloud architecture mapping. Implemented.
+- **Assess**: non-authoritative Quick Assessment followed by the full QALS 3.0 evidence-backed verdict, Algorithm Contract, blockers, and next decision. Implemented.
+- **Build**: explicit Tutorial and Contract modes in the Algorithm Experiment Workspace, with Result Trust. Implemented.
+- **Map**: contract-specific vendor-neutral reference architecture and Google Cloud implementation example, including classical-only PQC. Implemented.
 - **Save/Projects/Jobs**: workspace persistence, local job processing, and artifact export. Implemented.
 
 ## What Users Can Accomplish
 
 - Understand superposition, measurement, entanglement, interference, Grover intuition, and QAOA intuition.
 - Run small Cirq-based circuit templates.
-- Compare ideal and educational-noise histograms.
+- Compare ideal and educational-noise histograms without describing educational noise as calibrated hardware noise.
 - Export Cirq code, JSON artifacts, session summaries, and Colab notebooks.
-- See where a hybrid workflow might use Cloud Run, Cloud SQL, Cloud Storage, Cloud Tasks, Cloud Run Jobs, BigQuery, or Vertex AI/Gemini if configured.
+- See where a contract-specific hybrid workflow might use Cloud Run, Cloud SQL, Cloud Storage, Cloud Tasks, Cloud Run Jobs, BigQuery, or Vertex AI/Gemini if configured.
 
 ## Intentional Non-Goals
 
@@ -40,6 +41,7 @@ Quantum Foundry helps people learn quantum computing, run small Cirq-based simul
 - No official Google affiliation or endorsement.
 - No production scientific, legal, financial, or security advice.
 - No non-Google quantum SDK as a primary export path.
+- No broad framework marketplace or multi-SDK execution layer; Cirq remains the tested execution path.
 
 ## Current Limitations
 

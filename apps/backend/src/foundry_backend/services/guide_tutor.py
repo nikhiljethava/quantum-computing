@@ -149,7 +149,7 @@ async def ask_guide(db: AsyncSession, request: GuideAskRequest) -> dict[str, Any
         sources.append(GOOGLE_SOURCES["vertex"])
 
     if not actions:
-        actions.append(_action("Start with the Cirq Lab", "/build", "build"))
+        actions.append(_action("Open the Algorithm Experiment Workspace", "/build", "build"))
         actions.append(_action("Explore flagship use cases", "/explore", "use_case"))
 
     safety_notes = [

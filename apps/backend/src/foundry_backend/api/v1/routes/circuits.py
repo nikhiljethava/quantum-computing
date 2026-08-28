@@ -27,7 +27,7 @@ router = APIRouter()
     "/templates",
     response_model=list[CircuitTemplateRead],
     summary="List starter circuit templates",
-    description="Return the simulation-first starter templates shown in the Hybrid Lab.",
+    description="Return the simulation-first starter templates shown in Tutorial mode.",
 )
 async def get_circuit_templates() -> list[CircuitTemplateRead]:
     """Return starter templates for the Build workspace prompt rail."""
@@ -42,7 +42,7 @@ async def get_circuit_templates() -> list[CircuitTemplateRead]:
     summary="Generate and run a starter circuit",
     description=(
         "Synchronously generate a toy circuit, simulate it locally, and return the explanation, "
-        "Cirq code, measurement histogram, and QALS-lite preview used by the Build workspace."
+        "Cirq code, measurement histogram, and educational trust preview used by Tutorial mode."
     ),
 )
 async def run_circuit(

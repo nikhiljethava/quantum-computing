@@ -217,7 +217,7 @@ function FeaturedUseCaseCard({
           <Info size={14} /> Blueprint
         </button>
         <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
-          Open Hybrid Lab <ArrowRight size={14} />
+          Open experiment workspace <ArrowRight size={14} />
         </Link>
       </div>
     </motion.div>
@@ -302,7 +302,7 @@ function CatalogUseCaseCard({
           <SlidersHorizontal size={14} /> Assess Fit
         </button>
         <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost">
-          Open Hybrid Lab <ArrowRight size={14} />
+          Open experiment workspace <ArrowRight size={14} />
         </Link>
       </div>
     </motion.div>
@@ -489,7 +489,7 @@ function UseCaseDetailModal({
             Open Assess View <ArrowRight size={14} />
           </Link>
           <Link href={`/build?starter=${starter}&use_case_id=${useCase.id}`} className="btn-ghost" style={{ justifyContent: "center" }}>
-            Open Hybrid Lab <ArrowRight size={14} />
+            Open experiment workspace <ArrowRight size={14} />
           </Link>
           <button className="btn-ghost" onClick={onClose} style={{ justifyContent: "center" }}>
             Close blueprint

@@ -59,6 +59,37 @@ def test_public_mode_passes_normal_app_response(tmp_path: Path) -> None:
     assert "PASS: public frontend access" in result.stdout
 
 
+def test_public_mode_fails_on_missing_route(tmp_path: Path) -> None:
+    result = _run_check(tmp_path, "HTTP/2 404\ncontent-type: text/html\n", "public")
+
+    assert result.returncode == 1
+    assert "unexpected HTTP 404" in result.stderr
+
+
+def test_public_mode_fails_on_server_error(tmp_path: Path) -> None:
+    result = _run_check(tmp_path, "HTTP/2 500\ncontent-type: text/html\n", "public")
+
+    assert result.returncode == 1
+    assert "unexpected HTTP 500" in result.stderr
+
+
+def test_public_route_smoke_set_includes_new_companion_routes() -> None:
+    text = CHECK_SCRIPT.read_text(encoding="utf-8")
+
+    for route in [
+        "/",
+        "/learn",
+        "/learn/quantum-software-stack",
+        "/series",
+        "/series/01-platform-problem",
+        "/series/02-hybrid-computing",
+        "/assess",
+        "/build",
+        "/map",
+    ]:
+        assert f'"{route}"' in text
+
+
 def test_iap_protected_mode_passes_iap_intercept(tmp_path: Path) -> None:
     result = _run_check(
         tmp_path,

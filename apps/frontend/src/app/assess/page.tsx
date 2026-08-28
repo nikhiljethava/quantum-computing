@@ -14,7 +14,11 @@ import {
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
+import { ResultTrustPanel } from "@/components/trust/ResultTrustPanel";
+import { QuickAssessment, QuickGoal } from "@/components/assessment/QuickAssessment";
 import { getArtifactDownloadUrl } from "@/lib/api";
+import { trackProductEvent } from "@/lib/analytics";
+import { assessmentResultTrust } from "@/lib/result-trust";
 import {
   useCreateAlgorithmContract,
   useCreateAssessment,
@@ -41,6 +45,16 @@ const PROBLEM_CLASSES: Array<{ value: ProblemClass; label: string; hint: string 
 ];
 
 const INDUSTRIES = ["energy", "materials", "logistics", "finance", "pharma", "aerospace", "security", "other"];
+const ASSESSMENT_SOURCES = new Set(["series-01", "series-02"]);
+const QUICK_GOALS = new Set<QuickGoal>(["learning", "benchmarking", "research", "operational"]);
+
+function safeProblemClass(value: string | null): ProblemClass {
+  return PROBLEM_CLASSES.some((item) => item.value === value) ? (value as ProblemClass) : "UNKNOWN";
+}
+
+function safeQuickGoal(value: string | null): QuickGoal {
+  return value && QUICK_GOALS.has(value as QuickGoal) ? (value as QuickGoal) : "learning";
+}
 
 const TRUST_LABEL_TEXT: Record<TrustLabel, string> = {
   TUTORIAL: "Tutorial",
@@ -204,6 +218,14 @@ function AssessPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedUseCaseId = searchParams.get("use_case_id");
+  const source = ASSESSMENT_SOURCES.has(searchParams.get("source") ?? "")
+    ? searchParams.get("source")
+    : null;
+  const quickProblemClass = safeProblemClass(searchParams.get("problemClass"));
+  const quickGoal = safeQuickGoal(searchParams.get("goal"));
+  const [assessmentLevel, setAssessmentLevel] = useState<"quick" | "full">(() =>
+    searchParams.get("level") === "full" || Boolean(selectedUseCaseId) ? "full" : "quick",
+  );
   const { data: useCaseList, isLoading } = useUseCases({ limit: 12 });
   const selectedUseCase = useMemo(() => {
     const items = useCaseList?.items ?? [];
@@ -216,16 +238,17 @@ function AssessPageContent() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [bundleId, setBundleId] = useState<string | null>(null);
   const [contractId, setContractId] = useState<string | null>(null);
+  const [preserveQuickHandoff, setPreserveQuickHandoff] = useState(false);
   const createAssessment = useCreateAssessment();
   const createContract = useCreateAlgorithmContract();
   const createBundle = useCreateContractExperimentBundle();
   const exportMemo = useExportAssessmentMemo();
 
   useEffect(() => {
-    if (!selectedUseCase || selectedUseCase.id === activeUseCaseId || result) return;
+    if (preserveQuickHandoff || !selectedUseCase || selectedUseCase.id === activeUseCaseId || result) return;
     setActiveUseCaseId(selectedUseCase.id);
     setInputs(defaultInputs(selectedUseCase));
-  }, [activeUseCaseId, result, selectedUseCase]);
+  }, [activeUseCaseId, preserveQuickHandoff, result, selectedUseCase]);
 
   function updateInput<K extends keyof AssessmentInputs>(key: K, value: AssessmentInputs[K]) {
     setInputs((current) => ({ ...current, [key]: value }));
@@ -242,13 +265,47 @@ function AssessPageContent() {
     }));
   }
 
+  function switchAssessmentLevel(level: "quick" | "full") {
+    setAssessmentLevel(level);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("level", level);
+    if (source) params.set("source", source);
+    router.replace(`/assess?${params.toString()}`, { scroll: false });
+    if (level === "full") void trackProductEvent("full_contract_started", source ?? "direct");
+  }
+
+  function continueFromQuick(quickInputs: Partial<AssessmentInputs>) {
+    const nextInputs = { ...defaultInputs(null), ...quickInputs };
+    const selectedUseCaseIsCompatible =
+      selectedUseCase &&
+      (Boolean(selectedUseCaseId) || inferProblemClass(selectedUseCase) === nextInputs.problemClass)
+        ? selectedUseCase
+        : null;
+    const compatibleUseCase =
+      (useCaseList?.items ?? []).find(
+        (useCase) => inferProblemClass(useCase) === nextInputs.problemClass,
+      ) ?? selectedUseCaseIsCompatible;
+    setInputs(nextInputs);
+    setActiveUseCaseId(compatibleUseCase?.id ?? null);
+    setPreserveQuickHandoff(true);
+    setAssessmentLevel("full");
+    const params = new URLSearchParams();
+    params.set("level", "full");
+    params.set("problemClass", nextInputs.problemClass ?? "UNKNOWN");
+    if (source) params.set("source", source);
+    if (compatibleUseCase?.id) params.set("use_case_id", compatibleUseCase.id);
+    router.replace(`/assess?${params.toString()}`, { scroll: false });
+    void trackProductEvent("full_contract_started", source ?? "quick-assessment");
+  }
+
   function selectUseCase(useCase: UseCase) {
+    setPreserveQuickHandoff(false);
     setActiveUseCaseId(useCase.id);
     setInputs(defaultInputs(useCase));
     setResult(null);
     setBundleId(null);
     setContractId(null);
-    router.replace(`/assess?use_case_id=${useCase.id}`, { scroll: false });
+    router.replace(`/assess?level=full&use_case_id=${useCase.id}`, { scroll: false });
   }
 
   async function runAssessment() {
@@ -257,6 +314,7 @@ function AssessPageContent() {
       setPageError(null);
       setBundleId(null);
       setContractId(null);
+      void trackProductEvent("full_contract_started", source ?? inputs.problemClass);
       const assessment = await createAssessment.mutateAsync({
         use_case_id: selectedUseCase.id,
         user_inputs: inputs,
@@ -272,11 +330,13 @@ function AssessPageContent() {
     try {
       setPageError(null);
       const contract = await createContract.mutateAsync(result.id);
+      void trackProductEvent("contract_created", result.problem_class);
       setContractId(contract.id);
       const bundle = await createBundle.mutateAsync({ contractId: contract.id, body: { queue_simulation: true } });
       setBundleId(bundle.id);
+      const workflow = result.problem_class === "CRYPTO_SECURITY" ? "&workflow=pqc" : "";
       router.push(
-        `/build?assessment_id=${result.id}&contract_id=${contract.id}&bundle_id=${bundle.id}&starter=${starterForAssessment(result)}`,
+        `/build?mode=contract${workflow}&assessment_id=${result.id}&contract_id=${contract.id}&bundle_id=${bundle.id}&starter=${starterForAssessment(result)}`,
       );
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "The Algorithm Experiment Bundle could not be created.");
@@ -295,6 +355,7 @@ function AssessPageContent() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      void trackProductEvent("decision_brief_exported", result.problem_class);
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "The Algorithm Brief could not be exported.");
     }
@@ -317,7 +378,7 @@ function AssessPageContent() {
         <div className="mb-6 border-b border-[#dbe5f1] pb-5">
           <div className="mb-3 flex flex-wrap gap-2">
             <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
-              Readiness assessment
+              Readiness and Algorithm Contract
             </span>
             <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase text-[#157052]">
               Evidence-backed verdict
@@ -327,15 +388,47 @@ function AssessPageContent() {
             </span>
           </div>
           <h1 className="text-[clamp(2rem,4vw,3rem)] font-black text-slate-900">
-            Assess a quantum opportunity before you build
+            Readiness and Algorithm Contract
           </h1>
           <p className="mt-3 max-w-[820px] text-[1.02rem] leading-8 text-slate-600">
-            QALS 3.0 turns the intake into an Algorithm Contract: problem statement, mathematical reduction,
-            classical baseline, algorithm family, trust labels, missing inputs, and a simulator-first next decision.
-            The score is intentionally secondary.
+            Start with a short contract-shape preview or continue into the full QALS 3.0 deterministic
+            assessment. Only the full flow can create an Algorithm Contract, determine Build eligibility,
+            or export a decision brief. The score remains intentionally secondary.
           </p>
         </div>
 
+        <div className="mb-6 flex flex-col gap-3 border border-[#d8e2f3] bg-white p-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex w-fit border border-slate-300 bg-white p-1" aria-label="Assessment level">
+            <button
+              type="button"
+              aria-pressed={assessmentLevel === "quick"}
+              onClick={() => switchAssessmentLevel("quick")}
+              className={`px-4 py-2 text-sm font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb] ${assessmentLevel === "quick" ? "bg-[#2563eb] text-white" : "text-slate-600"}`}
+            >
+              Quick Assessment
+            </button>
+            <button
+              type="button"
+              aria-pressed={assessmentLevel === "full"}
+              onClick={() => switchAssessmentLevel("full")}
+              className={`px-4 py-2 text-sm font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb] ${assessmentLevel === "full" ? "bg-[#2563eb] text-white" : "text-slate-600"}`}
+            >
+              Full Algorithm Contract
+            </button>
+          </div>
+          <p className="px-2 text-xs leading-6 text-slate-500">
+            Quick identifies likely structure. Full QALS 3.0 is the deterministic source of truth.
+          </p>
+        </div>
+
+        {assessmentLevel === "quick" ? (
+          <QuickAssessment
+            initialProblemClass={quickProblemClass}
+            initialGoal={quickGoal}
+            source={source}
+            onContinue={continueFromQuick}
+          />
+        ) : (
         <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1.35fr)_340px]">
           <WorkspaceRail
             active="idea-evaluator"
@@ -396,7 +489,7 @@ function AssessPageContent() {
                 <InputField label="Current classical baseline" value={inputs.currentClassicalBaseline ?? ""} onChange={(value) => updateInput("currentClassicalBaseline", value)} placeholder="OR-Tools, MILP, DFT, HPC, current internal solver..." />
                 <InputField label="Baseline metrics" value={inputs.baselineMetrics ?? ""} onChange={(value) => updateInput("baselineMetrics", value)} placeholder="Runtime, quality gap, accuracy, cost, throughput..." />
                 <InputField label="Constraints" value={inputs.constraints ?? ""} onChange={(value) => updateInput("constraints", value)} placeholder="Capacity, time windows, active-space limits, compliance..." />
-                <InputField label="Accuracy / latency needs" value={`${inputs.accuracyNeeds ?? ""}${inputs.latencyTolerance ? `; ${inputs.latencyTolerance}` : ""}`} onChange={(value) => updateInput("accuracyNeeds", value)} placeholder="Accuracy tolerance and decision window" />
+                <InputField label="Accuracy / latency needs" value={[inputs.accuracyNeeds, inputs.latencyTolerance].filter(Boolean).join("; ")} onChange={(value) => updateInput("accuracyNeeds", value)} placeholder="Accuracy tolerance and decision window" />
                 <InputField label="Problem description" value={inputs.problemDescription ?? ""} onChange={(value) => updateInput("problemDescription", value)} textarea />
                 <InputField label="Evidence links or notes" value={inputs.userFilesOrNotes ?? ""} onChange={(value) => updateInput("userFilesOrNotes", value)} textarea placeholder="Papers, internal notes, dataset names, assumptions..." />
               </div>
@@ -480,52 +573,59 @@ function AssessPageContent() {
 
             {result ? (
               <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
-                <div className="flex flex-wrap items-start justify-between gap-5">
-                  <div className="max-w-[760px]">
-                    <div className="text-xs font-semibold uppercase text-slate-400">Verdict</div>
-                    <h2 className="mt-2 text-[clamp(2rem,4vw,3.2rem)] font-black text-slate-900">
-                      {result.verdict.replaceAll("_", " ")}
-                    </h2>
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <span className="rounded-full bg-[#dcfce7] px-3 py-2 text-xs font-semibold uppercase text-[#157052]">
-                        Confidence: {result.confidence}
-                      </span>
-                      <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold uppercase text-[#2f5be3]">
-                        Time horizon: {result.time_horizon.replaceAll("_", " ")}
-                      </span>
-                      <span className="rounded-full bg-[#fff7ed] px-3 py-2 text-xs font-semibold uppercase text-[#c2410c]">
-                        Build: {result.build_eligibility.replaceAll("_", " ")}
-                      </span>
-                    </div>
-                    <p className="mt-5 text-base leading-8 text-slate-700">
-                      {result.plain_english_recommendation}
-                    </p>
-                    <div className="mt-5">
-                      <TrustLabels labels={result.trust_labels} />
-                    </div>
+                <div className="text-xs font-semibold uppercase text-slate-400">Verdict</div>
+                <h2 className="mt-2 text-[clamp(2rem,4vw,3.2rem)] font-black text-slate-900">
+                  {result.verdict.replaceAll("_", " ")}
+                </h2>
+
+                <div className="mt-5 grid gap-px border border-slate-200 bg-slate-200 sm:grid-cols-2">
+                  <div className="bg-[#fbfdff] p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-400">Recommended contract type</div>
+                    <div className="mt-2 text-lg font-black text-slate-950">{result.recommended_contract_type.replaceAll("_", " ")}</div>
                   </div>
-                  <div className="min-w-[180px] rounded-[24px] border border-[#e2e8f0] bg-[#f8fbff] p-5 text-center">
-                    <div className="text-xs font-semibold uppercase text-slate-400">Readiness score</div>
-                    <div className="mt-2 text-5xl font-black text-[#2f5be3]">{result.readiness_score}</div>
-                    <div className="mt-2 text-xs leading-5 text-slate-500">Secondary to verdict and evidence</div>
+                  <div className="bg-[#fbfdff] p-4">
+                    <div className="text-xs font-semibold uppercase text-slate-400">Algorithm family</div>
+                    <div className="mt-2 text-lg font-black text-slate-950">{result.recommended_algorithm_family.replaceAll("_", " ")}</div>
                   </div>
                 </div>
 
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <span className="rounded-full bg-[#dcfce7] px-3 py-2 text-xs font-semibold uppercase text-[#157052]">
+                    Confidence: {result.confidence}
+                  </span>
+                  <span className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold uppercase text-[#2f5be3]">
+                    Time horizon: {result.time_horizon.replaceAll("_", " ")}
+                  </span>
+                  <span className="rounded-full bg-[#fff7ed] px-3 py-2 text-xs font-semibold uppercase text-[#c2410c]">
+                    Build eligibility: {result.build_eligibility.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <div className="mt-5">
+                  <TrustLabels labels={result.trust_labels} />
+                </div>
+                <div className="mt-5 text-xs font-semibold uppercase text-slate-400">Plain-English recommendation</div>
+                <p className="mt-2 max-w-4xl text-base leading-8 text-slate-700">
+                  {result.plain_english_recommendation}
+                </p>
+
                 <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                  <EvidenceList title="Recommended contract" items={[`${result.recommended_contract_type.replaceAll("_", " ")} / ${result.recommended_algorithm_family.replaceAll("_", " ")}`]} empty="No contract recommended." />
+                  <EvidenceList title="Missing evidence" items={result.missing_evidence} empty="No missing evidence recorded." />
+                  <EvidenceList title="Classical baseline" items={[result.classical_baseline_summary]} empty="Classical baseline required." />
+                  <EvidenceList title="Assumptions" items={result.assumptions} empty="No assumptions recorded." />
+                  <EvidenceList title="Caveats" items={result.caveats} empty="No caveats recorded." />
                   <EvidenceList title="Contract validity" items={[result.contract_validity_status.replaceAll("_", " ")]} empty="No validity status." />
+                  <EvidenceList title="Missing contract inputs" items={result.missing_inputs} empty="No missing contract inputs recorded." />
+                  <EvidenceList title="Required inputs" items={result.required_inputs} empty="No required inputs recorded." />
                   <EvidenceList title="Mathematical object" items={[result.mathematical_object]} empty="No mathematical object supplied." />
                   <EvidenceList title="Reduction summary" items={[result.reduction_summary]} empty="No reduction summary supplied." />
-                  <EvidenceList title="Classical baseline" items={[result.classical_baseline_summary]} empty="Classical baseline required." />
                   <EvidenceList title="Quantum candidate" items={[result.quantum_candidate_summary]} empty="No candidate recommended." />
-                  <EvidenceList title="Required inputs" items={result.required_inputs} empty="No required inputs recorded." />
-                  <EvidenceList title="Missing contract inputs" items={result.missing_inputs} empty="No missing contract inputs recorded." />
                   <EvidenceList title="Benchmark plan" items={[result.benchmark_plan]} empty="No benchmark plan supplied." />
                   <EvidenceList title="Resource estimate" items={[JSON.stringify(result.resource_estimate)]} empty="No resource estimate supplied." />
                   <EvidenceList title="Evidence used" items={result.evidence_used} empty="No evidence attached yet." />
-                  <EvidenceList title="Missing evidence" items={result.missing_evidence} empty="No missing evidence recorded." />
-                  <EvidenceList title="Assumptions" items={result.assumptions} empty="No assumptions recorded." />
-                  <EvidenceList title="Caveats" items={result.caveats} empty="No caveats recorded." />
+                </div>
+
+                <div className="mt-6">
+                  <ResultTrustPanel trust={assessmentResultTrust(result)} title="Assessment Result Trust" />
                 </div>
 
                 <div className="mt-5 rounded-[22px] border border-[#d8e2f3] bg-[#f8fbff] p-5">
@@ -540,7 +640,9 @@ function AssessPageContent() {
                         className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.25)] transition hover:-translate-y-[1px]"
                       >
                         {buildIsBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-                        Create Algorithm Experiment Bundle
+                        {result.problem_class === "CRYPTO_SECURITY"
+                          ? "Create PQC migration workspace"
+                          : "Create Algorithm Experiment Bundle"}
                       </button>
                     ) : (
                       <span className="rounded-full bg-[#fff7ed] px-4 py-3 text-sm font-semibold text-[#c2410c]">
@@ -559,13 +661,18 @@ function AssessPageContent() {
                   </div>
                   {bundleId ? (
                     <Link
-                      href={`/build?assessment_id=${result.id}${contractId ? `&contract_id=${contractId}` : ""}&bundle_id=${bundleId}&starter=${starterForAssessment(result)}`}
+                      href={`/build?mode=contract${result.problem_class === "CRYPTO_SECURITY" ? "&workflow=pqc" : ""}&assessment_id=${result.id}${contractId ? `&contract_id=${contractId}` : ""}&bundle_id=${bundleId}&starter=${starterForAssessment(result)}`}
                       className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#2f5be3]"
                     >
                       Open bundle in Build
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   ) : null}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-200 pt-4 text-sm text-slate-500">
+                  <span>Readiness score is secondary to the verdict, contract, evidence, and next action.</span>
+                  <span className="shrink-0 text-2xl font-black text-[#2563eb]">{result.readiness_score} / 100</span>
                 </div>
               </div>
             ) : null}
@@ -616,6 +723,7 @@ function AssessPageContent() {
             ) : null}
           </div>
         </div>
+        )}
       </section>
     </div>
   );

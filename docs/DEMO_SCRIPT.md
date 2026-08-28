@@ -7,7 +7,7 @@ Quantum Foundry is an independent personal project and is not an official Google
 1. Open `/` and point out the independent-project notice.
 2. Open `/learn` and select the beginner path.
 3. Open `What is a qubit?` and click Run in Build.
-4. In Build, run the circuit and inspect histogram/metrics.
+4. In Tutorial mode, run the circuit and inspect the Result Trust panel.
 5. Open Explore and choose Portfolio Optimization.
 6. Open Map and show the simulator-first Google Cloud architecture pattern.
 
@@ -16,7 +16,8 @@ Quantum Foundry is an independent personal project and is not an official Google
 Add:
 
 - Use-case evidence and business KPI discussion.
-- QALS-lite recommendation and blockers.
+- QALS 3.0 Algorithm Contract verdict, baseline status, and blockers.
+- Contract-specific Map and Result Trust.
 - Colab export.
 - Hardware-access disclaimer.
 

@@ -36,7 +36,7 @@ async def get_projects(
     response_model=ProjectRead,
     status_code=201,
     summary="Create a saved project",
-    description="Create a new project container for saved Hybrid Lab sessions.",
+    description="Create a new project container for saved experiment workspace sessions.",
 )
 async def post_project(
     body: ProjectCreate,

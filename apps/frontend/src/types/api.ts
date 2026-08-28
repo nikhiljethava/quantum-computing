@@ -110,6 +110,67 @@ export type BuildEligibility =
   | "ELIGIBLE_FOR_BENCHMARK"
   | "ELIGIBLE_FOR_RESEARCH_PROTOTYPE"
   | "NON_COMPUTE_ACTION_ONLY";
+export type EvidenceCategory =
+  | "tutorial"
+  | "toy simulation"
+  | "estimate"
+  | "measured hardware result"
+  | "vendor-reported claim"
+  | "independently reproduced result";
+export type ResultType =
+  | "Tutorial"
+  | "Simulation"
+  | "Estimated"
+  | "Hardware Measured"
+  | "Vendor Reported"
+  | "Independently Reproduced"
+  | "Unknown";
+export type EvidenceSourceType =
+  | "PEER_REVIEWED"
+  | "GOVERNMENT_STANDARD"
+  | "OFFICIAL_DOCUMENTATION"
+  | "VENDOR_REPORTED"
+  | "INDEPENDENT_BENCHMARK"
+  | "PERSONAL_ANALYSIS"
+  | "TUTORIAL"
+  | "USER_DECLARED"
+  | "UNKNOWN";
+
+export interface ResultTrust {
+  result_type: ResultType;
+  evidence_category: EvidenceCategory;
+  backend: string | null;
+  hardware_or_simulator_name: string | null;
+  execution_status: string | null;
+  estimate_level: string | null;
+  hardware_horizon: string | null;
+  qubit_count: number | null;
+  circuit_depth: number | null;
+  one_qubit_gate_count: number | null;
+  two_qubit_gate_count: number | null;
+  shots: number | null;
+  result_distribution: Array<Record<string, unknown>>;
+  ideal_or_noisy: string | null;
+  noise_model_description: string | null;
+  classical_baseline_status: string;
+  contract_validity_status: string | null;
+  readiness_verdict: string | null;
+  confidence: string | null;
+  time_horizon: string | null;
+  trust_labels: TrustLabel[];
+  assumptions: string[];
+  missing_evidence: string[];
+  caveats: string[];
+  provenance: string[];
+  generated_at: string | null;
+  software_or_model_version: string | null;
+  source_type: EvidenceSourceType;
+  source_organization: string | null;
+  source_link: string | null;
+  publication_date: string | null;
+  last_verified_date: string | null;
+  claim_status: string | null;
+}
 
 export interface UseCaseBlueprint {
   persona: string;
@@ -242,6 +303,7 @@ export interface Assessment {
   why_not_now: string[];
   top_blockers: string[];
   next_90_days: string[];
+  result_trust: ResultTrust | null;
   created_at: string;
   updated_at?: string | null;
 }
@@ -286,6 +348,33 @@ export interface ResultTrustMetrics {
   assumed_noise_model: string | null;
   hardware_readiness_label: string;
   caveats: string[];
+  result_type?: ResultType;
+  evidence_category?: EvidenceCategory;
+  hardware_or_simulator_name?: string | null;
+  execution_status?: string | null;
+  estimate_level?: string | null;
+  hardware_horizon?: string | null;
+  qubit_count?: number | null;
+  result_distribution?: Array<Record<string, unknown>>;
+  ideal_or_noisy?: string | null;
+  noise_model_description?: string | null;
+  classical_baseline_status?: string;
+  contract_validity_status?: string | null;
+  readiness_verdict?: string | null;
+  confidence?: string | null;
+  time_horizon?: string | null;
+  trust_labels?: TrustLabel[];
+  assumptions?: string[];
+  missing_evidence?: string[];
+  provenance?: string[];
+  generated_at?: string | null;
+  software_or_model_version?: string | null;
+  source_type?: EvidenceSourceType;
+  source_organization?: string | null;
+  source_link?: string | null;
+  publication_date?: string | null;
+  last_verified_date?: string | null;
+  claim_status?: string | null;
 }
 
 export interface ExperimentBundle {
@@ -312,6 +401,7 @@ export interface ExperimentBundle {
   };
   export_artifacts: Array<Record<string, unknown>>;
   trust_labels: TrustLabel[];
+  result_trust: ResultTrust | null;
   created_at: string;
 }
 
@@ -470,6 +560,7 @@ export interface CircuitRun {
   ideal_histogram: HistogramEntry[] | null;
   noisy_histogram: HistogramEntry[] | null;
   state_preview: StatePreview | null;
+  result_trust: ResultTrust | null;
   created_at: string;
 }
 
@@ -478,12 +569,14 @@ export interface GcpComponent {
   name: string;
   service: string;
   description: string;
+  execution_kind: "classical" | "simulated_quantum" | "optional_approved_hardware" | "future_only";
 }
 
 export interface ArchitectureRequest {
   circuit_run_id?: string;
   job_id?: string;
   assessment_id?: string;
+  contract_id?: string;
   use_case_id?: string;
 }
 
@@ -491,12 +584,19 @@ export interface ArchitectureMap {
   id: string | null;
   circuit_run_id: string | null;
   assessment_id: string | null;
+  contract_id: string | null;
   use_case_id: string | null;
+  problem_class: ProblemClass;
+  contract_type: ContractType;
+  time_horizon: TimeHorizon;
+  assumptions: string[];
+  trust_labels: TrustLabel[];
   title: string;
   summary: string;
   components: GcpComponent[];
   connections: string[][];
   notes: string[];
+  result_trust: ResultTrust | null;
   created_at: string | null;
 }
 
@@ -513,6 +613,8 @@ export interface Artifact {
   circuit_run_id: string | null;
   architecture_record_id: string | null;
   assessment_id: string | null;
+  contract_id: string | null;
+  result_trust: ResultTrust | null;
   filename: string;
   content_type: string;
   storage_uri: string;

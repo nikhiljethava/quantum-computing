@@ -14,9 +14,9 @@ export function IndependentProjectNotice({
       aria-label="Independent project notice"
       className={`mx-auto max-w-[1460px] px-4 md:px-6 ${compact ? "py-3" : "py-4"}`}
     >
-      <div className="rounded-[20px] border border-slate-200 bg-white/95 px-4 py-3 text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.10)]">
-        <div className="text-sm font-bold">{SHORT_INDEPENDENT_DISCLAIMER}</div>
-        <details className="mt-1 text-sm leading-6 text-slate-600">
+      <div className="rounded-[20px] border border-slate-200 bg-white/95 px-3 py-2 text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.10)] md:px-4 md:py-3">
+        <div className="text-xs font-bold md:text-sm">{SHORT_INDEPENDENT_DISCLAIMER}</div>
+        <details className="mt-1 text-xs leading-5 text-slate-600 md:text-sm md:leading-6">
           <summary className="cursor-pointer font-semibold text-slate-700">
             Independence and attribution details
           </summary>

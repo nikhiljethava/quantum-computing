@@ -105,7 +105,7 @@ export const LESSON_PATHS: LessonPathMeta[] = [
     title: "Beginner Quantum Concepts",
     subtitle: "Build intuition before equations.",
     level: "beginner",
-    description: "Bits, qubits, measurement, interference, and why small demos help teams reason clearly.",
+    description: "Bits, qubits, state, measurement, interference, noise, and today-versus-future maturity.",
   },
   {
     path: "cirq",
@@ -156,29 +156,49 @@ export const LESSONS: Lesson[] = [
     buildTemplateKey: "coin_flip",
     cirqCode: "import cirq\n\nq = cirq.LineQubit(0)\ncircuit = cirq.Circuit(cirq.H(q), cirq.measure(q, key='m'))\nprint(circuit)",
     explanationMarkdown:
-      "A qubit is the smallest unit of quantum information. In Cirq, you can start with a single qubit, apply a Hadamard gate, and measure it many times to see a histogram. The histogram is classical data produced by a quantum-inspired simulation, not evidence of business advantage.",
+      "A classical bit is read as 0 or 1. A qubit is described by a quantum state that can include amplitudes and phase. In Cirq, you can apply a Hadamard gate and measure the qubit many times to produce a classical histogram. That histogram is an educational simulator result, not evidence of quantum advantage.",
     nextLessonSlug: "superposition",
   }),
   lesson("beginner", "superposition", "Superposition", "Why one qubit can behave unlike one bit.", {
     buildTemplateKey: "coin_flip",
+    explanationMarkdown:
+      "A qubit can be prepared in a state described by amplitudes for 0 and 1. Measurement produces one classical outcome. Quantum algorithms use interference between amplitudes; this is not the same as freely evaluating every possible answer at once.",
     nextLessonSlug: "measurement",
   }),
   lesson("beginner", "measurement", "Measurement", "How amplitudes become classical outcomes.", {
     buildTemplateKey: "coin_flip",
+    explanationMarkdown:
+      "Measurement converts quantum information into a classical outcome. Because one run produces a sample, quantum programs are usually executed many times to estimate a probability distribution. Shots, uncertainty, and backend details belong beside the result.",
     nextLessonSlug: "entanglement",
   }),
   lesson("beginner", "entanglement", "Entanglement", "Correlations that cannot be explained as two independent coins.", {
     buildTemplateKey: "bell_state",
     cirqCode:
       "import cirq\n\nq0, q1 = cirq.LineQubit.range(2)\ncircuit = cirq.Circuit(cirq.H(q0), cirq.CNOT(q0, q1), cirq.measure(q0, q1, key='m'))\nprint(circuit)",
+    explanationMarkdown:
+      "Entangled qubits share a joint quantum state. Their measurement outcomes can have correlations that cannot be reproduced by ordinary classical variables. Entanglement does not enable faster-than-light communication.",
     nextLessonSlug: "interference",
   }),
   lesson("beginner", "interference", "Interference", "How amplitudes can reinforce or cancel.", {
     buildTemplateKey: "grover",
+    explanationMarkdown:
+      "Quantum algorithms shape amplitudes so useful outcomes become more likely and unwanted outcomes become less likely. The effect comes from a carefully designed sequence of operations, not from superposition alone.",
     nextLessonSlug: "amplitude-amplification",
   }),
   lesson("beginner", "amplitude-amplification", "Amplitude amplification", "The intuition behind Grover-style search.", {
     buildTemplateKey: "grover",
+    explanationMarkdown:
+      "For an unstructured search problem with an efficient oracle, Grover's algorithm uses O(sqrt(N)) oracle queries. Oracle construction, data loading, error correction, and end-to-end runtime still matter. A toy search circuit is not a generic database or vector-search replacement.",
+    nextLessonSlug: "noise-and-error-correction",
+  }),
+  lesson("beginner", "noise-and-error-correction", "Noise and error correction", "Why educational noise is not hardware characterization.", {
+    explanationMarkdown:
+      "Physical qubits are noisy. Error mitigation can reduce some effects of noise in limited experiments. Fault tolerance requires logical qubits and repeated error detection, classical decoding, and control throughout the computation. Quantum Foundry's optional noise comparison is educational and is not calibrated hardware noise.",
+    nextLessonSlug: "today-versus-future",
+  }),
+  lesson("beginner", "today-versus-future", "Today versus future maturity", "Separate simulator-now work from hardware-gated and FTQC-later claims.", {
+    explanationMarkdown:
+      "Today is strongest for learning, classical simulation, careful benchmark design, research prototypes, and post-quantum migration planning. Many large-scale quantum algorithms require future fault-tolerant hardware. A responsible recommendation states which horizon applies and what evidence is still missing.",
   }),
 
   lesson("cirq", "line-qubits-and-grid-qubits", "Line qubits and grid qubits", "Choose qubit layouts in Cirq.", {

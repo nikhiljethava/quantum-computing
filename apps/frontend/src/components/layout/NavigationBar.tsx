@@ -51,17 +51,7 @@ export function NavigationBar() {
       }}
     >
       <nav
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding: "0 1.5rem",
-          minHeight: "72px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
+        className="mx-auto flex min-h-[72px] max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6 lg:flex-nowrap"
       >
         <Link
           href="/"
@@ -102,7 +92,7 @@ export function NavigationBar() {
           </div>
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+        <div className="order-3 flex w-full items-center gap-1 overflow-x-auto pb-1 lg:order-none lg:w-auto lg:min-w-0 lg:flex-1 lg:justify-center lg:pb-0">
           {NAV_ITEMS.map(({ href, label, icon: Icon, step }) => {
             const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
             const isAssess = href === "/assess";
@@ -110,7 +100,7 @@ export function NavigationBar() {
               <Link
                 key={href}
                 href={href}
-                className={`nav-link${isActive ? " active" : ""}`}
+                className={`nav-link shrink-0${isActive ? " active" : ""}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -136,7 +126,7 @@ export function NavigationBar() {
           })}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div className="flex shrink-0 items-center gap-3">
           <Link
             href={askGuideHref}
             className="btn-primary"

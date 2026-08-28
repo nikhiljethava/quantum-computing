@@ -12,15 +12,51 @@ trust labels.
 Steps:
 
 1. Open `/`.
-2. Confirm the primary CTA is `Assess a quantum opportunity`.
-3. Confirm secondary paths include Explore and Learn.
+2. Confirm the hero says `Understand the quantum platform. Explore the software. Test an idea.`
+3. Confirm entry cards link to `/series`, `/learn/quantum-software-stack`, and `/assess`.
 4. Confirm navigation preserves Learn, Explore, Assess, Build, and Map.
-5. Confirm Assess is visually central in the journey.
+5. Confirm superposition, entanglement, and Grover explanations use the technically accurate copy.
+6. Confirm the independent-project, simulator-first, and no-public-hardware disclosure is SSR-visible.
 
 Expected:
 
-- The page positions the product as an Algorithm Contract Workbench.
+- The page is curiosity-first while preserving Assess as the spine for serious work.
+- Homepage and About both state that Quantum Foundry is an independent personal project and not an official Google product.
 - No copy claims guaranteed quantum advantage, guaranteed ROI, or unrestricted hardware access.
+
+## E2E-001A Series And Software Stack Entry
+
+Steps:
+
+1. Open `/series` and confirm Articles 1 and 2 are listed in sequence.
+2. Open `/series/01-platform-problem`; select each architecture layer with pointer and keyboard.
+3. Toggle `One level deeper` and confirm the architecture remains understandable with the interaction disabled.
+4. Open `/series/02-hybrid-computing`; compare batch, iterative, tight, and future interaction models.
+5. Start each guided example and confirm its Tutorial or Toy Simulation label.
+6. Open `/learn/quantum-software-stack` and review all six software roles.
+
+Expected:
+
+- Companion routes use one shared typed content model.
+- Canonical article CTAs are hidden when no trusted HTTPS URL is configured.
+- Assessment links contain only allowlisted source, problem class, and goal values.
+- Cirq is the supported execution path; other SDKs are described only as educational examples.
+
+## E2E-001B Quick And Full Assessment Boundary
+
+Steps:
+
+1. Open `/assess` with no query and complete all seven Quick Assessment questions.
+2. Inspect the result and continue into Full Algorithm Contract.
+3. Repeat with `/assess?source=series-02&problemClass=QUANTUM_SIMULATION&goal=research`.
+4. Try unsupported values for `source`, `problemClass`, and `goal`.
+
+Expected:
+
+- Quick output includes likely contract type, algorithm family, horizon, missing evidence, and next action.
+- Quick output contains no QALS verdict, readiness score, confidence, contract validity, or Build eligibility.
+- Continuing transfers user-entered context but does not add a sample baseline, molecule, oracle, or other serious-contract evidence.
+- Unsupported query values are ignored and cannot inject state or redirect the browser.
 
 ## E2E-002 Explore V1 Lanes
 
@@ -175,13 +211,16 @@ Expected:
 Steps:
 
 1. Open `/build` without query params.
-2. Click tutorial circuit.
-3. Run the tutorial simulation.
+2. Open `/build?mode=tutorial&starter=coin_flip`.
+3. Confirm Tutorial mode is selected in the Algorithm Experiment Workspace and run the tutorial simulation.
+4. Switch to `/build?mode=contract` without contract references.
 
 Expected:
 
 - Empty state says `Start with an assessment or open a tutorial`.
-- Tutorial circuits are labeled `TUTORIAL`.
+- Tutorial circuits are labeled `TUTORIAL` and `TOY_SIMULATION`.
+- Tutorial output says it is not a business recommendation and not evidence of quantum advantage.
+- Contract mode is blocked without matching assessment, Algorithm Contract, and Experiment Bundle records.
 - Tutorial artifacts cannot be exported as business recommendations.
 
 ## E2E-012 Result Trust Panel
@@ -194,23 +233,48 @@ Steps:
 
 Expected:
 
-- Result Trust panel shows backend, qubits, circuit depth, one-qubit gate count, two-qubit gate count, shots, histogram or distribution, ideal/noisy flag when available, assumed noise model when available, hardware readiness label, and caveats.
+- Result Trust panel shows result type, evidence category, backend/status, simulator or hardware name, qubits, depth, one/two-qubit gates, shots, distribution, ideal/noisy mode, noise model, estimate level, hardware horizon, baseline status, source type/organization/link/dates, claim status, contract status, verdict, confidence, horizon, labels, assumptions, missing evidence, caveats, provenance, timestamp, and software/version when available.
+- Tutorial and educational-noise results are never labeled calibrated hardware or measured hardware results.
+- Vendor Reported and Independently Reproduced results have distinct visible treatments that do not depend on color alone.
 - The panel does not claim real QCVV or hardware characterization.
 
 ## E2E-013 Map And Architecture Export
 
 Steps:
 
-1. Open `/map` with an assessment or bundle id.
-2. Generate a live map.
-3. Export architecture JSON.
+1. Open `/map` with an optimization assessment and contract id; verify classical solver, QUBO/Ising, simulator, optimizer loop, and comparison nodes.
+2. Repeat with chemistry/materials; verify fragment, basis/active space, Hamiltonian, OpenFermion/Cirq, baseline, interpretation, and future resource-estimation nodes.
+3. Repeat with search; verify search space, oracle, data loading, simulator, query complexity, and caveat nodes.
+4. Repeat with PQC; verify inventory, risk clock, prioritization, standards, interoperability, staged migration, crypto agility, and migration memo nodes.
+5. Export architecture JSON.
+6. Switch between `Reference architecture` and `Cloud implementation example` for each map.
 
 Expected:
 
-- The architecture separates data layer, classical preprocessing, quantum kernel or simulation worker, classical post-processing, storage, export, optional hardware path, time horizon, and assumptions.
+- Every node is classified as classical, simulated quantum, optional approved hardware, or future-only.
+- PQC contains no circuit, QPU, or quantum-hardware node.
 - Hardware path is labeled hardware access-controlled.
+- Export JSON retains assessment/contract ids, problem/contract classification, horizon, assumptions, and Result Trust.
+- Reference architecture uses vendor-neutral workflow names; the cloud tab is labeled as one implementation example, not an official or universal architecture.
 
-## E2E-014 Quantum Algorithm Brief Export
+## E2E-014 Contract Gate Revalidation
+
+Steps:
+
+1. Create an optimization assessment without a baseline and obtain or edit an Algorithm Contract record.
+2. Attempt to mark the contract eligible through contract patch fields and create/run Contract mode.
+3. Create a baseline-backed but partial contract with required QUBO fields missing.
+4. Create a complete valid contract and queue its experiment.
+
+Expected:
+
+- Assessment-owned QALS eligibility remains authoritative; an edited contract cannot bypass it.
+- Missing baseline blocks bundle creation or compute execution.
+- A partial contract may retain a scoped bundle but queues no simulation.
+- Only the valid, complete, baseline-backed contract reaches the worker circuit path.
+- The worker rejects mismatched assessment, contract, and bundle ids.
+
+## E2E-015 Quantum Algorithm Brief Export
 
 Steps:
 
@@ -223,8 +287,9 @@ Expected:
 - Export is represented as a job.
 - Filename starts with `quantum_algorithm_brief`.
 - Sections include Executive verdict, Problem statement, Algorithm Contract, Mathematical reduction, Classical baseline, Algorithm candidate, Resource/trust estimate, Simulator experiment, Benchmark result, Caveats/missing/evidence, GCP architecture, Time horizon, Next decision, and Assumptions.
+- Contract-backed code, notebook, session summary, assessment JSON, and architecture JSON carry assessment id, contract id, baseline, horizon, assumptions, and trust labels.
 
-## E2E-015 Jobs Activity
+## E2E-016 Jobs Activity
 
 Steps:
 
@@ -239,7 +304,21 @@ Expected:
 - Simulator-first jobs link back to the relevant workspace.
 - Empty states point to assessment, Algorithm Experiment Bundle, or Algorithm Brief export.
 
-## E2E-016 Deployment Access
+## E2E-017 API Compatibility And Routes
+
+Steps:
+
+1. Parse a legacy architecture response without Phase 0 fields.
+2. Parse a legacy component without `execution_kind`.
+3. Parse a legacy artifact without contract/trust fields.
+4. Open every current route listed in `apps/frontend/src/app`.
+
+Expected:
+
+- New API fields remain nullable/additive and legacy payloads parse with compatibility defaults.
+- Every current route returns rendered HTML with no browser console error or horizontal overflow.
+
+## E2E-018 Deployment Access
 
 Steps:
 
@@ -251,5 +330,6 @@ Steps:
 Expected:
 
 - Public mode fails if IAP headers, Google OAuth redirects, or auth-related `401`/`403` responses are present.
+- Public mode checks `/`, `/learn`, `/learn/quantum-software-stack`, `/series`, both article companions, `/assess`, `/build`, and `/map`, and also fails on unexpected `404` and `5xx` responses.
 - IAP-protected mode fails if no IAP challenge or IAP header is detected.
 - Cloud Build fails fast when `_FRONTEND_ACCESS_MODE` is invalid.

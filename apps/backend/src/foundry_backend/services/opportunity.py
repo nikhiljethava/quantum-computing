@@ -27,6 +27,11 @@ from foundry_core.assessment import (
     serialize_assessment_output,
 )
 from foundry_core.mapping.gcp_mapper import build_architecture_map
+from foundry_backend.services.result_trust import (
+    RESULT_TRUST_VERSION,
+    assessment_result_trust,
+    bundle_result_trust,
+)
 
 
 def _now_iso() -> str:
@@ -170,6 +175,7 @@ def serialize_assessment(assessment: Assessment) -> dict[str, Any]:
         "why_not_now": why_not_now,
         "top_blockers": blockers,
         "next_90_days": next_90_days,
+        "result_trust": assessment_result_trust(assessment),
         "created_at": assessment.created_at,
         "updated_at": getattr(assessment, "updated_at", None),
     }
@@ -270,7 +276,16 @@ def _build_gcp_map(qals_output: dict[str, Any]) -> dict[str, Any]:
             "qals_score": float(qals_output.get("readiness_score", 0)) / 100,
             "verdict": qals_output.get("verdict", ""),
             "problem_class": qals_output.get("problem_class", ""),
+            "contract_type": qals_output.get("recommended_contract_type", "TUTORIAL"),
+            "algorithm_family": qals_output.get("recommended_algorithm_family", "UNKNOWN"),
             "time_horizon": qals_output.get("time_horizon", ""),
+            "classical_baseline": qals_output.get("classical_baseline_summary", ""),
+            "contract_validity_status": qals_output.get("contract_validity_status", ""),
+            "confidence": qals_output.get("confidence", ""),
+            "trust_labels": qals_output.get("trust_labels", []),
+            "assumptions": qals_output.get("assumptions", []),
+            "missing_evidence": qals_output.get("missing_evidence", []),
+            "caveats": qals_output.get("caveats", []),
         }
     )
     return {
@@ -279,33 +294,71 @@ def _build_gcp_map(qals_output: dict[str, Any]) -> dict[str, Any]:
         "components": [dataclasses.asdict(component) for component in architecture.components],
         "connections": [list(connection) for connection in architecture.connections],
         "notes": architecture.notes,
-        "time_horizon": qals_output.get("time_horizon", ""),
-        "assumptions": qals_output.get("assumptions", []),
+        "problem_class": architecture.problem_class,
+        "contract_type": architecture.contract_type,
+        "time_horizon": architecture.time_horizon,
+        "assumptions": architecture.assumptions,
+        "trust_labels": architecture.trust_labels,
     }
 
 
 def _default_trust_metrics(qals_output: dict[str, Any]) -> dict[str, Any]:
     is_crypto = qals_output.get("problem_class") == ProblemClass.CRYPTO_SECURITY.value
-    is_stub = qals_output.get("build_eligibility") not in {
-        BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
-        BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
-        BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
-    }
+    is_stub = (
+        qals_output.get("build_eligibility")
+        not in {
+            BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
+            BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
+            BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
+        }
+        or qals_output.get("contract_validity_status") != "VALID"
+        or bool(qals_output.get("missing_inputs", []))
+    )
     return {
-        "backend": "stub" if is_stub else "simulator",
-        "number_of_qubits": 0 if is_stub else None,
-        "circuit_depth": 0 if is_stub else None,
-        "one_qubit_gate_count": 0 if is_stub else None,
-        "two_qubit_gate_count": 0 if is_stub else None,
-        "shots": 0 if is_stub else 1000,
+        "evidence_category": "estimate",
+        "backend": "non-compute migration workflow" if is_crypto else ("stub" if is_stub else "simulator"),
+        "execution_status": "non-compute action" if is_crypto else ("stub" if is_stub else "simulator queued"),
+        "number_of_qubits": None,
+        "qubit_count": None,
+        "circuit_depth": None,
+        "one_qubit_gate_count": None,
+        "two_qubit_gate_count": None,
+        "shots": None if is_stub else 1000,
         "histogram": [],
-        "ideal_vs_noisy": "ideal",
+        "result_distribution": [],
+        "ideal_vs_noisy": None if is_stub else "ideal",
+        "ideal_or_noisy": None if is_stub else "ideal",
         "assumed_noise_model": None,
+        "noise_model_description": None,
         "hardware_readiness_label": "hardware access-controlled",
+        "classical_baseline_status": (
+            "not applicable - migration action"
+            if is_crypto
+            else (
+                "declared"
+                if qals_output.get("classical_baseline_summary")
+                and "current classical baseline" not in qals_output.get("missing_evidence", [])
+                else "missing"
+            )
+        ),
+        "contract_validity_status": qals_output.get("contract_validity_status"),
+        "readiness_verdict": qals_output.get("verdict"),
+        "confidence": qals_output.get("confidence"),
+        "time_horizon": qals_output.get("time_horizon"),
+        "trust_labels": qals_output.get("trust_labels", []),
+        "assumptions": qals_output.get("assumptions", []),
+        "missing_evidence": qals_output.get("missing_evidence", []),
         "caveats": [
             "This is a simulation trust panel, not hardware characterization.",
             "Real hardware results may differ because queueing, calibration, topology, and noise are not represented here.",
+            *qals_output.get("caveats", []),
+        ] if not is_crypto else list(qals_output.get("caveats", [])),
+        "provenance": [
+            f"Assessment {qals_output.get('id', 'pending')}",
+            "QALS 3.0 deterministic Algorithm Contract output",
         ],
+        "generated_at": qals_output.get("created_at", _now_iso()),
+        "software_or_model_version": RESULT_TRUST_VERSION,
     }
 
 
@@ -319,21 +372,41 @@ async def create_experiment_bundle(
     """Create an assessment and contract-anchored Experiment Bundle."""
 
     qals_output = assessment.qals_output or {}
-    eligibility = (
-        contract.build_eligibility
-        if contract
-        else qals_output.get("build_eligibility", BuildEligibility.LIMITED_TUTORIAL_ONLY.value)
+    assessment_eligibility = qals_output.get(
+        "build_eligibility",
+        assessment.build_eligibility or BuildEligibility.LIMITED_TUTORIAL_ONLY.value,
     )
-    if eligibility in {
-        BuildEligibility.BLOCKED.value,
-        BuildEligibility.LIMITED_TUTORIAL_ONLY.value,
-    }:
+    contract_eligibility = contract.build_eligibility if contract else assessment_eligibility
+    allowed_eligibilities = {
+        BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
+        BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
+        BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
+        BuildEligibility.NON_COMPUTE_ACTION_ONLY.value,
+    }
+    if (
+        assessment_eligibility not in allowed_eligibilities
+        or contract_eligibility not in allowed_eligibilities
+    ):
         raise ValueError(
             "This Algorithm Contract is blocked or tutorial-only and cannot create a serious Experiment Bundle."
         )
 
+    if contract and contract.assessment_id != assessment.id:
+        raise ValueError("Algorithm Contract does not belong to the supplied assessment.")
+
     is_crypto = qals_output.get("problem_class") == ProblemClass.CRYPTO_SECURITY.value
-    can_queue_simulation = eligibility in {
+    missing_evidence = {str(item).strip().lower() for item in qals_output.get("missing_evidence", [])}
+    if not is_crypto and (
+        not str(qals_output.get("classical_baseline_summary", "")).strip()
+        or "current classical baseline" in missing_evidence
+    ):
+        raise ValueError("A declared current classical baseline is required before a serious Experiment Bundle.")
+
+    contract_ready_for_compute = (
+        qals_output.get("contract_validity_status") == "VALID"
+        and not qals_output.get("missing_inputs", [])
+    )
+    can_queue_simulation = contract_ready_for_compute and assessment_eligibility in {
         BuildEligibility.ELIGIBLE_FOR_TOY_EXPERIMENT.value,
         BuildEligibility.ELIGIBLE_FOR_BENCHMARK.value,
         BuildEligibility.ELIGIBLE_FOR_RESEARCH_PROTOTYPE.value,
@@ -382,6 +455,11 @@ async def create_experiment_bundle(
             "notes": [
                 "Simulator-first guardrail is active.",
                 "Algorithm Contract and classical baseline remain attached to the bundle.",
+                *(
+                    ["Required Algorithm Contract inputs must be completed before simulation."]
+                    if not is_crypto and not contract_ready_for_compute
+                    else []
+                ),
             ],
         },
         result_trust_metrics=_default_trust_metrics(qals_output),
@@ -416,5 +494,6 @@ def serialize_experiment_bundle(bundle: ExperimentBundle) -> dict[str, Any]:
         "gcp_map": bundle.gcp_map,
         "export_artifacts": bundle.export_artifacts,
         "trust_labels": bundle.trust_labels,
+        "result_trust": bundle_result_trust(bundle),
         "created_at": bundle.created_at,
     }

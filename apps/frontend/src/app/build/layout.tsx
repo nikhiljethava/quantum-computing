@@ -4,13 +4,13 @@ import type { ReactNode } from "react";
 import { HardwareAccessNote } from "@/components/HardwareAccessNote";
 
 export const metadata: Metadata = {
-  title: "Cirq Lab",
+  title: "Algorithm Experiment Workspace",
   description:
-    "Build and run Cirq-based circuits, inspect histograms, optional qsim fallback, educational noise, and Colab exports.",
+    "Run educational Cirq tutorials or open assessment-backed Contract mode with shared result trust.",
   openGraph: {
-    title: "Cirq Lab | Quantum Foundry",
+    title: "Build | Quantum Foundry",
     description:
-      "Run simulator-first Cirq labs and map the results to Google Cloud hybrid workflows.",
+      "Use a simulator-first Algorithm Experiment Workspace and map results to hybrid workflows.",
   },
   alternates: {
     canonical: "/build",
@@ -24,11 +24,12 @@ export default function BuildLayout({ children }: { children: ReactNode }) {
         <div className="grid gap-3 rounded-[24px] border border-[#d8e2f3] bg-white/95 p-4 shadow-[0_14px_34px_rgba(148,163,184,0.14)] lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.7fr)] lg:items-center">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#1967d2]">
-              What the Cirq Lab does
+              Algorithm Experiment Workspace
             </div>
             <p className="mt-2 text-sm leading-7 text-slate-600">
-              Run Cirq templates, inspect histograms and metrics, compare educational
-              noise, try optional qsim fallback, and export a runnable Google Colab notebook.
+              Tutorial mode runs educational Cirq examples without an assessment. Contract mode
+              requires an assessment, Algorithm Contract, declared baseline, and Experiment Bundle.
+              Interactive results remain simulator-first with visible trust and educational-noise labels.
             </p>
           </div>
           <HardwareAccessNote />

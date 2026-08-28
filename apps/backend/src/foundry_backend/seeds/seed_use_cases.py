@@ -425,7 +425,7 @@ SEED_DATA: list[dict] = [
                 "published_at": "2024-10-25",
                 "claim": (
                     "This work applies QAOA-style methods to a heterogeneous vehicle routing problem, "
-                    "reinforcing that routing remains a credible simulator-first hybrid benchmark rather than a hardware-ready production path."
+                    "reinforcing that routing remains a credible simulator-first hybrid benchmark rather than a near-term production path."
                 ),
                 "source_url": "https://www.nature.com/articles/s41598-024-76967-w",
             },

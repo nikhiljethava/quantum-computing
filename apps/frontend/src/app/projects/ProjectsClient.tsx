@@ -97,7 +97,7 @@ function ProjectListCard({
                   <div>
                     <div className="text-sm font-semibold text-slate-900">{project.name}</div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {project.description || "Saved Hybrid Lab sessions and exports."}
+                      {project.description || "Saved Algorithm Experiment Workspace sessions and exports."}
                     </div>
                   </div>
                   <div className="rounded-full bg-white/80 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -118,7 +118,7 @@ function ProjectListCard({
           })
         ) : (
           <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-            Save a workspace from the Hybrid Lab to create the first reusable project.
+            Save an Algorithm Experiment Workspace to create the first reusable project.
           </div>
         )}
       </div>
@@ -154,7 +154,7 @@ function ProjectSessionRow({ session }: { session: SavedSession }) {
           href={buildSessionHref(session)}
           className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-3 py-2 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(47,91,227,0.22)] transition hover:-translate-y-[1px]"
         >
-          Open in Hybrid Lab
+          Open experiment workspace
           <ArrowRight className="h-4 w-4" />
         </Link>
         <Link
@@ -203,7 +203,7 @@ function ProjectDetailPanel({
               {project.name}
             </h2>
             <p className="mt-3 max-w-[760px] text-[1rem] leading-8 text-slate-600">
-              {project.description || "A reusable container for saved Hybrid Lab sessions, architecture maps, and export bundles."}
+              {project.description || "A reusable container for saved experiment sessions, architecture maps, and export bundles."}
             </p>
           </div>
 
@@ -219,7 +219,7 @@ function ProjectDetailPanel({
               href="/build"
               className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
             >
-              Open Hybrid Lab
+              Open experiment workspace
               <Sparkles className="h-4 w-4" />
             </Link>
           </div>
@@ -355,7 +355,7 @@ function ProjectDetailPanel({
                 </>
               ) : (
                 <>
-                  <p>Open the Hybrid Lab and save the next run into this project to start building a reusable history.</p>
+                  <p>Open the Algorithm Experiment Workspace and save the next run into this project to start building a reusable history.</p>
                   <Link
                     href="/build"
                     className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-[#2f5be3] shadow-[0_12px_24px_rgba(47,91,227,0.12)] transition hover:-translate-y-[1px]"
@@ -466,13 +466,13 @@ function ProjectsPageContent() {
                   No projects yet
                 </div>
                 <p className="text-sm leading-7 text-slate-600">
-                  Save a workspace from the Hybrid Lab to create the first reusable project container.
+                  Save an Algorithm Experiment Workspace to create the first reusable project container.
                 </p>
                 <Link
                   href="/build"
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
                 >
-                  Open Hybrid Lab
+                  Open experiment workspace
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
+import { ResultTrustPanel } from "@/components/trust/ResultTrustPanel";
 import { getArtifactDownloadUrl } from "@/lib/api";
 import {
   buildJobHref,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/job-activity";
 import { useJobs, useProjects, useSession, useSessions, useUseCase } from "@/lib/hooks";
 import { getStarterStory, normalizeStarterKey } from "@/lib/studio-mocks";
+import { architectureResultTrust, circuitResultTrust } from "@/lib/result-trust";
 import { Artifact, Job, Project, SavedSession, SessionDetail } from "@/types/api";
 
 function formatSessionTime(value: string) {
@@ -56,6 +58,7 @@ function formatArtifactLabel(artifact: Artifact) {
 
 function buildSessionHref(session: SavedSession | SessionDetail) {
   const params = new URLSearchParams();
+  params.set("mode", "tutorial");
   params.set("starter", normalizeStarterKey(session.starter_key));
   params.set("session_id", session.id);
   if (session.selected_use_case_id) {
@@ -160,7 +163,7 @@ function SessionListCard({
           })
         ) : (
           <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-            Save a workspace from the Hybrid Lab to build up a reusable session history.
+            Save an Algorithm Experiment Workspace to build up a reusable session history.
           </div>
         )}
       </div>
@@ -216,17 +219,18 @@ function SessionDetailPanel({
               href={buildSessionHref(session)}
               className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
             >
-              Open in Hybrid Lab
+              Open experiment workspace
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href={`/map?starter=${normalizeStarterKey(session.starter_key)}`}
+              href={`/map?starter=${normalizeStarterKey(session.starter_key)}&session_id=${session.id}`}
               className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
             >
               Open map view
               <GitBranch className="h-4 w-4" />
             </Link>
           </div>
+
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -245,6 +249,15 @@ function SessionDetailPanel({
           ))}
         </div>
       </div>
+
+      <ResultTrustPanel
+        trust={
+          session.latest_circuit_run
+            ? circuitResultTrust(session.latest_circuit_run)
+            : architectureResultTrust(session.latest_architecture)
+        }
+        title="Saved Result Trust"
+      />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
@@ -438,7 +451,7 @@ function SessionDetailPanel({
                 ))
               ) : (
                 <div className="rounded-[22px] border border-dashed border-[#d8e2f3] bg-[#f8fbff] px-4 py-6 text-sm leading-7 text-slate-500">
-                  Exports will appear here after you generate them from the Hybrid Lab.
+                  Exports will appear here after you generate them from the Algorithm Experiment Workspace.
                 </div>
               )}
             </div>
@@ -557,7 +570,7 @@ function SessionsPageContent() {
                 What this unlocks
               </div>
               <div className="space-y-3 text-sm leading-7 text-slate-600">
-                <p>Saved sessions make the Hybrid Lab feel stateful, not disposable.</p>
+                <p>Saved sessions make the Algorithm Experiment Workspace stateful rather than disposable.</p>
                 <p>Artifacts stay attached to a concrete workspace instead of floating as one-off downloads.</p>
                 <p>PMs and architects can reopen the same narrative later without reconstructing the prototype.</p>
               </div>
@@ -586,14 +599,14 @@ function SessionsPageContent() {
                 </div>
                 <p className="text-sm leading-7 text-slate-600">
                   {selectedProjectId
-                    ? "This project does not have any saved sessions yet. Open the Hybrid Lab and save the next workspace into this project."
-                    : "Start in the Hybrid Lab, generate a live circuit, and save the workspace to populate this library."}
+                    ? "This project does not have any saved sessions yet. Open the Algorithm Experiment Workspace and save the next workspace into this project."
+                    : "Start in the Algorithm Experiment Workspace, generate a tutorial or contract-backed result, and save the workspace to populate this library."}
                 </p>
                 <Link
                   href="/build"
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.28)] transition hover:-translate-y-[1px]"
                 >
-                  Open Hybrid Lab
+                  Open experiment workspace
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>

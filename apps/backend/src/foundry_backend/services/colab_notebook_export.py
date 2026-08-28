@@ -1,4 +1,4 @@
-"""Google Colab notebook generation for Cirq Lab runs."""
+"""Google Colab notebook generation for Algorithm Experiment Workspace runs."""
 
 import json
 from typing import Any
@@ -46,10 +46,28 @@ def _architecture_markdown(architecture_record: ArchitectureRecord | None) -> st
         for component in architecture_record.components
     )
     notes = "\n".join(f"- {note}" for note in architecture_record.notes)
+    trust = dict(getattr(architecture_record, "trust_context", {}) or {})
+    contract_context = ""
+    if getattr(architecture_record, "contract_id", None):
+        assumptions = "\n".join(f"- {item}" for item in trust.get("assumptions", []))
+        labels = ", ".join(trust.get("trust_labels", [])) or "None recorded"
+        contract_context = (
+            "\n\n### Algorithm Contract context\n"
+            f"- Assessment ID: `{architecture_record.assessment_id}`\n"
+            f"- Contract ID: `{architecture_record.contract_id}`\n"
+            f"- Problem class: {getattr(architecture_record, 'problem_class', None) or 'N/A'}\n"
+            f"- Contract type: {getattr(architecture_record, 'contract_type', None) or 'N/A'}\n"
+            f"- Classical baseline: {trust.get('classical_baseline') or 'N/A'}\n"
+            f"- Time horizon: {trust.get('time_horizon') or 'N/A'}\n"
+            f"- Trust labels: {labels}\n\n"
+            f"#### Assumptions\n{assumptions or '- None recorded.'}\n\n"
+            "Simulator-first artifact; production advantage is unproven."
+        )
     return (
         f"## Google Cloud architecture context\n\n{architecture_record.summary}\n\n"
         f"### Components\n{components or '- No components recorded.'}\n\n"
         f"### Notes\n{notes or f'- {HARDWARE_ACCESS_GUARDRAIL}'}"
+        f"{contract_context}"
     )
 
 
@@ -84,7 +102,7 @@ def generate_colab_notebook(
             "metadata": {},
             "source": _source(
                 f"""
-                # Quantum Foundry: Cirq Lab Notebook
+                # Quantum Foundry: Tutorial-mode Notebook
 
                 - Circuit: **{label}**
                 - Concept: **{concept}**

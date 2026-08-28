@@ -12,7 +12,6 @@ import {
   FileDown,
   FolderOpen,
   GitBranch,
-  Gauge,
   Play,
   Plus,
   RotateCcw,
@@ -25,8 +24,10 @@ import {
 
 import { GuidePanel } from "@/components/GuidePanel";
 import { HardwareAccessNote } from "@/components/HardwareAccessNote";
+import { ResultTrustPanel } from "@/components/trust/ResultTrustPanel";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import { LESSON_BY_SLUG } from "@/content/lessons";
+import { trackProductEvent } from "@/lib/analytics";
 import {
   createArtifact,
   fetchArchitecture,
@@ -50,6 +51,11 @@ import {
   useUseCase,
 } from "@/lib/hooks";
 import {
+  assessmentResultTrust,
+  bundleResultTrust,
+  circuitResultTrust,
+} from "@/lib/result-trust";
+import {
   CircuitVisualNode,
   STARTER_ORDER,
   StarterKey,
@@ -65,6 +71,7 @@ import {
   GcpComponent,
   HistogramEntry,
   Project,
+  ResultTrust,
   SavedSession,
   UseCase,
 } from "@/types/api";
@@ -75,6 +82,7 @@ type HistogramTone = StarterStory["histogram"][number]["tone"];
 type EditableCircuitNode = CircuitVisualNode & { id: string };
 type EditableInsertType = "gate" | "measure" | "control" | "label";
 type SimulatorBackend = "cirq" | "qsim";
+type BuildMode = "tutorial" | "contract";
 type LabControls = {
   repetitions: number;
   simulatorBackend: SimulatorBackend;
@@ -510,12 +518,6 @@ function restoreSavedDraft(
   };
 }
 
-function formatScoreLabel(score: number) {
-  if (score >= 75) return "Hybrid now";
-  if (score >= 60) return "Prototype now";
-  return "Hardware later";
-}
-
 function buildDefaultSessionTitle(starterKey: StarterKey, useCase?: UseCase | null) {
   const starter = getStarterStory(starterKey);
   if (useCase) {
@@ -667,12 +669,19 @@ function architectureFromJobResult(result: Record<string, unknown> | null): Arch
       typeof candidate.circuit_run_id === "string" ? candidate.circuit_run_id : null,
     assessment_id:
       typeof candidate.assessment_id === "string" ? candidate.assessment_id : null,
+    contract_id: typeof candidate.contract_id === "string" ? candidate.contract_id : null,
     use_case_id: typeof candidate.use_case_id === "string" ? candidate.use_case_id : null,
+    problem_class: candidate.problem_class ?? "UNKNOWN",
+    contract_type: candidate.contract_type ?? "TUTORIAL",
+    time_horizon: candidate.time_horizon ?? "SIMULATOR_NOW",
+    assumptions: Array.isArray(candidate.assumptions) ? candidate.assumptions : [],
+    trust_labels: Array.isArray(candidate.trust_labels) ? candidate.trust_labels : ["TUTORIAL"],
     title: candidate.title,
     summary: candidate.summary,
     components: candidate.components,
     connections: Array.isArray(candidate.connections) ? candidate.connections : [],
     notes: Array.isArray(candidate.notes) ? candidate.notes : [],
+    result_trust: candidate.result_trust ?? null,
     created_at: typeof candidate.created_at === "string" ? candidate.created_at : null,
   };
 }
@@ -1649,10 +1658,6 @@ function formatProbability(value: number) {
   return `${Math.round(value * 1000) / 10}%`;
 }
 
-function formatMetric(value: number | null | undefined) {
-  return typeof value === "number" ? value.toLocaleString() : "N/A";
-}
-
 function LabControlsPanel({
   controls,
   isBusy,
@@ -1809,64 +1814,38 @@ function HistogramBars({
   );
 }
 
-function CircuitMetricsCard({ run }: { run: CircuitRun | null }) {
-  const metrics = [
-    ["Backend", run?.simulator_backend ?? "simulator"],
-    ["Qubits", formatMetric(run?.num_qubits)],
-    ["Depth", formatMetric(run?.circuit_depth)],
-    ["1Q gates", formatMetric(run?.one_qubit_gate_count)],
-    ["2Q gates", formatMetric(run?.two_qubit_gate_count)],
-    ["Shots", formatMetric(run?.shots)],
-    ["Ideal/noisy", run?.ideal_vs_noisy ?? "ideal"],
-    ["Hardware label", run?.hardware_readiness_label ?? "hardware access-controlled"],
-  ];
+function CircuitMetricsCard({
+  run,
+  trust,
+}: {
+  run: CircuitRun | null;
+  trust?: ResultTrust | null;
+}) {
+  return <ResultTrustPanel trust={trust ?? circuitResultTrust(run)} title="Simulation Result Trust" />;
+}
 
+function BuildModeSelector({ mode }: { mode: BuildMode }) {
   return (
-    <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-4">
-      <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <Gauge className="h-4 w-4 text-[#2f5be3]" />
-        Result Trust panel
-      </div>
-      <div className="grid gap-3 sm:grid-cols-4">
-        {metrics.map(([label, value]) => (
-          <div key={label} className="rounded-[16px] bg-[#f8fbff] p-3">
-            <div className="text-xs font-semibold uppercase text-slate-400">
-              {label}
-            </div>
-            <div className="mt-2 text-lg font-black text-slate-900">{value}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 rounded-[16px] bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
-        Measurement keys: {run?.measurement_keys?.length ? run.measurement_keys.join(", ") : "None recorded"}
-      </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <div className="rounded-[16px] bg-[#f8fafc] p-3 text-sm leading-6 text-slate-600">
-          Assumed noise model: {run?.assumed_noise_model ?? "None; ideal simulator path unless noise mode is enabled."}
-        </div>
-        <div className="rounded-[16px] bg-[#eef2ff] p-3 text-sm leading-6 text-[#2f5be3]">
-          Trust labels: {run?.trust_labels?.length ? run.trust_labels.join(", ").replaceAll("_", " ") : "Tutorial, toy simulation"}
-        </div>
-      </div>
-      <div className="mt-3 space-y-2">
-        {(run?.result_caveats?.length
-          ? run.result_caveats
-          : [
-              "This is a simulation trust panel, not hardware characterization.",
-              "Real hardware results may differ because topology, calibration, and noise are not represented by default.",
-            ]
-        ).map((caveat) => (
-          <div key={caveat} className="rounded-[16px] border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm leading-6 text-[#9a3412]">
-            {caveat}
-          </div>
-        ))}
-      </div>
-      {run?.simulator_warning ? (
-        <div className="mt-3 rounded-[16px] border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm leading-6 text-[#9a3412]">
-          {run.simulator_warning}
-        </div>
-      ) : null}
-    </div>
+    <nav aria-label="Build mode" className="inline-grid grid-cols-2 border border-[#cbd5e1] bg-white p-1">
+      <Link
+        href="/build?mode=tutorial&starter=coin_flip"
+        aria-current={mode === "tutorial" ? "page" : undefined}
+        className={`px-4 py-2.5 text-center text-sm font-bold transition ${
+          mode === "tutorial" ? "bg-[#2563eb] text-white" : "text-slate-600 hover:bg-slate-50"
+        }`}
+      >
+        Tutorial mode
+      </Link>
+      <Link
+        href="/build?mode=contract"
+        aria-current={mode === "contract" ? "page" : undefined}
+        className={`px-4 py-2.5 text-center text-sm font-bold transition ${
+          mode === "contract" ? "bg-[#2563eb] text-white" : "text-slate-600 hover:bg-slate-50"
+        }`}
+      >
+        Contract mode
+      </Link>
+    </nav>
   );
 }
 
@@ -1941,12 +1920,16 @@ function ResultsPanel({
   activeTab,
   simulationState,
   setActiveTab,
+  resultTrust,
+  isContractExperiment,
 }: {
   story: StarterStory;
   run: CircuitRun | null;
   activeTab: OutputTab;
   simulationState: "ready" | "running";
   setActiveTab: (tab: OutputTab) => void;
+  resultTrust: ResultTrust | null;
+  isContractExperiment: boolean;
 }) {
   return (
     <div className="rounded-[28px] border border-[#d8e2f3] bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)]">
@@ -2028,13 +2011,15 @@ function ResultsPanel({
                   <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                     Honest framing
                   </div>
-                  QALS-lite is a readiness heuristic and the simulation path is a teaching and prototype aid. It does not imply benchmark superiority or guaranteed quantum advantage.
+                  {isContractExperiment
+                    ? "This simulator result remains attached to its Algorithm Contract and declared classical baseline. Production advantage is unproven until the benchmark plan is completed."
+                    : "This educational preview and simulator path are teaching aids. They do not replace a QALS 3.0 Algorithm Contract and do not imply benchmark superiority or quantum advantage."}
                 </div>
               </div>
             </div>
           </div>
 
-          <CircuitMetricsCard run={run} />
+          <CircuitMetricsCard run={run} trust={resultTrust} />
           <StatePreviewCard run={run} />
           <NoiseComparisonCard run={run} />
         </div>
@@ -2049,9 +2034,13 @@ function ResultsPanel({
           </div>
           <div className="rounded-[24px] border border-[#e2e8f0] bg-white p-5">
             <div className="text-sm font-semibold text-slate-700">Recommended next action</div>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{story.assessment.nextAction}</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              {isContractExperiment
+                ? "Review the attached Algorithm Contract, declared baseline, benchmark plan, and remaining evidence before interpreting this result."
+                : "Use this prepared simulation for learning, then start a full assessment before applying the pattern to a real workload."}
+            </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {[story.concept, story.assessment.horizon, story.assessment.confidence].map((chip, index) => (
+              {[story.concept, isContractExperiment ? "CONTRACT CONTEXT" : "TUTORIAL", "SIMULATOR NOW"].map((chip, index) => (
                 <span
                   key={`${chip}-${index}`}
                   className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600"
@@ -2071,62 +2060,33 @@ function ResultsPanel({
   );
 }
 
-function AssessmentCard({
+function TutorialScopeCard({
   story,
   focused,
 }: {
   story: StarterStory;
   focused: boolean;
 }) {
-  const score = story.assessment.score;
-  const progress = `${score}%`;
-  const marker =
-    score >= 75 ? "66%" : score >= 60 ? "42%" : "12%";
-
   return (
     <div
-      id="qals-lite"
+      id="tutorial-scope"
       className={`rounded-[28px] border bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.18)] transition ${
         focused ? "border-[#2f5be3] ring-4 ring-[#dbe5ff]" : "border-[#d8e2f3]"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            QALS-lite score
-          </div>
-          <div className="mt-2 flex items-end gap-2">
-            <div className="text-[3rem] font-black tracking-[-0.05em] text-[#2f5be3]">
-              {score}
-            </div>
-            <div className="pb-2 text-lg font-semibold text-slate-500">/ 100</div>
-          </div>
-        </div>
-        <div className="rounded-[18px] bg-[#eaf7f2] px-3 py-2 text-sm font-semibold text-[#158c61]">
-          {story.assessment.verdict}
-        </div>
+      <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+        Tutorial scope
       </div>
-
-      <div className="mt-4">
-        <div className="relative h-3 rounded-full bg-slate-200">
-          <div
-            className="h-3 rounded-full bg-gradient-to-r from-[#2f5be3] via-[#5f3ef0] to-[#1cc98b]"
-            style={{ width: progress }}
-          />
-          <div
-            className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-4 border-white bg-[#2f5be3] shadow"
-            style={{ left: `calc(${marker} - 10px)` }}
-          />
-        </div>
-        <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
-          <span>Classical now</span>
-          <span>Hybrid now</span>
-          <span>Hardware later</span>
-        </div>
+      <div className="mt-3 border border-[#ddd6fe] bg-[#f5f3ff] p-4">
+        <div className="text-xl font-black text-[#6d28d9]">Tutorial / Toy Simulation</div>
+        <p className="mt-2 text-xs leading-6 text-[#5b21b6]">
+          {story.label} is a prepared learning example. It creates no readiness verdict, confidence,
+          score, Algorithm Contract, or serious Build eligibility.
+        </p>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {[story.assessment.horizon, story.assessment.confidence, formatScoreLabel(score)].map((chip, index) => (
+        {[story.concept, "SIMULATOR NOW"].map((chip, index) => (
           <span
             key={`${chip}-${index}`}
             className="rounded-full bg-[#eef2ff] px-3 py-2 text-xs font-semibold text-[#2f5be3]"
@@ -2136,14 +2096,14 @@ function AssessmentCard({
         ))}
       </div>
 
-      <div className="mt-5 space-y-3">
-        {story.assessment.explanation.map((item) => (
-          <div key={item} className="flex gap-3 text-sm leading-6 text-slate-600">
-            <span className="mt-[7px] h-2 w-2 rounded-full bg-[#2f5be3]" />
-            <span>{item}</span>
-          </div>
-        ))}
-      </div>
+      <p className="mt-5 text-sm leading-7 text-slate-600">
+        Prepared examples explain circuit behavior. They do not test a real classical baseline or
+        establish production value.
+      </p>
+      <Link href="/assess?level=full" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#2563eb]">
+        Start Full Algorithm Contract
+        <ArrowRight className="h-4 w-4" />
+      </Link>
     </div>
   );
 }
@@ -2241,6 +2201,7 @@ function ExportCard({
   exportStatusMessage,
   exportJobHref,
   exportError,
+  trust,
   onExport,
 }: {
   canExport: boolean;
@@ -2249,6 +2210,7 @@ function ExportCard({
   exportStatusMessage: string | null;
   exportJobHref: string | null;
   exportError: string | null;
+  trust: ResultTrust;
   onExport: (type: Exclude<ArtifactType, "job_output">) => void;
 }) {
   return (
@@ -2300,6 +2262,9 @@ function ExportCard({
       <div className="mt-4 rounded-[18px] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
         Keep the exports honest: label simulation-first assumptions, note missing evidence, and preserve the chosen time horizon in the bundle.
       </div>
+      <div className="mt-5 border-t border-slate-200 pt-5">
+        <ResultTrustPanel trust={trust} title="Export Trust Preview" embedded />
+      </div>
       {exportStatusMessage ? (
         <div className="mt-4 rounded-[18px] border border-[#d8e2f3] bg-[#f8fbff] p-4 text-sm leading-6 text-slate-600">
           <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
@@ -2334,8 +2299,22 @@ function BuildPageContent() {
   const assessmentId = searchParams.get("assessment_id");
   const contractId = searchParams.get("contract_id");
   const bundleId = searchParams.get("bundle_id");
+  const requestedMode = searchParams.get("mode");
+  const requestedSource = searchParams.get("source");
+  const guidedExampleSource =
+    requestedSource === "series-01" || requestedSource === "series-02"
+      ? requestedSource
+      : null;
+  const hasContractReferences = Boolean(assessmentId || contractId || bundleId);
+  const buildMode: BuildMode =
+    requestedMode === "contract" || (requestedMode !== "tutorial" && hasContractReferences)
+      ? "contract"
+      : "tutorial";
+  const hasCompleteContractReferences = Boolean(assessmentId && contractId && bundleId);
+  const isPqcWorkflow = searchParams.get("workflow") === "pqc";
   const sourceLesson = lessonSlug ? LESSON_BY_SLUG.get(lessonSlug) ?? null : null;
   const hasBuildContext = Boolean(
+    requestedMode ||
     activeSessionId ||
       lessonSlug ||
       assessmentId ||
@@ -2389,9 +2368,52 @@ function BuildPageContent() {
   const assessmentRef = useRef<HTMLDivElement>(null);
   const architectureRef = useRef<HTMLDivElement>(null);
   const { data: sessionDetail } = useSession(activeSessionId);
-  const { data: sourceAssessment } = useAssessment(assessmentId);
-  const { data: sourceContract } = useAlgorithmContract(contractId);
-  const { data: experimentBundle } = useExperimentBundle(bundleId);
+  const assessmentQuery = useAssessment(assessmentId);
+  const contractQuery = useAlgorithmContract(contractId);
+  const bundleQuery = useExperimentBundle(bundleId);
+  const sourceAssessment = assessmentQuery.data;
+  const sourceContract = contractQuery.data;
+  const experimentBundle = bundleQuery.data;
+  const contractContextLoading =
+    buildMode === "contract" &&
+    hasCompleteContractReferences &&
+    (assessmentQuery.isPending || contractQuery.isPending || bundleQuery.isPending);
+  const contractContextMatches = Boolean(
+    sourceAssessment &&
+      sourceContract &&
+      experimentBundle &&
+      sourceContract.assessment_id === sourceAssessment.id &&
+      experimentBundle.assessment_id === sourceAssessment.id &&
+      experimentBundle.contract_id === sourceContract.id,
+  );
+  const hasCompleteContractContext =
+    hasCompleteContractReferences && contractContextMatches;
+  const contractHasRequiredInputs = Boolean(
+    sourceAssessment?.contract_validity_status === "VALID" &&
+      sourceContract?.validity_status === "VALID" &&
+      sourceAssessment.missing_inputs.length === 0 &&
+      sourceContract.missing_inputs.length === 0,
+  );
+  const contractPassesComputeEligibility = Boolean(
+    sourceAssessment &&
+      sourceContract &&
+      [
+        "ELIGIBLE_FOR_TOY_EXPERIMENT",
+        "ELIGIBLE_FOR_BENCHMARK",
+        "ELIGIBLE_FOR_RESEARCH_PROTOTYPE",
+      ].includes(sourceAssessment.build_eligibility) &&
+      [
+        "ELIGIBLE_FOR_TOY_EXPERIMENT",
+        "ELIGIBLE_FOR_BENCHMARK",
+        "ELIGIBLE_FOR_RESEARCH_PROTOTYPE",
+      ].includes(sourceContract.build_eligibility),
+  );
+  const contractContextFailed =
+    assessmentQuery.isError || contractQuery.isError || bundleQuery.isError;
+  const isPqcContract =
+    isPqcWorkflow ||
+    sourceAssessment?.problem_class === "CRYPTO_SECURITY" ||
+    sourceContract?.contract_type === "PQC_RISK";
   const { data: projects } = useProjects(50);
   const { data: recentSessions } = useSessions({ limit: 5 });
   const geminiUpdateMutation = useGeminiCircuitUpdate();
@@ -2455,6 +2477,10 @@ function BuildPageContent() {
     }),
     [displayStory, editorDirty, editorNodes, geminiExplanation, geminiGuideReply],
   );
+  const activeResultTrust =
+    buildMode === "contract"
+      ? architecture?.result_trust ?? bundleResultTrust(experimentBundle)
+      : circuitResultTrust(workspaceRun);
   const selectedEditorNode = useMemo(
     () => editorNodes.find((node) => node.id === selectedEditorNodeId) ?? null,
     [editorNodes, selectedEditorNodeId],
@@ -2566,9 +2592,12 @@ function BuildPageContent() {
           const nextArchitecture = await fetchArchitecture({
             circuit_run_id: run.id,
             use_case_id: run.use_case_id ?? activeUseCaseId ?? undefined,
+            assessment_id: buildMode === "contract" ? assessmentId ?? undefined : undefined,
+            contract_id: buildMode === "contract" ? contractId ?? undefined : undefined,
           });
           setArchitecture(nextArchitecture);
         }
+        void trackProductEvent("experiment_completed", buildMode);
 
         setOutputTab("results");
       } catch (error) {
@@ -2583,7 +2612,7 @@ function BuildPageContent() {
         setBackgroundJobId(null);
       }
     },
-    [activeUseCaseId],
+    [activeUseCaseId, assessmentId, buildMode, contractId],
   );
 
   const loadWorkspace = useCallback(
@@ -2624,6 +2653,8 @@ function BuildPageContent() {
         const nextArchitecture = await fetchArchitecture({
           circuit_run_id: run.id,
           use_case_id: run.use_case_id ?? activeUseCaseId ?? undefined,
+          assessment_id: buildMode === "contract" ? assessmentId ?? undefined : undefined,
+          contract_id: buildMode === "contract" ? contractId ?? undefined : undefined,
         });
 
         if (requestIdRef.current !== activeRequestId) {
@@ -2631,6 +2662,10 @@ function BuildPageContent() {
         }
 
         setArchitecture(nextArchitecture);
+        void trackProductEvent("experiment_completed", `${buildMode}-${starterKey}`);
+        if (buildMode === "tutorial" && guidedExampleSource) {
+          void trackProductEvent("guided_example_completed", `${guidedExampleSource}-${starterKey}`);
+        }
       } catch (error) {
         if (requestIdRef.current !== activeRequestId) {
           return;
@@ -2647,7 +2682,15 @@ function BuildPageContent() {
         }
       }
     },
-    [activeUseCaseId, clearGeminiDraftState, currentSessionId],
+    [
+      activeUseCaseId,
+      assessmentId,
+      buildMode,
+      clearGeminiDraftState,
+      contractId,
+      currentSessionId,
+      guidedExampleSource,
+    ],
   );
 
   useEffect(() => {
@@ -2746,6 +2789,9 @@ function BuildPageContent() {
     if (!hasBuildContext) {
       return;
     }
+    if (buildMode === "contract") {
+      return;
+    }
     if (activeSessionId && !sessionDetail) {
       return;
     }
@@ -2758,7 +2804,14 @@ function BuildPageContent() {
       return;
     }
     void loadWorkspace(selectedKey);
-  }, [activeSessionId, hasBuildContext, loadWorkspace, selectedKey, sessionDetail]);
+  }, [
+    activeSessionId,
+    buildMode,
+    hasBuildContext,
+    loadWorkspace,
+    selectedKey,
+    sessionDetail,
+  ]);
 
   function syncQuery(
     nextKey: StarterKey,
@@ -2809,17 +2862,38 @@ function BuildPageContent() {
     selectStarter(nextKey);
   }
 
-  function refreshWorkspaceFromTemplate() {
-    setOutputTab("results");
+  function startWorkspaceRun(nextTab: OutputTab) {
+    setOutputTab(nextTab);
+    void trackProductEvent("experiment_started", `${buildMode}-${selectedKey}`);
+    if (buildMode === "contract") {
+      void queueBackgroundRun();
+      return;
+    }
     resetEditorFromGenerated();
     void loadWorkspace(selectedKey);
   }
 
   function runSimulation() {
-    refreshWorkspaceFromTemplate();
+    startWorkspaceRun("results");
   }
 
   async function queueBackgroundRun() {
+    if (buildMode === "contract" && !hasCompleteContractContext) {
+      setWorkspaceError(
+        "Contract mode requires a matching assessment, Algorithm Contract, and Experiment Bundle.",
+      );
+      return;
+    }
+    if (
+      buildMode === "contract" &&
+      !isPqcContract &&
+      (!contractHasRequiredInputs || !contractPassesComputeEligibility)
+    ) {
+      setWorkspaceError(
+        "Complete the required Algorithm Contract fields before running Contract mode.",
+      );
+      return;
+    }
     const activeStory = getStarterStory(selectedKey);
     const controls = labControlsRef.current;
     handledBackgroundJobRef.current = null;
@@ -2837,6 +2911,9 @@ function BuildPageContent() {
           prompt: activeStory.prompt,
           session_id: currentSessionId ?? undefined,
           use_case_id: activeUseCaseId ?? undefined,
+          assessment_id: buildMode === "contract" ? assessmentId ?? undefined : undefined,
+          contract_id: buildMode === "contract" ? contractId ?? undefined : undefined,
+          experiment_bundle_id: buildMode === "contract" ? bundleId ?? undefined : undefined,
           repetitions: controls.repetitions,
           simulator_backend: controls.simulatorBackend,
           noise_enabled: controls.noiseEnabled,
@@ -2933,7 +3010,7 @@ function BuildPageContent() {
       if (!nextProjectId) {
         const project = await createProjectMutation.mutateAsync({
           name: trimmedProjectName,
-          description: "Saved Hybrid Lab workspaces and demo sessions.",
+          description: "Saved Algorithm Experiment Workspace sessions and tutorial runs.",
           status: "active",
         });
         nextProjectId = project.id;
@@ -3060,13 +3137,16 @@ function BuildPageContent() {
             circuit_run_id: workspaceRun.id,
             architecture_record_id: architecture?.id ?? undefined,
             session_id: currentSessionId ?? undefined,
+            assessment_id: buildMode === "contract" ? assessmentId ?? undefined : undefined,
+            contract_id: buildMode === "contract" ? contractId ?? undefined : undefined,
+            experiment_bundle_id: buildMode === "contract" ? bundleId ?? undefined : undefined,
           },
         });
         setExportJobId(job.id);
         return;
       }
 
-      if (type === "cirq_code" && editorDirty) {
+      if (type === "cirq_code" && editorDirty && buildMode === "tutorial") {
         const blob = new Blob([editableDisplayStory.code], { type: "text/x-python" });
         const href = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -3141,11 +3221,193 @@ function BuildPageContent() {
     setSaveState("idle");
   }
 
+  if (contractContextLoading) {
+    return (
+      <div className="mx-auto max-w-[1180px] px-4 py-8 md:px-6">
+        <section
+          aria-live="polite"
+          className="border border-slate-200 bg-white p-7 shadow-[0_24px_70px_rgba(15,23,42,0.14)]"
+        >
+          <BuildModeSelector mode="contract" />
+          <div className="mt-8 text-xs font-bold uppercase text-[#2563eb]">Validating contract context</div>
+          <h1 className="mt-3 text-3xl font-black text-slate-950">Checking the assessment-backed bundle</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+            The workbench is loading the assessment, Algorithm Contract, and Experiment Bundle before enabling any serious build action.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  if (buildMode === "contract" && !hasCompleteContractContext) {
+    const invalidReferences = hasCompleteContractReferences && contractContextFailed;
+    return (
+      <div className="mx-auto max-w-[1180px] px-4 py-8 md:px-6">
+        <section className="border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.14)] md:p-7">
+          <BuildModeSelector mode="contract" />
+          <div className="mt-8 grid gap-7 lg:grid-cols-[1fr_0.8fr]">
+            <div>
+              <div className="text-xs font-bold uppercase text-[#c2410c]">Contract mode blocked</div>
+              <h1 className="mt-3 text-[clamp(2rem,5vw,3.6rem)] font-black text-slate-950">
+                {invalidReferences ? "Verify the attached contract records" : "Start with a complete Algorithm Contract"}
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
+                Contract mode requires matching assessment, Algorithm Contract, and Experiment Bundle records. The backend also enforces contract validity, required inputs, and classical-baseline eligibility.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/assess" className="inline-flex items-center gap-2 bg-[#2563eb] px-5 py-3 text-sm font-bold text-white">
+                  Open readiness assessment
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link href="/build?mode=tutorial&starter=coin_flip" className="inline-flex items-center gap-2 border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700">
+                  Open Tutorial mode
+                </Link>
+              </div>
+            </div>
+            <div className="border border-[#fed7aa] bg-[#fff7ed] p-5">
+              <div className="text-xs font-bold uppercase text-[#c2410c]">Required context</div>
+              <ul className="mt-4 grid gap-3 text-sm leading-7 text-[#9a3412]">
+                <li>Assessment hypothesis and assessment id</li>
+                <li>Algorithm Contract id and validity status</li>
+                <li>Declared classical baseline and benchmark plan</li>
+                <li>Time horizon, evidence or assumptions, and trust labels</li>
+                <li>Contract-backed Experiment Bundle id</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (buildMode === "contract" && hasCompleteContractContext && isPqcContract) {
+    const trust = bundleResultTrust(experimentBundle) ?? assessmentResultTrust(sourceAssessment);
+    const mapParams = new URLSearchParams({
+      assessment_id: assessmentId!,
+      contract_id: contractId!,
+      bundle_id: bundleId!,
+    });
+    return (
+      <div className="mx-auto max-w-[1180px] px-4 py-8 md:px-6">
+        <section className="border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.14)] md:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <BuildModeSelector mode="contract" />
+            <span className="border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2 text-xs font-bold uppercase text-[#166534]">
+              Action now - non-compute workflow
+            </span>
+          </div>
+          <div className="mt-8 max-w-4xl">
+            <div className="text-xs font-bold uppercase text-[#0f766e]">PQC migration workspace</div>
+            <h1 className="mt-3 text-[clamp(2rem,5vw,3.6rem)] font-black text-slate-950">
+              Inventory, test, and stage the migration
+            </h1>
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              This Algorithm Contract produces a classical crypto-readiness workflow and PQC Migration Memo. It does not create a quantum circuit, QPU node, or QKD recommendation by default.
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-4 md:grid-cols-3">
+            <div className="border border-slate-200 bg-[#fbfdff] p-4">
+              <div className="text-xs font-bold uppercase text-slate-400">Assessment</div>
+              <div className="mt-2 break-all text-sm font-bold text-slate-800">{assessmentId}</div>
+            </div>
+            <div className="border border-slate-200 bg-[#fbfdff] p-4">
+              <div className="text-xs font-bold uppercase text-slate-400">Algorithm Contract</div>
+              <div className="mt-2 break-all text-sm font-bold text-slate-800">{contractId}</div>
+            </div>
+            <div className="border border-slate-200 bg-[#fbfdff] p-4">
+              <div className="text-xs font-bold uppercase text-slate-400">Migration bundle</div>
+              <div className="mt-2 break-all text-sm font-bold text-slate-800">{bundleId}</div>
+            </div>
+          </div>
+
+          {experimentBundle ? (
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="border border-slate-200 bg-[#fbfdff] p-5">
+                <div className="text-xs font-bold uppercase text-slate-400">Hypothesis / action</div>
+                <p className="mt-3 text-sm leading-7 text-slate-700">{experimentBundle.hypothesis}</p>
+              </div>
+              <div className="border border-slate-200 bg-[#fbfdff] p-5">
+                <div className="text-xs font-bold uppercase text-slate-400">Next evidence required</div>
+                <ul className="mt-3 grid gap-2 text-sm leading-6 text-slate-700">
+                  {(experimentBundle.next_evidence_required.length
+                    ? experimentBundle.next_evidence_required
+                    : ["Maintain the cryptographic inventory and migration evidence."]
+                  ).map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-6">
+            <ResultTrustPanel trust={trust} title="PQC Migration Result Trust" />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href={`/map?${mapParams.toString()}`} className="inline-flex items-center gap-2 bg-[#2563eb] px-5 py-3 text-sm font-bold text-white">
+              Open migration map and memo
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href={`/assess?use_case_id=${sourceAssessment?.use_case_id ?? ""}`} className="inline-flex items-center gap-2 border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700">
+              Review assessment
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (
+    buildMode === "contract" &&
+    hasCompleteContractContext &&
+    (!contractHasRequiredInputs || !contractPassesComputeEligibility)
+  ) {
+    const trust = bundleResultTrust(experimentBundle) ?? assessmentResultTrust(sourceAssessment);
+    const missingInputs = Array.from(
+      new Set([
+        ...(sourceAssessment?.missing_inputs ?? []),
+        ...(sourceContract?.missing_inputs ?? []),
+      ]),
+    );
+    return (
+      <div className="mx-auto max-w-[1180px] px-4 py-8 md:px-6">
+        <section className="border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.14)] md:p-7">
+          <BuildModeSelector mode="contract" />
+          <div className="mt-8 text-xs font-bold uppercase text-[#c2410c]">Contract mode restricted</div>
+          <h1 className="mt-3 text-[clamp(2rem,5vw,3.6rem)] font-black text-slate-950">
+            Complete the Algorithm Contract before simulation
+          </h1>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
+            The Experiment Bundle remains available as a scoped plan, but the backend will not create a serious circuit or simulation until QALS 3.0 reports valid required inputs and eligible build status. The declared classical baseline remains required.
+          </p>
+          <div className="mt-6 grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="border border-[#fed7aa] bg-[#fff7ed] p-5">
+              <div className="text-xs font-bold uppercase text-[#9a3412]">Required inputs still missing</div>
+              <ul className="mt-4 grid gap-2 text-sm leading-6 text-[#9a3412]">
+                {(missingInputs.length ? missingInputs : ["QALS build eligibility or contract validity"])
+                  .map((item) => <li key={item}>{item}</li>)}
+              </ul>
+              <Link
+                href={`/assess?use_case_id=${sourceAssessment?.use_case_id ?? ""}`}
+                className="mt-5 inline-flex items-center gap-2 bg-[#2563eb] px-4 py-3 text-sm font-bold text-white"
+              >
+                Complete readiness assessment
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <ResultTrustPanel trust={trust} title="Restricted Contract Result Trust" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (!hasBuildContext) {
     return (
       <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
         <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-4 shadow-[0_35px_90px_rgba(15,23,42,0.18)] md:p-6">
           <div className="mb-6 border-b border-[#dbe5f1] pb-5">
+            <BuildModeSelector mode="tutorial" />
             <div className="mb-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase text-[#2f5be3]">
                 Algorithm Experiment Bundle
@@ -3179,7 +3441,7 @@ function BuildPageContent() {
                 </p>
               </Link>
               <Link
-                href="/build?starter=coin_flip"
+                href="/build?mode=tutorial&starter=coin_flip"
                 className="rounded-[28px] border border-[#d8e2f3] bg-white p-6 shadow-[0_18px_40px_rgba(148,163,184,0.18)] transition hover:border-[#2f5be3]"
               >
                 <div className="mb-3 text-xs font-semibold uppercase text-slate-400">Tutorial-only</div>
@@ -3198,11 +3460,19 @@ function BuildPageContent() {
   return (
     <div className="mx-auto max-w-[1460px] px-4 py-8 md:px-6">
       <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,245,255,0.96))] p-4 shadow-[0_35px_90px_rgba(15,23,42,0.18)] md:p-6">
+        <div className="mb-5 flex flex-col gap-3 border-b border-[#dbe5f1] pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <BuildModeSelector mode={buildMode} />
+          <div className="max-w-xl text-sm leading-6 text-slate-600 sm:text-right">
+            {buildMode === "tutorial"
+              ? "Tutorial mode runs without an assessment. Every output is educational and not a business recommendation."
+              : "Contract mode preserves assessment, baseline, horizon, assumptions, and trust context in the bundle."}
+          </div>
+        </div>
         <div className="mb-6 flex flex-col gap-4 border-b border-[#dbe5f1] pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-[760px]">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#e0e7ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2f5be3]">
-                Algorithm Experiment Bundle
+                {buildMode === "tutorial" ? "Tutorial mode" : "Contract mode"}
               </span>
               <span className="rounded-full bg-[#dcfce7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#157052]">
                 Simulation first
@@ -3217,12 +3487,20 @@ function BuildPageContent() {
               ) : null}
             </div>
             <h1 className="text-[clamp(2.15rem,4vw,3.35rem)] font-black tracking-[-0.05em] text-slate-900">
-              Build an Algorithm Experiment Bundle, not an isolated circuit
+              {buildMode === "tutorial"
+                ? "Learn with a clearly labeled toy simulation"
+                : "Build an Algorithm Experiment Bundle, not an isolated circuit"}
             </h1>
             <p className="mt-3 text-[1.05rem] leading-8 text-slate-600">
-              The bundle keeps the hypothesis, classical baseline, quantum candidate,
-              toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports in one place.
+              {buildMode === "tutorial"
+                ? "Run coin flip, Bell pair, Grover search, or another educational starter. Tutorial and Toy simulation labels remain attached to the result and exports."
+                : "The bundle keeps the hypothesis, classical baseline, quantum candidate, toy implementation, result trust metrics, limitations, next evidence, GCP map, and exports in one place."}
             </p>
+            {buildMode === "tutorial" ? (
+              <div className="mt-4 border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-sm font-semibold leading-7 text-[#9a3412]">
+                TUTORIAL / TOY_SIMULATION: this result is not a business recommendation and is not evidence of quantum advantage.
+              </div>
+            ) : null}
             {sourceContract ? (
               <div className="mt-4 rounded-[18px] border border-[#ddd6fe] bg-[#f5f3ff] px-4 py-3 text-sm leading-7 text-[#5b21b6]">
                 Algorithm Contract attached: <strong>{sourceContract.contract_type.replaceAll("_", " ")}</strong> / {sourceContract.algorithm_family.replaceAll("_", " ")} · {sourceContract.validity_status.replaceAll("_", " ")} · {sourceContract.build_eligibility.replaceAll("_", " ")}
@@ -3270,11 +3548,7 @@ function BuildPageContent() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => {
-                setOutputTab("notes");
-                resetEditorFromGenerated();
-                void loadWorkspace(selectedKey);
-              }}
+              onClick={() => startWorkspaceRun("notes")}
               disabled={isLoadingWorkspace}
               className="inline-flex items-center gap-2 rounded-full border border-[#d8e2f3] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#2f5be3] hover:text-[#2f5be3]"
             >
@@ -3285,6 +3559,7 @@ function BuildPageContent() {
               href={`/map?${new URLSearchParams({
                 starter: displayStory.key,
                 ...(assessmentId ? { assessment_id: assessmentId } : {}),
+                ...(contractId ? { contract_id: contractId } : {}),
                 ...(bundleId ? { bundle_id: bundleId } : {}),
                 ...(activeUseCaseId ? { use_case_id: activeUseCaseId } : {}),
               }).toString()}`}
@@ -3299,16 +3574,16 @@ function BuildPageContent() {
         <div className="mb-6 flex flex-wrap gap-3">
           <button
             type="button"
-              onClick={() => {
-                setOutputTab("notes");
-                resetEditorFromGenerated();
-                void loadWorkspace(selectedKey);
-              }}
+            onClick={() => startWorkspaceRun("notes")}
             disabled={isLoadingWorkspace}
             className="inline-flex items-center gap-2 rounded-full bg-[#2f5be3] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(47,91,227,0.25)]"
           >
             <Wand2 className="h-4 w-4" />
-            {isLoadingWorkspace ? "Generating..." : "Generate circuit"}
+            {isLoadingWorkspace
+              ? "Generating..."
+              : buildMode === "contract"
+                ? "Queue contract experiment"
+                : "Generate tutorial circuit"}
           </button>
           <button
             type="button"
@@ -3528,6 +3803,8 @@ function BuildPageContent() {
               activeTab={outputTab}
               simulationState={simulationState}
               setActiveTab={setOutputTab}
+              resultTrust={activeResultTrust}
+              isContractExperiment={buildMode === "contract"}
             />
           </div>
 
@@ -3559,7 +3836,16 @@ function BuildPageContent() {
             />
             <HardwareAccessNote />
             <div ref={assessmentRef}>
-              <AssessmentCard story={editableDisplayStory} focused={focusedCard === "assessment"} />
+              {buildMode === "tutorial" ? (
+                <TutorialScopeCard story={editableDisplayStory} focused={focusedCard === "assessment"} />
+              ) : (
+                <div className={focusedCard === "assessment" ? "ring-4 ring-[#dbe5ff]" : ""}>
+                  <ResultTrustPanel
+                    trust={assessmentResultTrust(sourceAssessment)}
+                    title="Contract Decision Context"
+                  />
+                </div>
+              )}
             </div>
             <div ref={architectureRef}>
               <ArchitectureCard story={editableDisplayStory} focused={focusedCard === "architecture"} />
@@ -3571,6 +3857,7 @@ function BuildPageContent() {
               exportStatusMessage={exportStatusMessage}
               exportJobHref={exportJobHref}
               exportError={exportError}
+              trust={bundleResultTrust(experimentBundle) ?? circuitResultTrust(workspaceRun)}
               onExport={exportArtifact}
             />
           </div>

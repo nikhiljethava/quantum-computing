@@ -17,7 +17,7 @@ const projectCards = [
   {
     title: "Circuit lab project",
     copy: "Save circuit templates, simulation outputs, histograms, and Colab exports.",
-    cta: "Open Cirq Lab",
+    cta: "Open experiment workspace",
     href: "/build",
   },
   {

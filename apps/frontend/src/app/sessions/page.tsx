@@ -16,8 +16,8 @@ const sessionCards = [
   },
   {
     title: "Reopen a circuit run",
-    copy: "Return to Cirq Lab experiments, histograms, and generated code.",
-    cta: "Open Cirq Lab",
+    copy: "Return to Algorithm Experiment Workspace results, histograms, and generated code.",
+    cta: "Open experiment workspace",
     href: "/build",
   },
   {
@@ -56,7 +56,7 @@ export default function SessionsPage() {
               Reopen previous learning, assessment, and simulation work.
             </p>
             <p className="mt-4 text-sm leading-8 text-slate-600">
-              Saved sessions are intended to help you return to earlier learning journeys, Cirq Lab
+              Saved sessions are intended to help you return to earlier learning journeys, Algorithm Experiment Workspace
               runs, readiness assessments, and architecture maps.
             </p>
           </div>

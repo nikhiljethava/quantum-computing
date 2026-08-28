@@ -65,7 +65,7 @@ export const USE_CASE_PAGES: UseCasePage[] = [
       "Use Cirq to teach QAOA-style cost and mixer intuition, then compare toy quantum-inspired outputs with classical optimization baselines.",
     simulateToday: [
       "Create a small QAOA-style routing or allocation circuit.",
-      "Run ideal and educational noisy histograms in the Cirq Lab.",
+      "Run ideal and educational noisy histograms in the Algorithm Experiment Workspace.",
       "Export a Colab notebook for repeatable stakeholder review.",
     ],
     futureHardwarePath: [
