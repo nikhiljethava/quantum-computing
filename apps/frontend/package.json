@@ -8,7 +8,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:models": "node --test tests/article4-*.test.mjs",
+    "test:browser": "node --test tests/article4-browser.mjs",
+    "test:media": "node --test tests/article4-media-browser.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",
@@ -26,6 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "playwright": "1.62.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

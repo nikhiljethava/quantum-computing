@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SeriesCompanionExperience } from "@/components/series/SeriesCompanionExperience";
+import { Article4Companion } from "@/components/article4/Article4Companion";
 import {
   SERIES_ARTICLES,
   getSeriesArticle,
@@ -31,6 +32,12 @@ export default async function SeriesArticlePage({ params }: PageProps) {
   const article = getSeriesArticle(slug);
   const companion = getSeriesCompanion(slug);
   if (!article || !companion) notFound();
+
+  if ("kind" in companion && companion.kind === "QUBIT_TECHNOLOGIES") {
+    return <Article4Companion article={article} />;
+  }
+
+  if (!("interactiveModule" in companion)) notFound();
 
   const nextArticle = companion.nextArticleSlug
     ? getSeriesArticle(companion.nextArticleSlug)

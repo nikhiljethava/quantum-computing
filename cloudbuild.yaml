@@ -25,6 +25,10 @@ substitutions:
   _RUNTIME_SERVICE_ACCOUNT: "quantum-app-build-sa@cloudhub-apptopology-golden.iam.gserviceaccount.com"
   _TASKS_INVOKER_SERVICE_ACCOUNT: "quantum-foundry-tasks@cloudhub-apptopology-golden.iam.gserviceaccount.com"
   _EXTRA_BACKEND_CORS_ORIGINS: ""
+  _SERIES_ARTICLE_01_URL: ""
+  _SERIES_ARTICLE_02_URL: ""
+  _SERIES_ARTICLE_04_URL: ""
+  _SITE_URL: "https://quantum-foundry-frontend-w24p6g25aq-uc.a.run.app"
 
 timeout: 3600s
 
@@ -218,6 +222,11 @@ steps:
   - name: gcr.io/cloud-builders/docker
     id: build-frontend
     entrypoint: bash
+    env:
+      - NEXT_PUBLIC_SITE_URL=${_SITE_URL}
+      - NEXT_PUBLIC_SERIES_ARTICLE_01_URL=${_SERIES_ARTICLE_01_URL}
+      - NEXT_PUBLIC_SERIES_ARTICLE_02_URL=${_SERIES_ARTICLE_02_URL}
+      - NEXT_PUBLIC_SERIES_ARTICLE_04_URL=${_SERIES_ARTICLE_04_URL}
     args:
       - -ceu
       - |
@@ -225,6 +234,10 @@ steps:
         docker build \
           -f apps/frontend/Dockerfile \
           --build-arg "NEXT_PUBLIC_API_URL=${backend_url}" \
+          --build-arg NEXT_PUBLIC_SITE_URL \
+          --build-arg NEXT_PUBLIC_SERIES_ARTICLE_01_URL \
+          --build-arg NEXT_PUBLIC_SERIES_ARTICLE_02_URL \
+          --build-arg NEXT_PUBLIC_SERIES_ARTICLE_04_URL \
           -t "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_FRONTEND_SERVICE}:$COMMIT_SHA" \
           apps/frontend
 

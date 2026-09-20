@@ -15,6 +15,8 @@ Run the local test suite first so implementation regressions are caught before b
 - `make test` runs foundry-core, backend, and worker tests.
 - `npm run lint` from `apps/frontend` runs the frontend lint rules.
 - `npm run build -- --webpack` from `apps/frontend` runs the production Next.js build and TypeScript checks.
+- `npm run build` verifies the default build command used by the frontend Dockerfile.
+- `npm run test:models` from `apps/frontend` checks Article 4 calculations, exports, queries, content integrity, canonical links, and analytics.
 - `git diff --check` catches whitespace and patch-format issues.
 
 ### 2. Local Service Smoke Tests
@@ -109,6 +111,26 @@ cd apps/frontend
 npm run lint
 npm run build -- --webpack
 ```
+
+### Article 4 reader and media checks
+
+From `apps/frontend`, run `npm run test:models` and `npm run test:media`.
+The media suite starts an ephemeral local server and generates synthetic MP4,
+GIF, and PNG fixtures in a temporary directory. It exercises the real player;
+it does not verify the missing reviewed V9 media package.
+
+With the production frontend running locally, run `npm run test:browser`.
+It defaults to `http://127.0.0.1:3000`; set `ARTICLE4_BASE_URL` for another local
+port. The harness blocks API calls and verifies lessons, all 32 scheduling
+choices, other numerical results, saved exports, navigation, and existing public
+routes. Browser tests require Playwright Chromium or an installed Chrome;
+`ARTICLE4_CHROME_PATH` can select the executable. Use an isolated local server,
+not a production endpoint, for these automated checks.
+
+`node tests/article4-screenshots.mjs` captures default-input desktop/mobile
+views. Generated-artifact and standalone-asset checks, exact commands, measured
+results, skipped original-media checks, and release limitations are recorded in
+[Article 4 implementation](ARTICLE_04_IMPLEMENTATION.md).
 
 ## Type Checks
 

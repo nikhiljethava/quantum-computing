@@ -70,6 +70,7 @@ default_public_routes=(
   "/series"
   "/series/01-platform-problem"
   "/series/02-hybrid-computing"
+  "/series/04-qubit-technologies"
   "/assess"
   "/build"
   "/map"

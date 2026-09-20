@@ -81,11 +81,11 @@ export interface ArticleCompanion {
   nextArticleSlug: string | null;
 }
 
-function configuredArticleUrl(value: string | undefined): string | null {
+export function configuredArticleUrl(value: string | undefined): string | null {
   if (!value) return null;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" ? url.toString() : null;
+    return url.protocol === "https:" && !url.username && !url.password ? url.toString() : null;
   } catch {
     return null;
   }
@@ -93,6 +93,7 @@ function configuredArticleUrl(value: string | undefined): string | null {
 
 const article01Url = configuredArticleUrl(process.env.NEXT_PUBLIC_SERIES_ARTICLE_01_URL);
 const article02Url = configuredArticleUrl(process.env.NEXT_PUBLIC_SERIES_ARTICLE_02_URL);
+const article04Url = configuredArticleUrl(process.env.NEXT_PUBLIC_SERIES_ARTICLE_04_URL);
 
 export const SERIES_ARTICLES: SeriesArticle[] = [
   {
@@ -123,11 +124,31 @@ export const SERIES_ARTICLES: SeriesArticle[] = [
     publishedAt: null,
     relatedArticleSlugs: ["01-platform-problem"],
   },
+  {
+    id: "series-04",
+    slug: "04-qubit-technologies",
+    sequence: 4,
+    title: "There Is No Single Winning Qubit Technology",
+    subtitle: "Choose a machine for the calculation and the decision it supports.",
+    summary: "Explore ten V9 lessons and four local educational tools covering sampling, scheduling, routing, and optics.",
+    canonicalArticleUrl: article04Url,
+    heroAsset: "/articles/04-qubit-technologies/v9/cover.png",
+    status: "DRAFT",
+    publishedAt: null,
+    relatedArticleSlugs: ["01-platform-problem", "02-hybrid-computing"],
+  },
 ];
 
 const sharedEvidenceDate = "2026-08-26";
 
-export const SERIES_COMPANIONS: ArticleCompanion[] = [
+export interface Article4CompanionDefinition {
+  articleSlug: "04-qubit-technologies";
+  kind: "QUBIT_TECHNOLOGIES";
+  nextArticleSlug: null;
+}
+
+export const SERIES_COMPANIONS: Array<ArticleCompanion | Article4CompanionDefinition> = [
+  { articleSlug: "04-qubit-technologies", kind: "QUBIT_TECHNOLOGIES", nextArticleSlug: null },
   {
     articleSlug: "01-platform-problem",
     simpleExplanation:
@@ -319,6 +340,6 @@ export function getSeriesArticle(slug: string): SeriesArticle | null {
   return SERIES_ARTICLES.find((article) => article.slug === slug) ?? null;
 }
 
-export function getSeriesCompanion(slug: string): ArticleCompanion | null {
+export function getSeriesCompanion(slug: string): ArticleCompanion | Article4CompanionDefinition | null {
   return SERIES_COMPANIONS.find((companion) => companion.articleSlug === slug) ?? null;
 }

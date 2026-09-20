@@ -50,13 +50,34 @@ Only absolute HTTPS values are accepted. Empty or invalid values hide the extern
 
 ## Adding An Article Companion
 
-1. Add a `SeriesArticle` and matching `ArticleCompanion` entry in `apps/frontend/src/content/series.ts`.
+1. Add a `SeriesArticle` and a matching companion registry entry in `apps/frontend/src/content/series.ts`.
 2. Use a stable slug and add it to `generateStaticParams` through the shared `SERIES_ARTICLES` array.
 3. Add simple and technical explanations, one guided example, glossary entries, and evidence records.
 4. Keep guided examples tutorial-only and use an existing tested starter id.
 5. Add only allowlisted assessment defaults and extend the validation union before accepting a new source value.
 6. Add the route to the sitemap, public access script, and companion contract tests.
 7. Verify keyboard interaction, mobile layout, copy accuracy, and the hidden-CTA state with no canonical URL.
+
+## Article 4 Local Learning Companion
+
+`/series/04-qubit-technologies` uses the same Series registry, dynamic route,
+metadata, sitemap, app shell, and typed analytics. Its `QUBIT_TECHNOLOGIES`
+registry variant selects `Article4Companion`; the existing Articles 1 and 2
+renderer and guided examples remain in place.
+
+Article 4 contains ten V9 lessons and four browser educational tools. Photonics
+and loss are separate panels of one Optics tool. Sources retain their original
+numbered IDs and qualifications; conceptual drawings receive no hardware
+confidence score or invented review date. It has no Build starter, backend
+calculation, or assessment eligibility path. Its JSON/Markdown learning record
+contains current-visit snapshots and clears on refresh.
+
+The canonical publication setting is `NEXT_PUBLIC_SERIES_ARTICLE_04_URL`, read
+at build time and restricted to absolute HTTPS without credentials. It remains
+empty until the publication URL is supplied. The companion is a preview while
+the original moving media, step/print assets, and independent acceptance package
+are missing. See [implementation and test results](ARTICLE_04_IMPLEMENTATION.md)
+and [proposed article links](ARTICLE_04_LINKS.md) for release status.
 
 ## Adding Evidence
 

@@ -1,0 +1,86 @@
+{
+  "baseUrl": "http://127.0.0.1:3000",
+  "checkedAt": "2026-09-20T23:05:35.534Z",
+  "localNode": "v25.8.2",
+  "localPlatform": "darwin",
+  "limitation": "Local standalone server and asset layout verified; no Docker image or production deployment performed.",
+  "resources": [
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/sampling.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 16672,
+      "sha256": "759f068f811e194753b024f8c05dd3cd3b64c7448f75047ab323b16f2620ef86"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/scheduling.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 42918,
+      "sha256": "d08ccd5338dca05fcef67f4ad8c6bcd7a9943857a99c27d3a5ab2a5358350255"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/transmon.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 30514,
+      "sha256": "21cf3dff337ea903c654719005f136d688cd2fad702e5a635820693beff3e7b7"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/ions.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 39557,
+      "sha256": "c3f7822b2bceffe927867bec30e9bf590cf0ea2455905e9f01f1f0cd1a948d3e"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/routing.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 43404,
+      "sha256": "d691742d58321ee5192213d7f621bd1e41b49857eb0fc3bc80dba5a0a496c7e9"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/blockade.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 48938,
+      "sha256": "d58a1ea8ec67763f802a93eb917217bf2fe7c6a4a7bbe0918e238331a16bfece"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/photonics.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 19024,
+      "sha256": "373e0bc56565742b9f018a40bb942ed2b24c82a819f5f875054bed43279501e8"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/loss.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 22107,
+      "sha256": "8e45274e74e7a23033e62f1e65cce5511d31e377426843f1b2303fb1f89cd4e9"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/phase.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 33907,
+      "sha256": "ad1d2184e19ba2443702a21934012a86244324776735704ff1ba8667423aed40"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/entanglement.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 20299,
+      "sha256": "a3d092e568dbbdcd4082bb11ad474352b19d806e618fb79eaaf6484387acce7c"
+    },
+    {
+      "pathname": "/articles/04-qubit-technologies/v9/cover.png",
+      "status": 200,
+      "contentType": "image/png",
+      "bytes": 1220785,
+      "sha256": "9393cc856be681f13f9357f306d95ede57b98f2f08808d28e69ffc2a61388a95"
+    }
+  ]
+}

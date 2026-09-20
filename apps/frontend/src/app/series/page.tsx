@@ -40,7 +40,7 @@ export default function SeriesPage() {
           <div className="grid gap-6 lg:grid-cols-[0.6fr_1.4fr] lg:items-start">
             <div>
               <div className="text-xs font-black uppercase text-[#2563eb]">Available companions</div>
-              <h2 id="series-list-title" className="mt-3 text-3xl font-black text-slate-950">Start with Articles 1 and 2</h2>
+              <h2 id="series-list-title" className="mt-3 text-3xl font-black text-slate-950">Choose an idea to explore</h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
                 Each companion remains understandable without interaction and clearly separates tutorials, estimates, and hardware-gated ideas.
               </p>
@@ -53,7 +53,7 @@ export default function SeriesPage() {
                     {String(article.sequence).padStart(2, "0")}
                   </div>
                   <div>
-                    <div className="text-xs font-black uppercase text-[#0f766e]">Interactive companion</div>
+                    <div className="text-xs font-black uppercase text-[#0f766e]">Interactive companion{article.status === "DRAFT" ? " · Preview" : ""}</div>
                     <h3 className="mt-2 text-2xl font-black text-slate-950">{article.title}</h3>
                     <p className="mt-2 text-sm leading-7 text-slate-600">{article.summary}</p>
                   </div>
