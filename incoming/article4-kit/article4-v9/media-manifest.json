@@ -1,0 +1,112 @@
+[
+  {
+    "path": "media/image1.png",
+    "byte_count": 1220785,
+    "sha256": "9393cc856be681f13f9357f306d95ede57b98f2f08808d28e69ffc2a61388a95",
+    "block_index": 6,
+    "lesson_id": null,
+    "role": "editorial_cover",
+    "caption": "AI-generated editorial concept art, not a hardware schematic. Mechanism diagrams below are separately drawn teaching models.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image2.png",
+    "byte_count": 16672,
+    "sha256": "759f068f811e194753b024f8c05dd3cd3b64c7448f75047ab323b16f2620ef86",
+    "block_index": 18,
+    "lesson_id": "sampling",
+    "role": "lesson_still",
+    "caption": "Figure 1. The reference and offset are chosen for this lesson. The curves show schematic sample-mean spreads with heights normalized for display, not energies measured on quantum hardware.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image3.png",
+    "byte_count": 42918,
+    "sha256": "d08ccd5338dca05fcef67f4ad8c6bcd7a9943857a99c27d3a5ab2a5358350255",
+    "block_index": 24,
+    "lesson_id": "scheduling",
+    "role": "lesson_still",
+    "caption": "Figure 2. The same jobs remain visible as equipment requirements become conflicts and then a checked selection. This five-job example is solved classically; it is not a quantum benchmark.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image4.png",
+    "byte_count": 30514,
+    "sha256": "21cf3dff337ea903c654719005f136d688cd2fad702e5a635820693beff3e7b7",
+    "block_index": 48,
+    "lesson_id": "transmon",
+    "role": "lesson_still",
+    "caption": "Figure 3. One ideal rotation changes a qubit’s measurement probabilities. The pulse and readout sketches are explanatory; they do not model a calibrated transmon or its leakage.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image5.png",
+    "byte_count": 39557,
+    "sha256": "c3f7822b2bceffe927867bec30e9bf590cf0ea2455905e9f01f1f0cd1a948d3e",
+    "block_index": 60,
+    "lesson_id": "ions",
+    "role": "lesson_still",
+    "caption": "Figure 4. The motion is exaggerated and schematic. The final probabilities correspond to an ideal XX gate. Shared 00/11 outcomes alone are not an entanglement test; Companion B supplies the missing comparison.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image6.png",
+    "byte_count": 43404,
+    "sha256": "d691742d58321ee5192213d7f621bd1e41b49857eb0fc3bc80dba5a0a496c7e9",
+    "block_index": 63,
+    "lesson_id": "routing",
+    "role": "lesson_still",
+    "caption": "Figure 5. On top, quantum states exchange places between fixed sites. Below, ions move to an operation zone. The timelines are steps, not matched physical durations or vendor benchmarks.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image7.png",
+    "byte_count": 48938,
+    "sha256": "d58a1ea8ec67763f802a93eb917217bf2fe7c6a4a7bbe0918e238331a16bfece",
+    "block_index": 74,
+    "lesson_id": "blockade",
+    "role": "lesson_still",
+    "caption": "Figure 6. The two panels use the same target pulse. The right-hand energy shift is an assumed eight times the drive scale. Its small residual excitation is allowed by the model; blockade does not mean a mathematically forbidden event.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image8.png",
+    "byte_count": 19024,
+    "sha256": "373e0bc56565742b9f018a40bb942ed2b24c82a819f5f875054bed43279501e8",
+    "block_index": 89,
+    "lesson_id": "photonics",
+    "role": "lesson_still",
+    "caption": "Figure 7. Each phase setting describes fresh preparations of the ideal one-photon state. The traces are amplitudes, not two photons. The diagram explains a single-qubit interferometer, not a universal quantum computer.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image9.png",
+    "byte_count": 22107,
+    "sha256": "8e45274e74e7a23033e62f1e65cce5511d31e377426843f1b2303fb1f89cd4e9",
+    "block_index": 95,
+    "lesson_id": "loss",
+    "role": "lesson_still",
+    "caption": "Figure 8. Four hypothetical stages each transmit or detect 90% of incoming photons. The expected surviving fraction is 65.61%. This is neither state fidelity nor the success probability of a full photonic algorithm.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image10.png",
+    "byte_count": 33907,
+    "sha256": "ad1d2184e19ba2443702a21934012a86244324776735704ff1ba8667423aed40",
+    "block_index": 145,
+    "lesson_id": "phase",
+    "role": "lesson_still",
+    "caption": "Figure 9. Moving around the equator leaves direct Z-basis probabilities unchanged. An analysis operation makes the phase visible. The arrow is a state coordinate, not an electron orbit.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  },
+  {
+    "path": "media/image11.png",
+    "byte_count": 20299,
+    "sha256": "a3d092e568dbbdcd4082bb11ad474352b19d806e618fb79eaaf6484387acce7c",
+    "block_index": 151,
+    "lesson_id": "entanglement",
+    "role": "lesson_still",
+    "caption": "Figure 10. Z/Z measurements alone give the same outcomes for these two ideal models. X/X measurements distinguish them. During the animation, both measurement axes rotate from Z toward X in the X–Z plane, on fresh preparations. This is a model comparison, not a substitute for a calibrated entanglement witness.",
+    "mapping_basis": "Document order and adjacent caption; original embedded filename retained."
+  }
+]

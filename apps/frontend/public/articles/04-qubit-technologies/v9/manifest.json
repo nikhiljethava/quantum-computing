@@ -1,0 +1,112 @@
+{
+  "articleRevision": "article4-v9",
+  "origin": "Embedded original PNGs from Article_4_V9_Scannable_Edition.docx. Filenames mapped from document order and adjacent captions; bytes unchanged.",
+  "scientificReviewDate": null,
+  "missingAssetKinds": [
+    "MP4",
+    "GIF",
+    "four numbered step PNGs per lesson",
+    "print PNGs"
+  ],
+  "files": [
+    {
+      "path": "cover.png",
+      "lessonId": null,
+      "role": "editorial_cover",
+      "byteCount": 1220785,
+      "sha256": "9393cc856be681f13f9357f306d95ede57b98f2f08808d28e69ffc2a61388a95",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image1.png",
+      "caption": "AI-generated editorial concept art, not a hardware schematic. Mechanism diagrams below are separately drawn teaching models."
+    },
+    {
+      "path": "sampling.png",
+      "lessonId": "sampling",
+      "role": "lesson_still",
+      "byteCount": 16672,
+      "sha256": "759f068f811e194753b024f8c05dd3cd3b64c7448f75047ab323b16f2620ef86",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image2.png",
+      "caption": "Figure 1. The reference and offset are chosen for this lesson. The curves show schematic sample-mean spreads with heights normalized for display, not energies measured on quantum hardware."
+    },
+    {
+      "path": "scheduling.png",
+      "lessonId": "scheduling",
+      "role": "lesson_still",
+      "byteCount": 42918,
+      "sha256": "d08ccd5338dca05fcef67f4ad8c6bcd7a9943857a99c27d3a5ab2a5358350255",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image3.png",
+      "caption": "Figure 2. The same jobs remain visible as equipment requirements become conflicts and then a checked selection. This five-job example is solved classically; it is not a quantum benchmark."
+    },
+    {
+      "path": "transmon.png",
+      "lessonId": "transmon",
+      "role": "lesson_still",
+      "byteCount": 30514,
+      "sha256": "21cf3dff337ea903c654719005f136d688cd2fad702e5a635820693beff3e7b7",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image4.png",
+      "caption": "Figure 3. One ideal rotation changes a qubit’s measurement probabilities. The pulse and readout sketches are explanatory; they do not model a calibrated transmon or its leakage."
+    },
+    {
+      "path": "ions.png",
+      "lessonId": "ions",
+      "role": "lesson_still",
+      "byteCount": 39557,
+      "sha256": "c3f7822b2bceffe927867bec30e9bf590cf0ea2455905e9f01f1f0cd1a948d3e",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image5.png",
+      "caption": "Figure 4. The motion is exaggerated and schematic. The final probabilities correspond to an ideal XX gate. Shared 00/11 outcomes alone are not an entanglement test; Companion B supplies the missing comparison."
+    },
+    {
+      "path": "routing.png",
+      "lessonId": "routing",
+      "role": "lesson_still",
+      "byteCount": 43404,
+      "sha256": "d691742d58321ee5192213d7f621bd1e41b49857eb0fc3bc80dba5a0a496c7e9",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image6.png",
+      "caption": "Figure 5. On top, quantum states exchange places between fixed sites. Below, ions move to an operation zone. The timelines are steps, not matched physical durations or vendor benchmarks."
+    },
+    {
+      "path": "blockade.png",
+      "lessonId": "blockade",
+      "role": "lesson_still",
+      "byteCount": 48938,
+      "sha256": "d58a1ea8ec67763f802a93eb917217bf2fe7c6a4a7bbe0918e238331a16bfece",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image7.png",
+      "caption": "Figure 6. The two panels use the same target pulse. The right-hand energy shift is an assumed eight times the drive scale. Its small residual excitation is allowed by the model; blockade does not mean a mathematically forbidden event."
+    },
+    {
+      "path": "photonics.png",
+      "lessonId": "photonics",
+      "role": "lesson_still",
+      "byteCount": 19024,
+      "sha256": "373e0bc56565742b9f018a40bb942ed2b24c82a819f5f875054bed43279501e8",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image8.png",
+      "caption": "Figure 7. Each phase setting describes fresh preparations of the ideal one-photon state. The traces are amplitudes, not two photons. The diagram explains a single-qubit interferometer, not a universal quantum computer."
+    },
+    {
+      "path": "loss.png",
+      "lessonId": "loss",
+      "role": "lesson_still",
+      "byteCount": 22107,
+      "sha256": "8e45274e74e7a23033e62f1e65cce5511d31e377426843f1b2303fb1f89cd4e9",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image9.png",
+      "caption": "Figure 8. Four hypothetical stages each transmit or detect 90% of incoming photons. The expected surviving fraction is 65.61%. This is neither state fidelity nor the success probability of a full photonic algorithm."
+    },
+    {
+      "path": "phase.png",
+      "lessonId": "phase",
+      "role": "lesson_still",
+      "byteCount": 33907,
+      "sha256": "ad1d2184e19ba2443702a21934012a86244324776735704ff1ba8667423aed40",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image10.png",
+      "caption": "Figure 9. Moving around the equator leaves direct Z-basis probabilities unchanged. An analysis operation makes the phase visible. The arrow is a state coordinate, not an electron orbit."
+    },
+    {
+      "path": "entanglement.png",
+      "lessonId": "entanglement",
+      "role": "lesson_still",
+      "byteCount": 20299,
+      "sha256": "a3d092e568dbbdcd4082bb11ad474352b19d806e618fb79eaaf6484387acce7c",
+      "sourcePath": "incoming/article4-kit/article4-v9/media/image11.png",
+      "caption": "Figure 10. Z/Z measurements alone give the same outcomes for these two ideal models. X/X measurements distinguish them. During the animation, both measurement axes rotate from Z toward X in the X–Z plane, on fresh preparations. This is a model comparison, not a substitute for a calibrated entanglement witness."
+    }
+  ]
+}

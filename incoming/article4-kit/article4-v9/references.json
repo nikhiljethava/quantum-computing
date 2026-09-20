@@ -1,0 +1,453 @@
+[
+  {
+    "id": "[1]",
+    "number": 1,
+    "text": "[1] Reiher et al. (2017). Elucidating reaction mechanisms on quantum computers.",
+    "links": [
+      {
+        "text": "Elucidating reaction mechanisms on quantum computers",
+        "url": "https://arxiv.org/abs/1605.03590"
+      }
+    ]
+  },
+  {
+    "id": "[2]",
+    "number": 2,
+    "text": "[2] Peruzzo et al. (2014). A variational eigenvalue solver on a photonic quantum processor.",
+    "links": [
+      {
+        "text": "A variational eigenvalue solver on a photonic quantum processor",
+        "url": "https://www.nature.com/articles/ncomms5213"
+      }
+    ]
+  },
+  {
+    "id": "[3]",
+    "number": 3,
+    "text": "[3] Ebadi et al. (2022). Quantum optimization of maximum independent set using Rydberg atom arrays.",
+    "links": [
+      {
+        "text": "Quantum optimization of maximum independent set using Rydberg atom arrays",
+        "url": "https://arxiv.org/abs/2202.09372"
+      }
+    ]
+  },
+  {
+    "id": "[4]",
+    "number": 4,
+    "text": "[4] IBM Quantum Learning. Bloch sphere.",
+    "links": [
+      {
+        "text": "Bloch sphere",
+        "url": "https://quantum.cloud.ibm.com/learning/en/courses/general-formulation-of-quantum-information/density-matrices/bloch-sphere"
+      }
+    ]
+  },
+  {
+    "id": "[5]",
+    "number": 5,
+    "text": "[5] Roffe (2019). Quantum Error Correction: An Introductory Guide.",
+    "links": [
+      {
+        "text": "Quantum Error Correction: An Introductory Guide",
+        "url": "https://arxiv.org/abs/1907.11157"
+      }
+    ]
+  },
+  {
+    "id": "[6]",
+    "number": 6,
+    "text": "[6] Koch et al. (2007). Charge-insensitive qubit design derived from the Cooper pair box.",
+    "links": [
+      {
+        "text": "Charge-insensitive qubit design derived from the Cooper pair box",
+        "url": "https://arxiv.org/abs/cond-mat/0703002"
+      }
+    ]
+  },
+  {
+    "id": "[7]",
+    "number": 7,
+    "text": "[7] Krantz et al. (2019). A Quantum Engineer’s Guide to Superconducting Qubits.",
+    "links": [
+      {
+        "text": "A Quantum Engineer’s Guide to Superconducting Qubits",
+        "url": "https://arxiv.org/abs/1904.06560"
+      }
+    ]
+  },
+  {
+    "id": "[8]",
+    "number": 8,
+    "text": "[8] Google Quantum AI and Collaborators (2025). Quantum error correction below the surface code threshold.",
+    "links": [
+      {
+        "text": "Quantum error correction below the surface code threshold",
+        "url": "https://www.nature.com/articles/s41586-024-08449-y"
+      }
+    ]
+  },
+  {
+    "id": "[9]",
+    "number": 9,
+    "text": "[9] Bruzewicz et al. (2019). Trapped-Ion Quantum Computing: Progress and Challenges.",
+    "links": [
+      {
+        "text": "Trapped-Ion Quantum Computing: Progress and Challenges",
+        "url": "https://arxiv.org/abs/1904.04178"
+      }
+    ]
+  },
+  {
+    "id": "[10]",
+    "number": 10,
+    "text": "[10] Mølmer and Sørensen (1999). Multiparticle entanglement of hot trapped ions.",
+    "links": [
+      {
+        "text": "Multiparticle entanglement of hot trapped ions",
+        "url": "https://arxiv.org/abs/quant-ph/9810040"
+      }
+    ]
+  },
+  {
+    "id": "[11]",
+    "number": 11,
+    "text": "[11] Pino et al. (2021). Demonstration of the trapped-ion quantum CCD computer architecture.",
+    "links": [
+      {
+        "text": "Demonstration of the trapped-ion quantum CCD computer architecture",
+        "url": "https://arxiv.org/abs/2003.01293"
+      }
+    ]
+  },
+  {
+    "id": "[12]",
+    "number": 12,
+    "text": "[12] Ransford et al. (2026). A 98-qubit trapped-ion quantum computer with all-to-all connectivity.",
+    "links": [
+      {
+        "text": "A 98-qubit trapped-ion quantum computer with all-to-all connectivity",
+        "url": "https://www.nature.com/articles/s41586-026-10676-4"
+      }
+    ]
+  },
+  {
+    "id": "[13]",
+    "number": 13,
+    "text": "[13] Saffman (2016). Quantum computing with atomic qubits and Rydberg interactions: Progress and challenges.",
+    "links": [
+      {
+        "text": "Quantum computing with atomic qubits and Rydberg interactions: Progress and challenges",
+        "url": "https://arxiv.org/abs/1605.05207"
+      }
+    ]
+  },
+  {
+    "id": "[14]",
+    "number": 14,
+    "text": "[14] Evered et al. (2023). High-fidelity parallel entangling gates on a neutral-atom quantum computer.",
+    "links": [
+      {
+        "text": "High-fidelity parallel entangling gates on a neutral-atom quantum computer",
+        "url": "https://www.nature.com/articles/s41586-023-06481-y"
+      }
+    ]
+  },
+  {
+    "id": "[15]",
+    "number": 15,
+    "text": "[15] Bluvstein et al. (online 2025; journal 2026). A fault-tolerant neutral-atom architecture for universal quantum computation.",
+    "links": [
+      {
+        "text": "A fault-tolerant neutral-atom architecture for universal quantum computation",
+        "url": "https://www.nature.com/articles/s41586-025-09848-5"
+      }
+    ]
+  },
+  {
+    "id": "[16]",
+    "number": 16,
+    "text": "[16] Knill, Laflamme and Milburn (2001). A scheme for efficient quantum computation with linear optics.",
+    "links": [
+      {
+        "text": "A scheme for efficient quantum computation with linear optics",
+        "url": "https://www.nature.com/articles/35051009"
+      }
+    ]
+  },
+  {
+    "id": "[17]",
+    "number": 17,
+    "text": "[17] Bartolucci et al. (2023). Fusion-based quantum computation.",
+    "links": [
+      {
+        "text": "Fusion-based quantum computation",
+        "url": "https://www.nature.com/articles/s41467-023-36493-1"
+      }
+    ]
+  },
+  {
+    "id": "[18]",
+    "number": 18,
+    "text": "[18] Alexander et al. (2025). A manufacturable platform for photonic quantum computing.",
+    "links": [
+      {
+        "text": "A manufacturable platform for photonic quantum computing",
+        "url": "https://www.nature.com/articles/s41586-025-08820-7"
+      }
+    ]
+  },
+  {
+    "id": "[19]",
+    "number": 19,
+    "text": "[19] Aghaee Rad et al. (2025). Scaling and networking a modular photonic quantum computer.",
+    "links": [
+      {
+        "text": "Scaling and networking a modular photonic quantum computer",
+        "url": "https://www.nature.com/articles/s41586-024-08406-9"
+      }
+    ]
+  },
+  {
+    "id": "[20]",
+    "number": 20,
+    "text": "[20] Bourassa et al. (2021). Blueprint for a Scalable Photonic Fault-Tolerant Quantum Computer.",
+    "links": [
+      {
+        "text": "Blueprint for a Scalable Photonic Fault-Tolerant Quantum Computer",
+        "url": "https://quantum-journal.org/papers/q-2021-02-04-392/"
+      }
+    ]
+  },
+  {
+    "id": "[21]",
+    "number": 21,
+    "text": "[21] Main et al. (2025). Distributed quantum computing across an optical network link.",
+    "links": [
+      {
+        "text": "Distributed quantum computing across an optical network link",
+        "url": "https://arxiv.org/abs/2407.00835"
+      }
+    ]
+  },
+  {
+    "id": "[22]",
+    "number": 22,
+    "text": "[22] Farhi, Goldstone and Gutmann (2014). A Quantum Approximate Optimization Algorithm.",
+    "links": [
+      {
+        "text": "A Quantum Approximate Optimization Algorithm",
+        "url": "https://arxiv.org/abs/1411.4028"
+      }
+    ]
+  },
+  {
+    "id": "[23]",
+    "number": 23,
+    "text": "[23] Bravyi et al. (2024). High-threshold and low-overhead fault-tolerant quantum memory.",
+    "links": [
+      {
+        "text": "High-threshold and low-overhead fault-tolerant quantum memory",
+        "url": "https://www.nature.com/articles/s41586-024-07107-7"
+      }
+    ]
+  },
+  {
+    "id": "[24]",
+    "number": 24,
+    "text": "[24] D-Wave technical documentation. What is quantum annealing?.",
+    "links": [
+      {
+        "text": "What is quantum annealing?",
+        "url": "https://docs.dwavequantum.com/en/latest/quantum_research/quantum_annealing_intro.html"
+      }
+    ]
+  },
+  {
+    "id": "[25]",
+    "number": 25,
+    "text": "[25] IBM. Quantum hardware.",
+    "links": [
+      {
+        "text": "Quantum hardware",
+        "url": "https://www.ibm.com/quantum/hardware"
+      }
+    ]
+  },
+  {
+    "id": "[26]",
+    "number": 26,
+    "text": "[26] IonQ. Trapped-ion technology.",
+    "links": [
+      {
+        "text": "Trapped-ion technology",
+        "url": "https://www.ionq.com/technology"
+      }
+    ]
+  },
+  {
+    "id": "[27]",
+    "number": 27,
+    "text": "[27] QuEra. Neutral-atom platform.",
+    "links": [
+      {
+        "text": "Neutral-atom platform",
+        "url": "https://www.quera.com/neutral-atom-platform"
+      }
+    ]
+  },
+  {
+    "id": "[28]",
+    "number": 28,
+    "text": "[28] Pasqal. Neutral-atom quantum computing.",
+    "links": [
+      {
+        "text": "Neutral-atom quantum computing",
+        "url": "https://www.pasqal.com/"
+      }
+    ]
+  },
+  {
+    "id": "[29]",
+    "number": 29,
+    "text": "[29] Blais et al. (2004). Cavity quantum electrodynamics for superconducting electrical circuits: an architecture for quantum computation.",
+    "links": [
+      {
+        "text": "Cavity quantum electrodynamics for superconducting electrical circuits: an architecture for quantum computation",
+        "url": "https://arxiv.org/abs/cond-mat/0402216"
+      }
+    ]
+  },
+  {
+    "id": "[30]",
+    "number": 30,
+    "text": "[30] Bluvstein et al. (2024). Logical quantum processor based on reconfigurable atom arrays.",
+    "links": [
+      {
+        "text": "Logical quantum processor based on reconfigurable atom arrays",
+        "url": "https://www.nature.com/articles/s41586-023-06927-3"
+      }
+    ]
+  },
+  {
+    "id": "[31]",
+    "number": 31,
+    "text": "[31] Manetsch et al. (2025). A tweezer array with 6,100 highly coherent atomic qubits.",
+    "links": [
+      {
+        "text": "A tweezer array with 6,100 highly coherent atomic qubits",
+        "url": "https://www.nature.com/articles/s41586-025-09641-4"
+      }
+    ]
+  },
+  {
+    "id": "[32]",
+    "number": 32,
+    "text": "[32] Chiu et al. (2025). Continuous operation of a coherent 3,000-qubit system.",
+    "links": [
+      {
+        "text": "Continuous operation of a coherent 3,000-qubit system",
+        "url": "https://www.nature.com/articles/s41586-025-09596-6"
+      }
+    ]
+  },
+  {
+    "id": "[33]",
+    "number": 33,
+    "text": "[33] Motzoi et al. (2009). Simple pulses for elimination of leakage in weakly nonlinear qubits.",
+    "links": [
+      {
+        "text": "Simple pulses for elimination of leakage in weakly nonlinear qubits",
+        "url": "https://arxiv.org/abs/0901.0534"
+      }
+    ]
+  },
+  {
+    "id": "[34]",
+    "number": 34,
+    "text": "[34] Nguyen et al. (2023). Quantum Optimization with Arbitrary Connectivity Using Rydberg Atom Arrays.",
+    "links": [
+      {
+        "text": "Quantum Optimization with Arbitrary Connectivity Using Rydberg Atom Arrays",
+        "url": "https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.4.010316"
+      }
+    ]
+  },
+  {
+    "id": "[35]",
+    "number": 35,
+    "text": "[35] Putterman et al. (2025). Hardware-efficient quantum error correction via concatenated bosonic qubits.",
+    "links": [
+      {
+        "text": "Hardware-efficient quantum error correction via concatenated bosonic qubits",
+        "url": "https://www.nature.com/articles/s41586-025-08642-7"
+      }
+    ]
+  },
+  {
+    "id": "[36]",
+    "number": 36,
+    "text": "[36] Robledo-Moreno et al. (2025). Chemistry Beyond the Scale of Exact Diagonalization on a Quantum-Centric Supercomputer.",
+    "links": [
+      {
+        "text": "Chemistry Beyond the Scale of Exact Diagonalization on a Quantum-Centric Supercomputer",
+        "url": "https://arxiv.org/abs/2405.05068"
+      }
+    ]
+  },
+  {
+    "id": "[37]",
+    "number": 37,
+    "text": "[37] IBM Quantum documentation. Sample-based quantum diagonalization and chemistry tutorial.",
+    "links": [
+      {
+        "text": "Sample-based quantum diagonalization and chemistry tutorial",
+        "url": "https://quantum.cloud.ibm.com/docs/en/tutorials/sample-based-quantum-diagonalization"
+      }
+    ]
+  },
+  {
+    "id": "[38]",
+    "number": 38,
+    "text": "[38] IonQ (17 September 2025). IonQ completes acquisition of Oxford Ionics.",
+    "links": [
+      {
+        "text": "IonQ completes acquisition of Oxford Ionics",
+        "url": "https://www.ionq.com/news/ionq-completes-acquisition-of-oxford-ionics-rapidly-accelerating-its-quantum"
+      }
+    ]
+  },
+  {
+    "id": "[39]",
+    "number": 39,
+    "text": "[39] Atom Computing. Quantum computing technology.",
+    "links": [
+      {
+        "text": "Quantum computing technology",
+        "url": "https://atom-computing.com/quantum-computing-technology/"
+      }
+    ]
+  },
+  {
+    "id": "[40]",
+    "number": 40,
+    "text": "[40] Google Quantum AI (24 March 2026). Building superconducting and neutral atom quantum computers.",
+    "links": [
+      {
+        "text": "Building superconducting and neutral atom quantum computers",
+        "url": "https://blog.google/innovation-and-ai/technology/research/neutral-atom-quantum-computers/"
+      }
+    ]
+  },
+  {
+    "id": "[41]",
+    "number": 41,
+    "text": "[41] McClean et al. (2018). Barren plateaus in quantum neural network training landscapes.",
+    "links": [
+      {
+        "text": "Barren plateaus in quantum neural network training landscapes",
+        "url": "https://www.nature.com/articles/s41467-018-07090-4"
+      }
+    ]
+  }
+]

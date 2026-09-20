@@ -1,0 +1,40 @@
+{
+  "source_revision": "article4-v9",
+  "source_filename": "Article_4_V9_Scannable_Edition.docx",
+  "source_sha256": "42b7981391f3c81b491706f039844454a574ddedcc75bb4b6bd4a3aecadd2697",
+  "source_kind": "User-supplied DOCX; original moving-media and fixture package not supplied",
+  "implementation_brief": "CODEX_ARTICLE4_BRIEF.md",
+  "source_review_date": null,
+  "paragraph_count": 269,
+  "table_count": 11,
+  "reference_count": 41,
+  "embedded_png_count": 11,
+  "lesson_ids": [
+    "sampling",
+    "scheduling",
+    "transmon",
+    "ions",
+    "routing",
+    "blockade",
+    "photonics",
+    "loss",
+    "phase",
+    "entanglement"
+  ],
+  "missing_supplied_files": [
+    "ACCEPTANCE_CASES.json",
+    "golden-fixtures.json",
+    "validate_handoff.py",
+    "V9 review notes",
+    "10 MP4 videos",
+    "10 GIF alternatives",
+    "40 numbered step PNGs",
+    "10 separately identified print PNGs"
+  ],
+  "limitations": [
+    "PNG extractions are byte-identical embedded stills; video/step/print provenance cannot be inferred from them.",
+    "DOCX metadata contains 2013 timestamps; these are not scientific review dates.",
+    "No older V4/V5/V7 material was imported.",
+    "This importer does not validate scientific claims or application behavior."
+  ]
+}
