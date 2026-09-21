@@ -74,7 +74,7 @@ Current integration checks:
 | `npm run build -- --webpack` from `apps/frontend` | Passed with 63 generated routes, including Article 4, and TypeScript validation |
 | `NEXT_PUBLIC_SERIES_ARTICLE_04_URL= NEXT_PUBLIC_SITE_URL=https://quantum-foundry-frontend-w24p6g25aq-uc.a.run.app npm run build` | Passed with the default Turbopack builder used by Docker: 63 routes and TypeScript validation. The generated-artifact checker also passed |
 | `npm run lint` from `apps/frontend` | Passed, including the clipboard-state fix |
-| `npm run test:browser` from `apps/frontend`, against the final default-build standalone server | 11 passed, 0 failed, 2 explicitly skipped missing-media acceptance groups; includes the denied-clipboard Back/Forward regression. The preceding webpack-server run also passed 11/13 with the same two blocked groups |
+| `npm run test:browser` from `apps/frontend`, against the final default-build standalone server | 13 passed, 0 failed, 2 explicitly skipped missing-media acceptance groups; includes denied-clipboard Back/Forward, compact lesson navigation, and modified-click new-tab regressions |
 | `node --test tests/article4-media-browser.mjs` from `apps/frontend` (`npm run test:media` alias) | 10 passed, 0 failed, 0 skipped. Synthetic fixtures verify the actual reusable media component; they do not certify the missing reviewed originals |
 | `node tests/article4-screenshots.mjs` from `apps/frontend` | Captured desktop/mobile hero, lesson, tool/results, and full-page screenshots using default sampling inputs and blocked APIs |
 | `node tests/article4-standalone-check.mjs` from `apps/frontend` | All ten stills and the cover returned HTTP 200, `image/png`, and byte-identical source data from the final standalone server. Initial restricted loopback access returned EPERM; the approved escalation passed |
@@ -88,6 +88,12 @@ Current integration checks:
 The browser run used isolated headless Chrome 153.0.8010.50 and Playwright 1.62.1. Launching Chrome required an approved sandbox escalation; the initial restricted launch aborted. All `/api/` requests were deliberately blocked. The suite verified rendered results and both export formats, immutable snapshots, all 32 scheduling selections, numeric errors, sampling zero variance, routing zero/ties, optical phase endpoints and loss/launch zero cases, all ten stills and four manual text steps each, source disclosures, safe query handling, reload/Back/Forward, keyboard focus, removal/clearing, and the hidden unconfigured article CTA. Articles 1/2, assessment, Build, and Map loaded with backend unavailable. Reading and export actions submitted no assessment or job requests.
 
 The suite confirmed no page-level horizontal overflow at 360px for each of the five live lesson panels. The reduced-motion preference was active and no video autoplay occurred. At 200% root CSS zoom with reflow, document scroll width and client width were both 1,280px. This is explicitly CSS zoom, not device-pixel-ratio emulation or a claim of cross-browser screen-reader certification. Manual screen-reader testing and additional browser engines were not performed.
+
+### Compact navigation follow-up
+
+A reader reported that lesson links appeared unresponsive. In the compact in-app viewport, clicking a link updated the URL and lesson while the selected question remained below the visible area. Explicit entry, lesson-list, technology, and Next links now focus the selected question and scroll it below the measured height of the shared sticky navigation. Clicking the current lesson also reveals it. Level 400 toggles retain focus at their summary, and Ctrl/Cmd-click preserves native new-tab behavior.
+
+Two browser regressions were added and passed. At 734 × 675, the selected scheduling question was focused and fully visible from y=141.02 to y=199.02, below the header ending at y=116.31. Entry, sidebar, technology, Next, repeated same-lesson navigation, and Level 400 focus were checked. A real modified-primary click opened the expected lesson in another tab while the original query and lesson remained unchanged. The complete browser suite then passed 13 tests with the same two missing-original-media groups explicitly skipped, and regenerated the complete media-measurement report.
 
 ### Production public-configuration checks
 

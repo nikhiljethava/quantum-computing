@@ -4,7 +4,7 @@
 .article4 button,.article4 input,.article4 select{font:inherit}
 .article4 button,.article4 summary{cursor:pointer}
 .article4 button:disabled{cursor:not-allowed;opacity:.5}
-.article4 :is(a,button,input,summary,select):focus-visible{outline:3px solid #087d76;outline-offset:4px}
+.article4 :is(a,button,input,summary,select,[tabindex]):focus-visible{outline:3px solid #087d76;outline-offset:4px}
 .article4 :is(h1,h2,h3,h4){letter-spacing:-.025em;line-height:1.25}
 .article4 h2{font-size:clamp(1.45rem,3vw,1.85rem);font-weight:750}
 .article4 h3{font-size:1.05rem;font-weight:700}

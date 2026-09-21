@@ -173,6 +173,86 @@ test("Safe deep links, reload, Back/Forward and keyboard navigation preserve les
   }
 }));
 
+test("Compact entry, sidebar, hardware, Next and same-lesson links reveal and focus the selected question", { timeout: 90000 }, async () => withPage(async (page) => {
+  console.log("Compact navigation: open sampling");
+  await openLesson(page);
+  const headingIsRevealed = async id => {
+    await page.waitForURL(url => url.searchParams.get("lesson") === id, { timeout: 10000 });
+    // Reading geometry must not scroll the heading into view on the app's behalf.
+    await page.waitForFunction(lessonId => {
+      const selected = document.querySelector(`.a4-lesson[data-lesson-id="${lessonId}"] h2`);
+      const header = document.querySelector("header");
+      if (!selected || !header) return false;
+      const rect = selected.getBoundingClientRect();
+      return document.activeElement === selected
+        && rect.top >= header.getBoundingClientRect().bottom - 1
+        && rect.bottom <= window.innerHeight;
+    }, id, { timeout: 10000 });
+    const observed = await page.locator(`.a4-lesson[data-lesson-id="${id}"] h2`).evaluate(heading => ({
+      focused: document.activeElement === heading,
+      top: heading.getBoundingClientRect().top,
+      bottom: heading.getBoundingClientRect().bottom,
+      headerBottom: document.querySelector("header").getBoundingClientRect().bottom,
+      viewportHeight: window.innerHeight,
+    }));
+    assert.equal(observed.focused, true);
+    assert.ok(observed.top >= observed.headerBottom - 1 && observed.bottom <= observed.viewportHeight, JSON.stringify(observed));
+    return observed;
+  };
+  const entry = page.locator(".a4-entry").filter({ hasText: "Try the five-job scheduling example" });
+  console.log("Compact navigation: entry to scheduling");
+  await entry.click();
+  const afterEntry = await headingIsRevealed("scheduling");
+  const nav = page.getByRole("navigation", { name: "Article 4 lessons" });
+  console.log("Compact navigation: sidebar to transmon");
+  await nav.getByRole("link").filter({ hasText: "A circuit stores a qubit" }).click();
+  await headingIsRevealed("transmon");
+  console.log("Compact navigation: hardware link to ions");
+  await page.locator(".a4-hardware-links").getByRole("link", { name: "Ions", exact: true }).click();
+  await headingIsRevealed("ions");
+  const next = page.locator(".a4-next").getByRole("link");
+  const nextLesson = new URL(await next.getAttribute("href"), baseUrl).searchParams.get("lesson");
+  assert.notEqual(nextLesson, "ions");
+  console.log(`Compact navigation: Next to ${nextLesson}`);
+  await next.click();
+  await headingIsRevealed(nextLesson);
+  // A same-lesson link must still reveal the question even though the query
+  // string does not change and therefore cannot be the only effect trigger.
+  console.log("Compact navigation: sidebar back to scheduling");
+  await nav.getByRole("link").filter({ hasText: "Five jobs, shared equipment" }).click();
+  await headingIsRevealed("scheduling");
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  const sameLessonUrl = page.url();
+  console.log("Compact navigation: repeat scheduling entry");
+  await entry.click();
+  await headingIsRevealed("scheduling");
+  assert.equal(page.url(), sameLessonUrl);
+  measurements.compactLessonNavigation = { viewport: { width: 734, height: 675 }, afterEntry, sameLessonRevealed: true };
+  const technical = page.locator(".a4-technical > summary");
+  console.log("Compact navigation: Level 400 retains summary focus");
+  await technical.focus();
+  await page.keyboard.press("Enter");
+  await page.waitForURL(url => url.searchParams.get("level") === "400");
+  assert.equal(await technical.evaluate(summary => document.activeElement === summary), true, "Opening Level 400 must keep focus at the technical explanation");
+}, { viewport: { width: 734, height: 675 }, reducedMotion: "reduce" }));
+
+test("Modified primary click opens the correct lesson in a new tab without changing the original lesson", { timeout: 25000 }, async () => withPage(async (page, _requests, context) => {
+  await openLesson(page);
+  const originalUrl = page.url();
+  const link = page.locator(".a4-entry").filter({ hasText: "Try the five-job scheduling example" });
+  const destination = new URL(await link.getAttribute("href"), baseUrl).toString();
+  const [newTab] = await Promise.all([
+    context.waitForEvent("page"),
+    link.click({ modifiers: ["ControlOrMeta"] }),
+  ]);
+  await newTab.waitForLoadState("domcontentloaded");
+  await newTab.locator('[data-testid="teaching-media"][data-lesson="scheduling"]').waitFor();
+  assert.equal(newTab.url(), destination);
+  assert.equal(page.url(), originalUrl);
+  assert.equal(await page.getByTestId("teaching-media").getAttribute("data-lesson"), "sampling");
+  await newTab.close();
+}));
+
 test("Sampling validates input, preserves live inputs across modes, and exports immutable JSON/Markdown snapshots", { timeout: 45000 }, async () => withPage(async (page) => {
   await explore(page);
   const sampling = tool(page, "Sampling tool");

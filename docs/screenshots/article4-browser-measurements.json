@@ -1,6 +1,6 @@
 {
   "baseUrl": "http://127.0.0.1:3000",
-  "measuredAt": "2026-09-20T23:05:16.438Z",
+  "measuredAt": "2026-09-21T04:37:42.789Z",
   "backend": "All API requests deliberately blocked",
   "initialRequests": [
     {
@@ -69,63 +69,77 @@
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/sampling.png",
       "transferSize": 16972,
       "encodedBodySize": 16672,
-      "durationMs": 6.9000000059604645
+      "durationMs": 10.5
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/scheduling.png",
       "transferSize": 43218,
       "encodedBodySize": 42918,
-      "durationMs": 8.5
+      "durationMs": 17.5
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/transmon.png",
       "transferSize": 30814,
       "encodedBodySize": 30514,
-      "durationMs": 5.200000002980232
+      "durationMs": 16.700000002980232
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/ions.png",
       "transferSize": 39857,
       "encodedBodySize": 39557,
-      "durationMs": 7.5
+      "durationMs": 15.699999988079071
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/routing.png",
       "transferSize": 43704,
       "encodedBodySize": 43404,
-      "durationMs": 5.5
+      "durationMs": 16.100000008940697
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/blockade.png",
       "transferSize": 49238,
       "encodedBodySize": 48938,
-      "durationMs": 9.5
+      "durationMs": 9.100000008940697
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/photonics.png",
       "transferSize": 19324,
       "encodedBodySize": 19024,
-      "durationMs": 6.600000008940697
+      "durationMs": 8.099999994039536
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/loss.png",
       "transferSize": 22407,
       "encodedBodySize": 22107,
-      "durationMs": 7
+      "durationMs": 15.299999997019768
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/phase.png",
       "transferSize": 34207,
       "encodedBodySize": 33907,
-      "durationMs": 9.400000005960464
+      "durationMs": 14.5
     },
     {
       "url": "http://127.0.0.1:3000/articles/04-qubit-technologies/v9/entanglement.png",
       "transferSize": 20599,
       "encodedBodySize": 20299,
-      "durationMs": 8.799999997019768
+      "durationMs": 10.299999997019768
     }
   ],
+  "compactLessonNavigation": {
+    "viewport": {
+      "width": 734,
+      "height": 675
+    },
+    "afterEntry": {
+      "focused": true,
+      "top": 141.015625,
+      "bottom": 199.015625,
+      "headerBottom": 116.3125,
+      "viewportHeight": 675
+    },
+    "sameLessonRevealed": true
+  },
   "zoom": {
     "method": "CSS root zoom with reflow; not deviceScaleFactor",
     "scrollWidth": 1280,
